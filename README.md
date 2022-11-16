@@ -5,4 +5,4 @@
 
 ### Connect with me
 
-<a href="https://www.linkedin.com/in/longkilos/"><img src="https://cdn-icons-png.flaticon.com/512/145/145807.png" height="30"></a>
+<a href="https://www.linkedin.com/in/longkilos/"><img src="https://cdn-icons-png.flaticon.com/512/145/145807.png" height="40"></a>
