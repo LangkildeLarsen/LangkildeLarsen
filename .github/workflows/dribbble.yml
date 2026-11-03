@@ -1,0 +1,44 @@
+name: Hent Dribbble-billeder
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hent billeder
+        run: |
+          mkdir -p assets/projects
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+          grep -o "https://dribbble.com/shots/[^']*" inc/bootstrap.php | sort -u | while read url; do
+            id=$(echo "$url" | sed -E 's#.*/shots/([0-9]+).*#\1#')
+            html=$(curl -sL -A "$UA" -H "Accept-Language: en" "$url")
+            img=$(echo "$html" | grep -oE '<meta[^>]+property="og:image"[^>]+content="[^"]+"' | head -1 | sed -E 's/.*content="([^"]+)".*/\1/' | sed 's/&amp;/\&/g')
+            if [ -z "$img" ]; then echo "MANGLER $id ($(echo "$html" | head -c 120 | tr '\n' ' '))"; continue; fi
+            img=$(echo "$img" | sed -E 's/[?&]resize=[^&]*//')
+            case "$img" in *\?*) img="$img&resize=1200x900";; *) img="$img?resize=1200x900";; esac
+            curl -sL -A "$UA" -o "/tmp/$id" "$img"
+            type=$(file -b --mime-type "/tmp/$id")
+            case "$type" in
+              image/webp) ext=webp;; image/jpeg) ext=jpg;; image/png) ext=png;; image/gif) ext=gif;;
+              *) echo "IKKE BILLEDE $id $type"; continue;;
+            esac
+            rm -f assets/projects/$id.*
+            mv "/tmp/$id" "assets/projects/$id.$ext"
+            echo "OK $id.$ext"
+          done
+          ls -la assets/projects
+
+      - name: Gem i repoet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/projects
+          git diff --cached --quiet || git commit -m "Dribbble-billeder"
+          git push
