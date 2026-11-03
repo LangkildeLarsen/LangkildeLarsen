@@ -36,7 +36,7 @@ jobs:
             [ -z "$d" ] && continue
             curl -sL -A "$UA" -o "/tmp/logo" "$img"
             case "$(file -b --mime-type /tmp/logo)" in
-              image/webp) ext=webp;; image/jpeg) ext=jpg;; image/png) ext=png;; image/gif) ext=gif;;
+              image/webp) ext=webp;; image/jpeg) ext=jpg;; image/png) ext=png;; image/gif) ext=gif;; image/svg+xml|text/xml|text/html|text/plain) grep -q "<svg" /tmp/logo && ext=svg || { echo "LISTE FEJL $d"; continue; };;
               *) echo "LISTE FEJL $d"; continue;;
             esac
             rm -f assets/logos/$d.*
