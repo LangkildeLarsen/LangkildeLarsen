@@ -1,4 +1,4 @@
-name: Hent Dribbble-billeder
+name: Hent billeder
 
 on:
   workflow_dispatch:
@@ -12,28 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Hent billeder
+      - name: Hent Dribbble-billeder
         run: |
           mkdir -p assets/projects
           UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
           while read id img; do
             [ -z "$id" ] && continue
+            [ -n "$(ls assets/projects/$id.* 2>/dev/null)" ] && continue
             curl -sL -A "$UA" -H "Referer: https://dribbble.com/" -o "/tmp/$id" "$img"
-            type=$(file -b --mime-type "/tmp/$id")
-            case "$type" in
+            case "$(file -b --mime-type /tmp/$id)" in
               image/webp) ext=webp;; image/jpeg) ext=jpg;; image/png) ext=png;; image/gif) ext=gif;;
-              *) echo "IKKE BILLEDE $id $type"; continue;;
+              *) echo "IKKE BILLEDE $id"; continue;;
             esac
-            rm -f assets/projects/$id.*
             mv "/tmp/$id" "assets/projects/$id.$ext"
             echo "OK $id.$ext"
           done < assets/projects-sources.txt
-          ls -la assets/projects
+
+      - name: Hent avatar og logoer
+        run: python3 .github/scripts-fetch.py efuture.dk sikkerhedsgiganten.dk esbjergmuseum.dk voresverden.dk home-shoppen.dk airnet.dk blavand.dk easv.dk lammhults-biblioteksdesign.dk
 
       - name: Gem i repoet
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/projects
-          git diff --cached --quiet || git commit -m "Dribbble-billeder"
+          git add assets
+          git diff --cached --quiet || git commit -m "Hentede billeder"
           git push
