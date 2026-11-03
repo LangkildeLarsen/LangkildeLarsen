@@ -1020,7 +1020,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <div class="project-grid">
           <?php foreach (array_merge($profile['projects'], array_fill(0, 2, ['title' => '', 'url' => '', 'image' => '', 'show' => true])) as $i => $pr): ?>
             <fieldset class="project-edit panel">
-              <div class="thumb"><?php if ($pr['image']): ?><img src="../uploads/<?= e($pr['image']) ?>" alt=""><?php else: ?><span><?= $pr['title'] ? 'Intet billede' : 'Nyt projekt' ?></span><?php endif; ?></div>
+              <div class="thumb"><?php if ($pr['image']): ?><img src="<?= e(img_src($pr['image'], '../')) ?>" alt=""><?php else: ?><span><?= $pr['title'] ? 'Intet billede' : 'Nyt projekt' ?></span><?php endif; ?></div>
               <input name="pr_title[<?= $i ?>]" value="<?= e($pr['title']) ?>" placeholder="Titel" aria-label="Titel">
               <input name="pr_url[<?= $i ?>]" value="<?= e($pr['url']) ?>" placeholder="https://dribbble.com/shots/…" aria-label="Link">
               <input type="hidden" name="pr_image[<?= $i ?>]" value="<?= e($pr['image']) ?>">

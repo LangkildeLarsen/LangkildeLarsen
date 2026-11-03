@@ -121,9 +121,20 @@ function get_profile(): array
         if ($pr['image'] === '' && isset($images[$pr['url']])) {
             $pr['image'] = $images[$pr['url']];
         }
+        if ($pr['image'] === '' && preg_match('~/shots/(\d+)~', $pr['url'], $m)) {
+            $found = glob(dirname(__DIR__) . '/assets/projects/' . $m[1] . '.*');
+            if ($found) {
+                $pr['image'] = 'assets/projects/' . basename($found[0]);
+            }
+        }
     }
     unset($pr);
     return $p;
+}
+
+function img_src(string $path, string $prefix = ''): string
+{
+    return $prefix . (str_starts_with($path, 'assets/') ? $path : 'uploads/' . $path);
 }
 
 function is_logged_in(): bool

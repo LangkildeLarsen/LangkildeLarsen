@@ -68,7 +68,7 @@ $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(exp
       <?php $shown = array_slice($projects, 0, 9); $odd = count($shown) % 2 === 1; ?>
       <?php foreach ($shown as $i => $x): ?>
         <a class="shot<?= $i === 0 && $odd ? ' lead-shot' : '' ?>" href="<?= e($x['url']) ?>" target="_blank" rel="noopener">
-          <img src="uploads/<?= e($x['image']) ?>" alt="<?= e($x['title']) ?>" loading="lazy">
+          <img src="<?= e(img_src($x['image'])) ?>" alt="<?= e($x['title']) ?>" loading="lazy">
           <span><?= e($x['title']) ?></span>
         </a>
       <?php endforeach; ?>
