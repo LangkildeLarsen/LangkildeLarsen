@@ -46,7 +46,7 @@ function save_json(string $name, array $data): void
 function default_profile(): array
 {
     return [
-        'name' => 'Emil Langkilde Larsen',
+        'name' => 'Emil Langkilde Oehlenschläger Larsen',
         'title' => 'UI/UX- og grafisk designer · E-commerce · Marketing',
         'location' => 'Esbjerg, Danmark',
         'email' => 'emil@langkildelarsen.dk',
@@ -68,6 +68,12 @@ function default_profile(): array
             ['role' => 'Studentermedhjælper', 'company' => 'Lammhults Biblioteksdesign', 'period' => '2012 – 2015', 'text' => 'Etablerede YouTube-kanalen LibraryPeople og producerede 100+ videoer, samt grafisk design og SEO.'],
             ['role' => 'Salgsmedarbejder', 'company' => 'Vores Verden', 'url' => 'https://www.voresverden.dk', 'period' => '2011 – mar. 2016', 'text' => 'Kasseekspedition, opfyldning og prismærkning.'],
         ],
+        'highlights' => [
+            ['value' => '2015', 'label' => 'startede min første webshop'],
+            ['value' => '15 mio. kr.', 'label' => 'i omsætning med Home Shoppen'],
+            ['value' => '800.000', 'label' => 'sidevisninger om året på blavand.dk'],
+            ['value' => '20.000', 'label' => 'pakker sendt om året'],
+        ],
         'projects' => [
             ['title' => 'Efuture', 'url' => 'https://dribbble.com/shots/25467502-Efuture', 'image' => '', 'show' => true],
             ['title' => 'BilligParfume', 'url' => 'https://dribbble.com/shots/24280992-BilligParfume', 'image' => '', 'show' => true],
@@ -87,7 +93,7 @@ function default_profile(): array
             ['title' => 'Stop Childlabour Redesign', 'url' => 'https://dribbble.com/shots/20812553-Stop-Childlabour-Redesign', 'image' => '', 'show' => true],
         ],
         'education' => [
-            ['title' => 'Multimediedesigner', 'school' => 'Erhvervsakademi SydVest', 'period' => '2022 – 2024'],
+            ['title' => 'Multimediedesigner', 'school' => 'Erhvervsakademi SydVest', 'period' => '2022 – 2024', 'url' => 'https://easv.dk'],
             ['title' => 'Innovation', 'school' => 'Varde Handelsskole', 'period' => '2013 – 2016'],
             ['title' => 'Success Online', 'school' => 'Google', 'period' => 'Certificering'],
         ],
@@ -100,6 +106,9 @@ function get_profile(): array
 {
     $def = default_profile();
     $p = array_merge($def, load_json('profile'));
+    if ($p['name'] === 'Emil Langkilde Larsen') {
+        $p['name'] = $def['name'];
+    }
     $urls = [];
     foreach ($def['experience'] as $x) {
         $urls[mb_strtolower($x['company'])] = $x['url'] ?? '';
@@ -111,10 +120,19 @@ function get_profile(): array
     $logos = load_json('logos');
     foreach ($p['experience'] as &$x) {
         if ($x['logo'] === '' && $x['url'] !== '') {
-            $x['logo'] = $logos[preg_replace('/^www\./', '', strtolower((string)parse_url($x['url'], PHP_URL_HOST)))] ?? '';
+            $x['logo'] = $logos[site_domain($x['url'])] ?? bundled_logo($x['url']);
         }
     }
     unset($x);
+    $schoolUrls = [];
+    foreach ($def['education'] as $ed) {
+        $schoolUrls[mb_strtolower($ed['school'])] = $ed['url'] ?? '';
+    }
+    foreach ($p['education'] as &$ed) {
+        $ed += ['url' => $schoolUrls[mb_strtolower($ed['school'])] ?? ''];
+        $ed['logo'] = $ed['url'] !== '' ? bundled_logo($ed['url']) : '';
+    }
+    unset($ed);
     $images = load_json('project-images');
     foreach ($p['projects'] as &$pr) {
         $pr += ['image' => '', 'show' => true];
@@ -130,6 +148,22 @@ function get_profile(): array
     }
     unset($pr);
     return $p;
+}
+
+function site_domain(string $url): string
+{
+    $host = parse_url(preg_match('~^https?://~i', $url) ? $url : 'https://' . $url, PHP_URL_HOST) ?: '';
+    return preg_replace('/^www\./i', '', strtolower($host));
+}
+
+function bundled_logo(string $url): string
+{
+    $d = site_domain($url);
+    if ($d === '') {
+        return '';
+    }
+    $found = glob(dirname(__DIR__) . '/assets/logos/' . $d . '.*');
+    return $found ? 'assets/logos/' . basename($found[0]) : '';
 }
 
 function img_src(string $path, string $prefix = ''): string

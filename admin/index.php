@@ -107,7 +107,8 @@ function app_head(): string
 <meta name="apple-mobile-web-app-title" content="Emil">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="../assets/icon-180.png">
-<link rel="icon" type="image/png" href="../assets/icon-192.png">';
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/icon-192.png">';
 }
 
 function default_categories(): array
@@ -411,7 +412,14 @@ if ($action) {
             if ($parts[0] === '') {
                 continue;
             }
-            $p['education'][] = ['title' => $parts[0], 'school' => $parts[1] ?? '', 'period' => $parts[2] ?? ''];
+            $p['education'][] = ['title' => $parts[0], 'school' => $parts[1] ?? '', 'period' => $parts[2] ?? '', 'url' => $parts[3] ?? ''];
+        }
+        $p['highlights'] = [];
+        foreach (preg_split('/\R/', (string)($_POST['highlights'] ?? '')) as $line) {
+            $parts = array_map('trim', explode('|', $line, 2));
+            if ($parts[0] !== '') {
+                $p['highlights'][] = ['value' => $parts[0], 'label' => $parts[1] ?? ''];
+            }
         }
         $exp = [];
         foreach ($_POST['exp_role'] ?? [] as $i => $role) {
@@ -773,7 +781,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <label>Om mig<textarea name="about" rows="4"><?= e($profile['about']) ?></textarea></label>
         <label>Kompetencer <small>(adskilt med komma)</small><input name="skills" value="<?= e(implode(', ', $profile['skills'])) ?>"></label>
         <label>Sprog <small>(adskilt med komma)</small><input name="languages" value="<?= e(implode(', ', $profile['languages'])) ?>"></label>
-        <label>Uddannelse <small>(én pr. linje: Titel | Sted | Periode)</small><textarea name="education" rows="4"><?= e(implode("\n", array_map(fn($x) => $x['title'] . ' | ' . $x['school'] . ' | ' . $x['period'], $profile['education']))) ?></textarea></label>
+        <label>Uddannelse <small>(én pr. linje: Titel | Sted | Periode | Hjemmeside)</small><textarea name="education" rows="4"><?= e(implode("\n", array_map(fn($x) => rtrim($x['title'] . ' | ' . $x['school'] . ' | ' . $x['period'] . ' | ' . ($x['url'] ?? ''), ' |'), $profile['education']))) ?></textarea></label>
+        <label>Nøgletal på forsiden <small>(én pr. linje: Tal | Tekst)</small><textarea name="highlights" rows="4"><?= e(implode("\n", array_map(fn($x) => $x['value'] . ' | ' . $x['label'], $profile['highlights']))) ?></textarea></label>
 
         <div class="panel-head">
           <h2 class="section-title">Erfaring</h2>
@@ -783,7 +792,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <?php foreach (array_merge($profile['experience'], array_fill(0, 2, ['role' => '', 'company' => '', 'url' => '', 'period' => '', 'text' => '', 'logo' => ''])) as $i => $x): ?>
           <fieldset class="exp">
             <div class="exp-top">
-              <span class="logo"><?php if ($x['logo']): ?><img src="../uploads/<?= e($x['logo']) ?>" alt=""><?php else: ?><?= e(mb_substr($x['company'] ?: '+', 0, 1)) ?><?php endif; ?></span>
+              <span class="logo"><?php if ($x['logo']): ?><img src="<?= e(img_src($x['logo'], '../')) ?>" alt=""><?php else: ?><?= e(mb_substr($x['company'] ?: '+', 0, 1)) ?><?php endif; ?></span>
               <div class="three">
                 <label>Rolle<input name="exp_role[]" value="<?= e($x['role']) ?>"></label>
                 <label>Virksomhed<input name="exp_company[]" value="<?= e($x['company']) ?>"></label>
