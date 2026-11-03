@@ -662,3 +662,19 @@ select {
     background: rgba(0, 0, 0, .18);
   }
 }
+
+.siri { display: grid; gap: 16px; margin-top: 20px; max-width: 840px; }
+
+.siri h3 { font-size: 17px; margin-top: 8px; }
+
+.siri .actions form { display: inline; }
+
+code {
+  padding: 2px 7px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

@@ -44,8 +44,8 @@ function cal_events(int $days = 30, bool $force = false): array
     }
     $cache = load_json('cal-cache');
     $tz = new DateTimeZone(date_default_timezone_get());
-    $from = new DateTime('today', $tz);
-    $to = (clone $from)->modify("+$days days");
+    $from = new DateTime('now', $tz);
+    $to = (new DateTime('today', $tz))->modify("+$days days");
     $events = [];
     $errors = [];
     $dirty = false;

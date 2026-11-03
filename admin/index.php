@@ -296,6 +296,20 @@ if ($action) {
         redirect('index.php?view=settings');
     }
 
+    if ($action === 'api_token') {
+        $token = bin2hex(random_bytes(20));
+        save_json('api', ['hash' => hash('sha256', $token), 'created' => date('c')]);
+        $_SESSION['new_token'] = $token;
+        flash('Ny nøgle lavet. Kopiér den nu – den vises kun én gang.');
+        redirect('index.php?view=settings#siri');
+    }
+
+    if ($action === 'api_revoke') {
+        save_json('api', []);
+        flash('Nøglen er slået fra. Dine genveje virker ikke længere.');
+        redirect('index.php?view=settings#siri');
+    }
+
     if ($action === 'refresh_calendar') {
         cal_events(30, true);
         redirect('index.php?view=calendar');
@@ -709,6 +723,40 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <?php endforeach; ?>
         <div class="actions"><button class="btn">Gem kalendere</button></div>
       </form>
+
+      <?php $api = load_json('api'); $newToken = $_SESSION['new_token'] ?? null; unset($_SESSION['new_token']); ?>
+      <?php $base = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'langkildelarsen.dk') . '/api/'; ?>
+      <div class="panel siri" id="siri">
+        <h2 class="section-title">Siri & Genveje</h2>
+        <?php if ($newToken): ?>
+          <label>Din nøgle – kopiér den til dine genveje nu<input value="<?= e($newToken) ?>" readonly onfocus="this.select()"></label>
+        <?php endif; ?>
+        <div class="actions">
+          <?php if (!empty($api['hash'])): ?>
+            <span class="muted small">Nøgle aktiv siden <?= e(dk_date($api['created'])) ?>.</span>
+            <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="api_token"><button class="btn ghost">Lav ny nøgle</button></form>
+            <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="api_revoke"><button class="btn ghost danger">Slå fra</button></form>
+          <?php else: ?>
+            <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="api_token"><button class="btn">Lav nøgle til Siri</button></form>
+          <?php endif; ?>
+        </div>
+
+        <h3>"Hey Siri, ny lifehack"</h3>
+        <ol class="steps muted small">
+          <li>Åbn <strong>Genveje</strong> på iPhone → <strong>+</strong> → giv den navnet <strong>Ny lifehack</strong>.</li>
+          <li>Tilføj handlingen <strong>Diktér tekst</strong> (sprog: Dansk).</li>
+          <li>Tilføj <strong>Hent indhold af URL</strong> med adressen <code><?= e($base) ?></code>. Tryk på pilen: Metode <strong>POST</strong>, Anmodningstekst <strong>Formular</strong>, og tilføj tre felter: <code>token</code> = din nøgle, <code>action</code> = <code>lifehack</code>, <code>text</code> = <strong>Dikteret tekst</strong>.</li>
+          <li>Tilføj <strong>Vis resultat</strong>, så Siri bekræfter, hvad der blev gemt.</li>
+        </ol>
+        <p class="muted small">Start med et kategorinavn for at sortere den, fx "Tech, tryk to gange på mellemrum for at…". Ellers lander den uden kategori med tagget #siri.</p>
+
+        <h3>"Hey Siri, min dag" og "Hey Siri, mit budget"</h3>
+        <ol class="steps muted small">
+          <li>Lav en ny genvej med navnet <strong>Min dag</strong>.</li>
+          <li>Tilføj <strong>Hent indhold af URL</strong> som ovenfor, men kun med felterne <code>token</code> og <code>action</code> = <code>agenda</code>.</li>
+          <li>Tilføj <strong>Læs tekst op</strong>. Lav én magen til med navnet <strong>Mit budget</strong> og <code>action</code> = <code>budget</code>.</li>
+        </ol>
+      </div>
 
       <div class="panel">
         <h2 class="section-title">Admin som app på iPhone</h2>
