@@ -1,5 +1,7 @@
 <?php
 require dirname(__DIR__) . '/inc/bootstrap.php';
+require dirname(__DIR__) . '/inc/budget.php';
+require dirname(__DIR__) . '/inc/calendar.php';
 
 $auth = load_json('auth');
 $needsSetup = empty($auth['hash']);
@@ -48,6 +50,65 @@ function clear_fails(): void
     save_json('login', $l);
 }
 
+function remember_cookie(string $value, int $expires): void
+{
+    setcookie('ll_remember', $value, [
+        'expires' => $expires,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    ]);
+}
+
+function remember_issue(array $auth): void
+{
+    $token = bin2hex(random_bytes(32));
+    $expires = time() + 60 * 86400;
+    $tokens = array_filter($auth['tokens'] ?? [], fn($t) => $t > time());
+    $tokens[hash('sha256', $token)] = $expires;
+    $auth['tokens'] = $tokens;
+    save_json('auth', $auth);
+    remember_cookie($token, $expires);
+}
+
+function remember_check(array $auth): bool
+{
+    $token = (string)($_COOKIE['ll_remember'] ?? '');
+    if ($token === '') {
+        return false;
+    }
+    $exp = $auth['tokens'][hash('sha256', $token)] ?? 0;
+    if ($exp > time()) {
+        session_regenerate_id(true);
+        $_SESSION['admin'] = true;
+        return true;
+    }
+    remember_cookie('', time() - 3600);
+    return false;
+}
+
+function remember_clear(array $auth): void
+{
+    $token = (string)($_COOKIE['ll_remember'] ?? '');
+    if ($token !== '' && isset($auth['tokens'][hash('sha256', $token)])) {
+        unset($auth['tokens'][hash('sha256', $token)]);
+        save_json('auth', $auth);
+    }
+    remember_cookie('', time() - 3600);
+}
+
+function app_head(): string
+{
+    return '<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Emil">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/icon-180.png">
+<link rel="icon" type="image/png" href="../assets/icon-192.png">';
+}
+
 function default_categories(): array
 {
     return ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser'];
@@ -63,9 +124,11 @@ if ($action === 'setup' && $needsSetup) {
     } elseif ($pw !== ($_POST['password2'] ?? '')) {
         $error = 'De to adgangskoder er ikke ens.';
     } else {
-        save_json('auth', ['hash' => password_hash($pw, PASSWORD_DEFAULT)]);
+        $auth = ['hash' => password_hash($pw, PASSWORD_DEFAULT)];
+        save_json('auth', $auth);
         session_regenerate_id(true);
         $_SESSION['admin'] = true;
+        remember_issue($auth);
         flash('Velkommen! Din adgangskode er gemt.');
         redirect('index.php');
     }
@@ -79,6 +142,9 @@ if ($action === 'login' && !$needsSetup) {
         clear_fails();
         session_regenerate_id(true);
         $_SESSION['admin'] = true;
+        if (!empty($_POST['remember'])) {
+            remember_issue($auth);
+        }
         redirect('index.php');
     } else {
         register_fail();
@@ -87,14 +153,19 @@ if ($action === 'login' && !$needsSetup) {
     }
 }
 
+if (!is_logged_in() && !$needsSetup) {
+    remember_check($auth);
+}
+
 if (!is_logged_in()) {
     ?><!doctype html>
 <html lang="da">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050506">
+<?= app_head() ?>
 <title>Log ind</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css">
@@ -112,6 +183,9 @@ if (!is_logged_in()) {
   <?php if ($needsSetup): ?>
     <label>Gentag adgangskode<input type="password" name="password2" required autocomplete="new-password"></label>
   <?php endif; ?>
+  <?php if (!$needsSetup): ?>
+    <label class="check"><input type="checkbox" name="remember" value="1" checked> Forbliv logget ind på denne enhed</label>
+  <?php endif; ?>
   <button class="btn"><?= $needsSetup ? 'Gem og fortsæt' : 'Log ind' ?></button>
   <a href="../" class="muted small">← Tilbage til siden</a>
 </form>
@@ -128,6 +202,7 @@ if ($action) {
     verify_csrf();
 
     if ($action === 'logout') {
+        remember_clear($auth);
         $_SESSION = [];
         session_destroy();
         redirect('../');
@@ -191,10 +266,39 @@ if ($action) {
         } elseif ($_POST['new'] !== ($_POST['new2'] ?? '')) {
             flash('De nye adgangskoder er ikke ens.');
         } else {
-            save_json('auth', ['hash' => password_hash($_POST['new'], PASSWORD_DEFAULT)]);
-            flash('Adgangskode ændret.');
+            $auth = ['hash' => password_hash($_POST['new'], PASSWORD_DEFAULT)];
+            save_json('auth', $auth);
+            remember_issue($auth);
+            flash('Adgangskode ændret. Andre enheder er logget ud.');
         }
         redirect('index.php?view=settings');
+    }
+
+    if ($action === 'save_budget') {
+        save_json('budget', budget_from_post($_POST));
+        flash('Budget gemt.');
+        redirect('index.php?view=budget' . (!empty($_POST['edit']) ? '&edit=1' : ''));
+    }
+
+    if ($action === 'save_calendars') {
+        $cals = [];
+        foreach ($_POST['cal_url'] ?? [] as $i => $url) {
+            $url = trim((string)$url);
+            if ($url === '') {
+                continue;
+            }
+            $cals[] = ['name' => trim((string)($_POST['cal_name'][$i] ?? '')) ?: 'Kalender', 'url' => $url];
+        }
+        save_json('calendars', $cals);
+        save_json('cal-cache', []);
+        $res = cal_events(30, true);
+        flash($res['errors'] ? 'Gemt, men disse kunne ikke hentes: ' . implode(', ', $res['errors']) . '. Tjek linket.' : 'Kalendere gemt.');
+        redirect('index.php?view=settings');
+    }
+
+    if ($action === 'refresh_calendar') {
+        cal_events(30, true);
+        redirect('index.php?view=calendar');
     }
 
     if ($action === 'save_profile') {
@@ -315,15 +419,44 @@ $titles = [
     'edit' => isset($_GET['id']) ? 'Rediger lifehack' : 'Ny lifehack',
     'profile' => 'Profil & CV',
     'settings' => 'Indstillinger',
+    'budget' => 'Budget',
+    'calendar' => 'Kalender',
 ];
+
+$budget = load_json('budget', ['income' => [], 'expenses' => []]);
+$sum = budget_summary($budget);
+$cal = in_array($view, ['dashboard', 'calendar'], true) ? cal_events($view === 'calendar' ? 30 : 7) : ['events' => [], 'errors' => []];
+$hasCal = (bool)cal_sources();
+
+function upcoming_payments(array $budget, int $days): array
+{
+    $out = [];
+    $today = strtotime('today');
+    foreach ($budget['expenses'] ?? [] as $x) {
+        if (empty($x['day']) || ($x['freq'] ?? 'month') !== 'month') {
+            continue;
+        }
+        for ($m = 0; $m <= 1; $m++) {
+            $base = strtotime(date('Y-m-01', strtotime("+$m month", strtotime(date('Y-m-01', $today)))));
+            $dim = (int)date('t', $base);
+            $ts = $base + (min($x['day'], $dim) - 1) * 86400;
+            if ($ts >= $today && $ts < $today + $days * 86400) {
+                $out[] = ['ts' => $ts, 'name' => $x['name'], 'amount' => $x['amount']];
+            }
+        }
+    }
+    usort($out, fn($a, $b) => $a['ts'] <=> $b['ts']);
+    return $out;
+}
 $pageTitle = $titles[$view] ?? 'Oversigt';
 ?><!doctype html>
 <html lang="da">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050506">
+<?= app_head() ?>
 <title><?= e($pageTitle) ?> · Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css">
@@ -342,6 +475,12 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <nav>
       <a href="./" class="<?= $view === 'dashboard' ? 'active' : '' ?>">Oversigt</a>
       <a href="./?view=hacks" class="<?= $view === 'hacks' && $cat === '' ? 'active' : '' ?>">Alle lifehacks <span class="count"><?= $total ?></span></a>
+    </nav>
+
+    <p class="nav-label">Værktøjer</p>
+    <nav>
+      <a href="./?view=budget" class="<?= $view === 'budget' ? 'active' : '' ?>">Budget <span class="count"><?= $sum['income'] > 0 ? e(number_format($sum['left'], 0, ',', '.')) : '' ?></span></a>
+      <a href="./?view=calendar" class="<?= $view === 'calendar' ? 'active' : '' ?>">Kalender</a>
     </nav>
 
     <p class="nav-label">Kategorier</p>
@@ -380,11 +519,37 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <?php if ($flash): ?><p class="alert"><?= e($flash) ?></p><?php endif; ?>
 
     <?php if ($view === 'dashboard'): ?>
+      <?php $pay = upcoming_payments($budget, 7); ?>
       <div class="stats">
-        <div class="stat"><span><?= $total ?></span>lifehacks</div>
-        <div class="stat"><span><?= count($pinned) ?></span>fastgjort</div>
-        <div class="stat"><span><?= count(array_filter($counts)) ?></span>kategorier i brug</div>
+        <a class="stat" href="./?view=hacks"><span><?= $total ?></span>lifehacks</a>
+        <?php if ($sum['income'] > 0): ?>
+          <a class="stat" href="./?view=budget"><span class="<?= $sum['left'] < 0 ? 'neg' : '' ?>"><?= e(number_format($sum['left'], 0, ',', '.')) ?></span>kr. tilbage pr. md.</a>
+        <?php else: ?>
+          <a class="stat" href="./?view=budget"><span>–</span>opsæt budget</a>
+        <?php endif; ?>
+        <a class="stat" href="./?view=calendar"><span><?= count($cal['events']) ?></span>aftaler næste 7 dage</a>
       </div>
+
+      <?php if ($cal['events'] || $pay): ?>
+        <h2 class="section-title">Kommende</h2>
+        <div class="agenda panel compact">
+          <?php $last = null; $items = []; ?>
+          <?php foreach ($cal['events'] as $ev) $items[] = ['ts' => $ev['start'], 'kind' => 'ev', 'ev' => $ev]; ?>
+          <?php foreach ($pay as $pp) $items[] = ['ts' => $pp['ts'], 'kind' => 'pay', 'pay' => $pp]; ?>
+          <?php usort($items, fn($a, $b) => $a['ts'] <=> $b['ts']); ?>
+          <?php foreach (array_slice($items, 0, 8) as $it): ?>
+            <?php $d = date('Y-m-d', $it['ts']); if ($d !== $last): $last = $d; ?><p class="day"><?= e(day_label($it['ts'])) ?></p><?php endif; ?>
+            <?php if ($it['kind'] === 'ev'): ?>
+              <div class="ev c<?= $it['ev']['color'] ?>"><time><?= e(event_time($it['ev'])) ?></time><span><?= e($it['ev']['title']) ?><?php if ($it['ev']['location']): ?><small><?= e($it['ev']['location']) ?></small><?php endif; ?></span></div>
+            <?php else: ?>
+              <div class="ev pay"><time>Betaling</time><span><?= e($it['pay']['name']) ?><small><?= e(kr($it['pay']['amount'])) ?></small></span></div>
+            <?php endif; ?>
+          <?php endforeach; ?>
+          <a href="./?view=calendar" class="more">Se kalender →</a>
+        </div>
+      <?php elseif (!$hasCal): ?>
+        <div class="hint panel compact"><p>Forbind din iPhone-kalender for at se dine aftaler her.</p><a href="./?view=settings#kalender" class="btn ghost">Forbind kalender</a></div>
+      <?php endif; ?>
 
       <?php if ($pinned): ?>
         <h2 class="section-title">Fastgjort</h2>
@@ -524,6 +689,158 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <div class="actions"><button class="btn">Skift</button></div>
         </form>
       </div>
+
+      <?php $cals = load_json('calendars'); ?>
+      <form method="post" class="panel form" id="kalender">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_calendars">
+        <h2 class="section-title">iPhone-kalender</h2>
+        <ol class="steps muted small">
+          <li>Åbn Kalender-appen på din iPhone og tryk på <strong>Kalendere</strong> nederst.</li>
+          <li>Tryk på <strong>ⓘ</strong> ud for den kalender, du vil vise, og slå <strong>Offentlig kalender</strong> til.</li>
+          <li>Tryk <strong>Del link…</strong> → <strong>Kopiér</strong>, og sæt linket ind herunder. Gentag for flere kalendere.</li>
+        </ol>
+        <p class="muted small">Linket virker som en hemmelig adresse: alle der kender det kan se kalenderen, så del det ikke andre steder. Det gemmes kun på din server.</p>
+        <?php foreach (array_merge($cals, array_fill(0, 2, ['name' => '', 'url' => ''])) as $c): ?>
+          <div class="row cal">
+            <input name="cal_name[]" value="<?= e($c['name']) ?>" placeholder="Navn, fx Privat" aria-label="Navn">
+            <input name="cal_url[]" value="<?= e($c['url']) ?>" placeholder="webcal://p…-caldav.icloud.com/published/…" aria-label="Link">
+          </div>
+        <?php endforeach; ?>
+        <div class="actions"><button class="btn">Gem kalendere</button></div>
+      </form>
+
+      <div class="panel">
+        <h2 class="section-title">Admin som app på iPhone</h2>
+        <ol class="steps muted small">
+          <li>Åbn <strong>langkildelarsen.dk/admin</strong> i Safari på din iPhone og log ind.</li>
+          <li>Tryk på <strong>Del</strong>-ikonet (firkant med pil op).</li>
+          <li>Vælg <strong>Føj til hjemmeskærm</strong> → <strong>Tilføj</strong>.</li>
+        </ol>
+        <p class="muted small">Så åbner dashboardet i fuld skærm som en app, og du forbliver logget ind i 60 dage.</p>
+      </div>
+
+    <?php elseif ($view === 'budget'): ?>
+      <?php $editing = !empty($_GET['edit']) || (!$budget['income'] && !$budget['expenses']); ?>
+      <?php if (!$editing): ?>
+        <div class="stats four">
+          <div class="stat"><span><?= e(number_format($sum['income'], 0, ',', '.')) ?></span>indtægt pr. md.</div>
+          <div class="stat"><span><?= e(number_format($sum['expenses'], 0, ',', '.')) ?></span>udgifter pr. md.</div>
+          <div class="stat"><span class="<?= $sum['left'] < 0 ? 'neg' : '' ?>"><?= e(number_format($sum['left'], 0, ',', '.')) ?></span>tilbage pr. md.</div>
+          <div class="stat"><span><?= e(number_format($sum['saving_rate'], 0, ',', '.')) ?> %</span>opsparing</div>
+        </div>
+
+        <div class="cols wide">
+          <section class="panel">
+            <h2 class="section-title">Fordeling · 50/30/20</h2>
+            <?php $targets = ['need' => 50, 'want' => 30, 'saving' => 20]; ?>
+            <?php foreach ($targets as $t => $goal): ?>
+              <?php $pct = $sum['income'] > 0 ? $sum['by_type'][$t] / $sum['income'] * 100 : 0; ?>
+              <div class="bar-row">
+                <div class="bar-head"><span><?= e(BUDGET_TYPES[$t]) ?></span><span><?= e(number_format($pct, 0, ',', '.')) ?> % <small>mål <?= $goal ?> %</small></span></div>
+                <div class="bar"><i style="width: <?= min(100, round($pct, 1)) ?>%"></i><b style="left: <?= $goal ?>%"></b></div>
+                <small class="muted"><?= e(kr($sum['by_type'][$t])) ?></small>
+              </div>
+            <?php endforeach; ?>
+            <?php if ($sum['left'] > 0): ?>
+              <p class="muted small">Ufordelt: <?= e(kr($sum['left'])) ?> pr. måned.</p>
+            <?php endif; ?>
+          </section>
+
+          <section class="panel">
+            <h2 class="section-title">Udgifter pr. kategori</h2>
+            <?php $max = max($sum['by_cat'] ?: [1]); ?>
+            <?php foreach ($sum['by_cat'] as $c => $v): ?>
+              <div class="bar-row">
+                <div class="bar-head"><span><?= e($c) ?></span><span><?= e(kr($v)) ?></span></div>
+                <div class="bar thin"><i style="width: <?= round($v / $max * 100, 1) ?>%"></i></div>
+              </div>
+            <?php endforeach; ?>
+          </section>
+        </div>
+
+        <section class="panel table-panel">
+          <div class="panel-head">
+            <h2 class="section-title">Poster</h2>
+            <a href="./?view=budget&edit=1" class="btn">Rediger budget</a>
+          </div>
+          <table class="ledger">
+            <thead><tr><th>Post</th><th>Kategori</th><th>Type</th><th class="num">Beløb</th><th class="num">Pr. md.</th></tr></thead>
+            <tbody>
+              <?php foreach ($budget['income'] as $x): ?>
+                <tr class="in"><td><?= e($x['name']) ?></td><td>Indtægt</td><td>–</td><td class="num"><?= e(kr($x['amount'])) ?> <small><?= e(mb_strtolower(BUDGET_FREQ[$x['freq']][0])) ?></small></td><td class="num">+<?= e(kr(monthly($x))) ?></td></tr>
+              <?php endforeach; ?>
+              <?php foreach ($budget['expenses'] as $x): ?>
+                <tr><td><?= e($x['name']) ?><?php if (!empty($x['day'])): ?> <small>d. <?= (int)$x['day'] ?>.</small><?php endif; ?></td><td><?= e($x['category'] ?: 'Andet') ?></td><td><?= e(BUDGET_TYPES[$x['type']]) ?></td><td class="num"><?= e(kr($x['amount'])) ?> <small><?= e(mb_strtolower(BUDGET_FREQ[$x['freq']][0])) ?></small></td><td class="num">−<?= e(kr(monthly($x))) ?></td></tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </section>
+      <?php else: ?>
+        <form method="post" class="panel form budget-form">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="save_budget">
+          <p class="muted small">Skriv beløb som de trækkes – fx en årlig forsikring som årligt beløb – så regner siden det om til pr. måned. Tomme rækker ignoreres; gem for at få flere.</p>
+
+          <h2 class="section-title">Indtægter</h2>
+          <div class="rows">
+            <div class="row head in"><span>Navn</span><span>Beløb</span><span>Hvor ofte</span></div>
+            <?php foreach (array_merge($budget['income'], array_fill(0, 2, ['name' => '', 'amount' => 0, 'freq' => 'month'])) as $x): ?>
+              <div class="row in">
+                <input name="in_name[]" value="<?= e($x['name']) ?>" placeholder="Løn efter skat" aria-label="Navn">
+                <input name="in_amount[]" value="<?= e(amount_value($x['amount'])) ?>" inputmode="decimal" placeholder="0" aria-label="Beløb">
+                <select name="in_freq[]" aria-label="Hvor ofte"><?php foreach (BUDGET_FREQ as $k => $f): ?><option value="<?= $k ?>" <?= $x['freq'] === $k ? 'selected' : '' ?>><?= e($f[0]) ?></option><?php endforeach; ?></select>
+              </div>
+            <?php endforeach; ?>
+          </div>
+
+          <h2 class="section-title">Udgifter</h2>
+          <datalist id="bcats"><?php foreach (BUDGET_CATEGORIES as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist>
+          <div class="rows">
+            <div class="row head ex"><span>Navn</span><span>Kategori</span><span>Beløb</span><span>Hvor ofte</span><span>Type</span><span>Dag</span></div>
+            <?php foreach (array_merge($budget['expenses'], array_fill(0, 4, ['name' => '', 'category' => '', 'amount' => 0, 'freq' => 'month', 'type' => 'need', 'day' => 0])) as $x): ?>
+              <div class="row ex">
+                <input name="ex_name[]" value="<?= e($x['name']) ?>" placeholder="Husleje" aria-label="Navn">
+                <input name="ex_cat[]" value="<?= e($x['category']) ?>" list="bcats" placeholder="Kategori" aria-label="Kategori">
+                <input name="ex_amount[]" value="<?= e(amount_value($x['amount'])) ?>" inputmode="decimal" placeholder="0" aria-label="Beløb">
+                <select name="ex_freq[]" aria-label="Hvor ofte"><?php foreach (BUDGET_FREQ as $k => $f): ?><option value="<?= $k ?>" <?= $x['freq'] === $k ? 'selected' : '' ?>><?= e($f[0]) ?></option><?php endforeach; ?></select>
+                <select name="ex_type[]" aria-label="Type"><?php foreach (BUDGET_TYPES as $k => $t): ?><option value="<?= $k ?>" <?= $x['type'] === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
+                <input name="ex_day[]" value="<?= $x['day'] ?: '' ?>" inputmode="numeric" placeholder="–" aria-label="Betalingsdag">
+              </div>
+            <?php endforeach; ?>
+          </div>
+          <p class="muted small">Dag = den dag i måneden beløbet trækkes. Så vises betalingen under "Kommende" på oversigten.</p>
+          <div class="actions">
+            <button class="btn">Gem budget</button>
+            <button class="btn ghost" name="edit" value="1">Gem og fortsæt</button>
+            <?php if ($budget['income'] || $budget['expenses']): ?><a href="./?view=budget" class="btn ghost">Annuller</a><?php endif; ?>
+          </div>
+        </form>
+      <?php endif; ?>
+
+    <?php elseif ($view === 'calendar'): ?>
+      <?php if (!$hasCal): ?>
+        <div class="empty">
+          <p>Ingen kalender forbundet endnu.</p>
+          <a href="./?view=settings#kalender" class="btn">Forbind din iPhone-kalender</a>
+        </div>
+      <?php else: ?>
+        <?php if ($cal['errors']): ?><p class="alert error">Kunne ikke hente: <?= e(implode(', ', $cal['errors'])) ?></p><?php endif; ?>
+        <div class="panel-head">
+          <p class="muted small">Næste 30 dage · opdateres hvert kvarter</p>
+          <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="refresh_calendar"><button class="btn ghost">Opdater nu</button></form>
+        </div>
+        <?php if (!$cal['events']): ?>
+          <div class="empty"><p>Ingen aftaler de næste 30 dage.</p></div>
+        <?php else: ?>
+          <div class="agenda panel">
+            <?php $last = null; foreach ($cal['events'] as $ev): ?>
+              <?php $d = date('Y-m-d', $ev['start']); if ($d !== $last): $last = $d; ?><p class="day"><?= e(day_label($ev['start'])) ?></p><?php endif; ?>
+              <div class="ev c<?= $ev['color'] ?>"><time><?= e(event_time($ev)) ?></time><span><?= e($ev['title']) ?><small><?= e(trim($ev['location'] . ($ev['location'] && count(cal_sources()) > 1 ? ' · ' : '') . (count(cal_sources()) > 1 ? $ev['calendar'] : ''))) ?></small></span></div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
 
     <?php else: ?>
       <div class="empty"><p>Siden findes ikke.</p><a href="./" class="btn">Til oversigten</a></div>

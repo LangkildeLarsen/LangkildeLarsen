@@ -1,5 +1,6 @@
 Options -Indexes
 DirectoryIndex index.php
+AddType application/manifest+json .webmanifest
 RedirectMatch 404 ^/(inc|data|\.git|\.github)(/|$)
 <FilesMatch "\.(md|json|yml|yaml|lock)$">
   Require all denied
