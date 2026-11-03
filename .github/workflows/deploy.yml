@@ -25,6 +25,7 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
           SFTP_PATH: ${{ secrets.SFTP_PATH }}
         run: |
+          if [ -z "$SFTP_PATH" ]; then echo "SFTP_PATH mangler – deploy springes over."; exit 1; fi
           lftp -u "$SFTP_USER","$SFTP_PASSWORD" "sftp://$SFTP_HOST" -e "
             set sftp:auto-confirm yes;
             set net:max-retries 3;
