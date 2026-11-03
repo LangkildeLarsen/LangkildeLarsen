@@ -76,7 +76,7 @@ function default_profile(): array
             ['value' => '20.000', 'label' => 'pakker sendt om året'],
         ],
         'projects' => [
-            ['title' => 'Efuture', 'url' => 'https://dribbble.com/shots/25467502-Efuture', 'image' => '', 'show' => true],
+            ['title' => 'EFUTURE', 'url' => 'https://dribbble.com/shots/25467502-Efuture', 'image' => '', 'show' => true],
             ['title' => 'BilligParfume', 'url' => 'https://dribbble.com/shots/24280992-BilligParfume', 'image' => '', 'show' => true],
             ['title' => 'Sikkerhedsgiganten.dk', 'url' => 'https://dribbble.com/shots/23587648-Sikkerhedsgiganten-dk', 'image' => '', 'show' => true],
             ['title' => 'Barkworthy Dog Treats', 'url' => 'https://dribbble.com/shots/23213887-Barkworthy-Dog-Treats', 'image' => '', 'show' => true],
@@ -154,6 +154,20 @@ function get_profile(): array
         }
     }
     unset($pr);
+    $fix = fn($v) => is_string($v) ? preg_replace('/\bEfuture\b/iu', 'EFUTURE', $v) : $v;
+    foreach (['title', 'about', 'now'] as $k) {
+        $p[$k] = $fix($p[$k]);
+    }
+    foreach (['projects', 'experience'] as $list) {
+        foreach ($p[$list] as &$row) {
+            foreach ($row as $k => $v) {
+                if ($k !== 'url' && $k !== 'image' && $k !== 'logo') {
+                    $row[$k] = $fix($v);
+                }
+            }
+        }
+        unset($row);
+    }
     return $p;
 }
 

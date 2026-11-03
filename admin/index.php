@@ -116,6 +116,33 @@ function default_categories(): array
     return ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser'];
 }
 
+function greeting(): string
+{
+    $h = (int)date('G');
+    return $h < 5 ? 'God nat' : ($h < 10 ? 'Godmorgen' : ($h < 12 ? 'God formiddag' : ($h < 18 ? 'God eftermiddag' : 'Godaften')));
+}
+
+function icon(string $name): string
+{
+    $paths = [
+        'home' => '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+        'bulb' => '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+        'wallet' => '<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.2"/>',
+        'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+        'grid' => '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+        'gear' => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+        'external' => '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+        'logout' => '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H4"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    ];
+    return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? '') . '</svg>';
+}
+
+$ui = load_json('ui');
+$bgUrl = !empty($ui['bg']) ? '../uploads/' . $ui['bg'] : '../assets/brand/dashboard-bg.jpg';
+
 $action = $_POST['action'] ?? '';
 
 if ($action === 'setup' && $needsSetup) {
@@ -173,6 +200,7 @@ if (!is_logged_in()) {
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
 <body class="auth">
+<div class="bg" style="background-image: url('<?= e($bgUrl) ?>')" aria-hidden="true"></div>
 <form method="post" class="auth-box">
   <?= csrf_field() ?>
   <h1><?= $needsSetup ? 'Opret adgangskode' : 'Log ind' ?></h1>
@@ -296,6 +324,30 @@ if ($action) {
         $res = cal_events(30, true);
         flash($res['errors'] ? 'Gemt, men disse kunne ikke hentes: ' . implode(', ', $res['errors']) . '. Tjek linket.' : 'Kalendere gemt.');
         redirect('index.php?view=settings');
+    }
+
+    if ($action === 'save_background') {
+        $ui = load_json('ui');
+        if (!empty($_POST['reset'])) {
+            if (!empty($ui['bg'])) {
+                @unlink(UPLOAD_DIR . '/' . $ui['bg']);
+            }
+            $ui['bg'] = '';
+            flash('Standardbaggrunden er sat igen.');
+        } else {
+            $saved = save_upload($_FILES['bg'] ?? [], 'backgrounds', 'bg-' . bin2hex(random_bytes(3)));
+            if ($saved) {
+                if (!empty($ui['bg'])) {
+                    @unlink(UPLOAD_DIR . '/' . $ui['bg']);
+                }
+                $ui['bg'] = $saved;
+                flash('Ny baggrund gemt.');
+            } else {
+                flash('Vælg et billede (JPG, PNG eller WebP).');
+            }
+        }
+        save_json('ui', $ui);
+        redirect('index.php?view=settings#baggrund');
     }
 
     if ($action === 'api_token') {
@@ -586,46 +638,43 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
 <body>
+<div class="bg" style="background-image: url('<?= e($bgUrl) ?>')" aria-hidden="true"></div>
 <input type="checkbox" id="nav-toggle" class="nav-toggle">
 <div class="layout">
   <aside class="sidebar">
     <div class="brand">
-      <span class="avatar"><?php if ($profile['photo']): ?><img src="../uploads/<?= e($profile['photo']) ?>" alt=""><?php else: ?><?= e(mb_substr($profile['name'], 0, 1)) ?><?php endif; ?></span>
-      <div><strong><?= e(explode(' ', $profile['name'])[0]) ?></strong><small>Admin</small></div>
+      <span class="avatar"><img src="../assets/brand/avatar-round.png" alt=""></span>
+      <div><strong><?= e(explode(' ', $profile['name'])[0]) ?></strong><small>Dashboard</small></div>
     </div>
 
-    <a href="./?view=edit" class="btn block">+ Ny lifehack</a>
+    <a href="./?view=edit" class="btn block"><?= icon('plus') ?> Ny lifehack</a>
 
     <nav>
-      <a href="./" class="<?= $view === 'dashboard' ? 'active' : '' ?>">Oversigt</a>
-      <a href="./?view=hacks" class="<?= $view === 'hacks' && $cat === '' ? 'active' : '' ?>">Alle lifehacks <span class="count"><?= $total ?></span></a>
-    </nav>
-
-    <p class="nav-label">Værktøjer</p>
-    <nav>
-      <a href="./?view=budget" class="<?= $view === 'budget' ? 'active' : '' ?>">Budget <span class="count"><?= $sum['income'] > 0 ? e(number_format($sum['left'], 0, ',', '.')) : '' ?></span></a>
-      <a href="./?view=calendar" class="<?= $view === 'calendar' ? 'active' : '' ?>">Kalender</a>
+      <a href="./" class="<?= $view === 'dashboard' ? 'active' : '' ?>"><?= icon('home') ?><span>Oversigt</span></a>
+      <a href="./?view=hacks" class="<?= $view === 'hacks' && $cat === '' ? 'active' : '' ?>"><?= icon('bulb') ?><span>Lifehacks</span><span class="count"><?= $total ?></span></a>
+      <a href="./?view=budget" class="<?= $view === 'budget' ? 'active' : '' ?>"><?= icon('wallet') ?><span>Budget</span></a>
+      <a href="./?view=calendar" class="<?= $view === 'calendar' ? 'active' : '' ?>"><?= icon('calendar') ?><span>Kalender</span></a>
     </nav>
 
     <p class="nav-label">Kategorier</p>
-    <nav>
+    <nav class="cats">
       <?php foreach ($categories as $c): ?>
-        <a href="./?view=hacks&cat=<?= urlencode($c) ?>" class="<?= $view === 'hacks' && $cat === $c ? 'active' : '' ?>"><?= e($c) ?> <span class="count"><?= $counts[$c] ?? 0 ?></span></a>
+        <a href="./?view=hacks&cat=<?= urlencode($c) ?>" class="<?= $view === 'hacks' && $cat === $c ? 'active' : '' ?>"><span class="dot"></span><span><?= e($c) ?></span><span class="count"><?= $counts[$c] ?? 0 ?></span></a>
       <?php endforeach; ?>
     </nav>
 
     <p class="nav-label">Side</p>
     <nav>
-      <a href="./?view=profile" class="<?= $view === 'profile' ? 'active' : '' ?>">Profil & CV</a>
-      <a href="./?view=projects" class="<?= $view === 'projects' ? 'active' : '' ?>">Projekter</a>
-      <a href="./?view=settings" class="<?= $view === 'settings' ? 'active' : '' ?>">Indstillinger</a>
-      <a href="../" target="_blank">Se siden ↗</a>
+      <a href="./?view=profile" class="<?= $view === 'profile' ? 'active' : '' ?>"><?= icon('user') ?><span>Profil & CV</span></a>
+      <a href="./?view=projects" class="<?= $view === 'projects' ? 'active' : '' ?>"><?= icon('grid') ?><span>Projekter</span></a>
+      <a href="./?view=settings" class="<?= $view === 'settings' ? 'active' : '' ?>"><?= icon('gear') ?><span>Indstillinger</span></a>
+      <a href="../" target="_blank"><?= icon('external') ?><span>Se siden</span></a>
     </nav>
 
     <form method="post" class="logout">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="logout">
-      <button class="link">Log ud</button>
+      <button class="link"><?= icon('logout') ?> Log ud</button>
     </form>
   </aside>
   <label for="nav-toggle" class="scrim"></label>
@@ -633,58 +682,108 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   <main class="content">
     <header class="topbar">
       <label for="nav-toggle" class="burger" aria-label="Menu"><span></span></label>
-      <h1><?= e($pageTitle) ?></h1>
+      <div class="titles">
+        <?php if ($view === 'dashboard'): ?>
+          <p class="greet"><?= e(greeting()) ?>, <?= e(explode(' ', $profile['name'])[0]) ?></p>
+          <h1><?= e(ucfirst(dk_weekday(time())) . ' ' . dk_date(date('c'))) ?></h1>
+        <?php else: ?>
+          <h1><?= e($pageTitle) ?></h1>
+        <?php endif; ?>
+      </div>
       <form class="search" action="./">
         <input type="hidden" name="view" value="hacks">
         <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>"><?php endif; ?>
-        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Søg i lifehacks…">
+        <?= icon('search') ?>
+        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Søg i lifehacks…" aria-label="Søg i lifehacks">
       </form>
     </header>
 
     <?php if ($flash): ?><p class="alert"><?= e($flash) ?></p><?php endif; ?>
 
     <?php if ($view === 'dashboard'): ?>
-      <?php $pay = upcoming_payments($budget, 7); ?>
-      <div class="stats">
-        <a class="stat" href="./?view=hacks"><span><?= $total ?></span>lifehacks</a>
+      <?php
+        $pay = upcoming_payments($budget, 7);
+        $items = [];
+        foreach ($cal['events'] as $ev) $items[] = ['ts' => $ev['start'], 'kind' => 'ev', 'ev' => $ev];
+        foreach ($pay as $pp) $items[] = ['ts' => $pp['ts'], 'kind' => 'pay', 'pay' => $pp];
+        usort($items, fn($a, $b) => $a['ts'] <=> $b['ts']);
+        $catBars = array_slice($sum['by_cat'], 0, 7, true);
+        $catMax = max($catBars ?: [1]);
+        $topCat = $catBars ? array_key_first($catBars) : null;
+        $recent = $hacks;
+        uasort($recent, fn($a, $b) => $b['updated'] <=> $a['updated']);
+      ?>
+      <div class="dash">
+        <section class="w w-budget">
+          <?php if ($sum['income'] > 0): ?>
+            <div class="w-head"><h2>Budget</h2><a href="./?view=budget" class="pill">Se budget</a></div>
+            <div class="budget-split">
+              <div>
+                <p class="w-label">Tilbage pr. måned</p>
+                <p class="big<?= $sum['left'] < 0 ? ' neg' : '' ?>"><?= e(number_format($sum['left'], 0, ',', '.')) ?> <small>kr.</small></p>
+                <?php $usedPct = $sum['income'] > 0 ? min(100, $sum['expenses'] / $sum['income'] * 100) : 0; ?>
+                <div class="meter"><i style="width: <?= round($usedPct, 1) ?>%"></i></div>
+                <p class="w-sub"><?= e(number_format($sum['expenses'], 0, ',', '.')) ?> af <?= e(number_format($sum['income'], 0, ',', '.')) ?> kr. er fordelt</p>
+              </div>
+              <div class="bars" role="img" aria-label="Udgifter pr. kategori">
+                <?php foreach ($catBars as $c => $v): ?>
+                  <div class="col<?= $c === $topCat ? ' top' : '' ?>" title="<?= e($c . ': ' . kr($v)) ?>">
+                    <span class="b" style="height: <?= max(6, round($v / $catMax * 100)) ?>%"></span>
+                    <small><?= e(mb_strimwidth($c, 0, 9, '…')) ?></small>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php else: ?>
+            <div class="w-head"><h2>Budget</h2></div>
+            <p class="w-sub">Læg dine faste indtægter og udgifter ind, så får du overblik her.</p>
+            <a href="./?view=budget" class="btn">Opsæt budget</a>
+          <?php endif; ?>
+        </section>
+
+        <section class="w w-agenda">
+          <div class="w-head"><h2>Kommende</h2><a href="./?view=calendar" class="pill">Kalender</a></div>
+          <?php if ($items): ?>
+            <div class="agenda">
+              <?php $last = null; foreach (array_slice($items, 0, 6) as $it): ?>
+                <?php $d = date('Y-m-d', $it['ts']); if ($d !== $last): $last = $d; ?><p class="day"><?= e(day_label($it['ts'])) ?></p><?php endif; ?>
+                <?php if ($it['kind'] === 'ev'): ?>
+                  <div class="ev c<?= $it['ev']['color'] ?>"><time><?= e(event_time($it['ev'])) ?></time><span><?= e($it['ev']['title']) ?></span></div>
+                <?php else: ?>
+                  <div class="ev pay"><time><?= e(kr($it['pay']['amount'])) ?></time><span><?= e($it['pay']['name']) ?></span></div>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+          <?php elseif (!$hasCal): ?>
+            <p class="w-sub">Forbind din iPhone-kalender for at se dine aftaler her.</p>
+            <a href="./?view=settings#kalender" class="btn ghost">Forbind kalender</a>
+          <?php else: ?>
+            <p class="w-sub">Ingen aftaler de næste 7 dage.</p>
+          <?php endif; ?>
+        </section>
+
         <?php if ($sum['income'] > 0): ?>
-          <a class="stat" href="./?view=budget"><span class="<?= $sum['left'] < 0 ? 'neg' : '' ?>"><?= e(number_format($sum['left'], 0, ',', '.')) ?></span>kr. tilbage pr. md.</a>
-        <?php else: ?>
-          <a class="stat" href="./?view=budget"><span>–</span>opsæt budget</a>
+          <?php foreach (['need' => 50, 'want' => 30, 'saving' => 20] as $t => $goal): ?>
+            <?php $pct = $sum['income'] > 0 ? round($sum['by_type'][$t] / $sum['income'] * 100) : 0; ?>
+            <a class="w w-ring" href="./?view=budget">
+              <span class="tag-sm">Mål <?= $goal ?> %</span>
+              <span class="ring-wrap"><span class="ring<?= $t === 'saving' && $pct >= $goal ? ' good' : ($t !== 'saving' && $pct > $goal ? ' over' : '') ?>" style="--p: <?= min(100, $pct) ?>"></span><b><?= $pct ?>%</b></span>
+              <strong><?= e(BUDGET_TYPES[$t]) ?></strong>
+              <small><?= e(kr($sum['by_type'][$t])) ?> pr. md.</small>
+            </a>
+          <?php endforeach; ?>
         <?php endif; ?>
-        <a class="stat" href="./?view=calendar"><span><?= count($cal['events']) ?></span>aftaler næste 7 dage</a>
+        <a class="w w-ring w-add" href="./?view=edit">
+          <span class="plus"><?= icon('plus') ?></span>
+          <strong>Ny lifehack</strong>
+          <small>Eller sig "Hey Siri, ny lifehack"</small>
+        </a>
       </div>
 
-      <?php if ($cal['events'] || $pay): ?>
-        <h2 class="section-title">Kommende</h2>
-        <div class="agenda panel compact">
-          <?php $last = null; $items = []; ?>
-          <?php foreach ($cal['events'] as $ev) $items[] = ['ts' => $ev['start'], 'kind' => 'ev', 'ev' => $ev]; ?>
-          <?php foreach ($pay as $pp) $items[] = ['ts' => $pp['ts'], 'kind' => 'pay', 'pay' => $pp]; ?>
-          <?php usort($items, fn($a, $b) => $a['ts'] <=> $b['ts']); ?>
-          <?php foreach (array_slice($items, 0, 8) as $it): ?>
-            <?php $d = date('Y-m-d', $it['ts']); if ($d !== $last): $last = $d; ?><p class="day"><?= e(day_label($it['ts'])) ?></p><?php endif; ?>
-            <?php if ($it['kind'] === 'ev'): ?>
-              <div class="ev c<?= $it['ev']['color'] ?>"><time><?= e(event_time($it['ev'])) ?></time><span><?= e($it['ev']['title']) ?><?php if ($it['ev']['location']): ?><small><?= e($it['ev']['location']) ?></small><?php endif; ?></span></div>
-            <?php else: ?>
-              <div class="ev pay"><time>Betaling</time><span><?= e($it['pay']['name']) ?><small><?= e(kr($it['pay']['amount'])) ?></small></span></div>
-            <?php endif; ?>
-          <?php endforeach; ?>
-          <a href="./?view=calendar" class="more">Se kalender →</a>
-        </div>
-      <?php elseif (!$hasCal): ?>
-        <div class="hint panel compact"><p>Forbind din iPhone-kalender for at se dine aftaler her.</p><a href="./?view=settings#kalender" class="btn ghost">Forbind kalender</a></div>
-      <?php endif; ?>
-
-      <?php if ($pinned): ?>
-        <h2 class="section-title">Fastgjort</h2>
-        <div class="grid"><?php foreach (array_slice($pinned, 0, 6) as $h) echo hack_card($h, $back); ?></div>
-      <?php endif; ?>
-
-      <h2 class="section-title">Senest opdateret</h2>
-      <?php $recent = $hacks; uasort($recent, fn($a, $b) => $b['updated'] <=> $a['updated']); ?>
-      <?php if ($recent): ?>
-        <div class="grid"><?php foreach (array_slice($recent, 0, 6) as $h) echo hack_card($h, $back); ?></div>
+      <div class="w-head out"><h2>Lifehacks</h2><a href="./?view=hacks" class="pill">Se alle <?= $total ?></a></div>
+      <?php $show = $pinned ?: array_slice($recent, 0, 6); ?>
+      <?php if ($show): ?>
+        <div class="grid"><?php foreach (array_slice($pinned ? array_merge($pinned, array_diff_key($recent, $pinned)) : $recent, 0, 6) as $h) echo hack_card($h, $back); ?></div>
       <?php else: ?>
         <div class="empty">
           <p>Du har ingen lifehacks endnu.</p>
@@ -850,6 +949,20 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           </div>
         <?php endforeach; ?>
         <div class="actions"><button class="btn">Gem kalendere</button></div>
+      </form>
+
+      <form method="post" enctype="multipart/form-data" class="panel form" id="baggrund">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_background">
+        <h2 class="section-title">Baggrund i dashboardet</h2>
+        <div class="bg-row">
+          <span class="bg-prev" style="background-image: url('<?= e($bgUrl) ?>')"></span>
+          <label>Upload dit eget foto <small>(fx et rum, en udsigt eller et projekt)</small><input type="file" name="bg" accept="image/jpeg,image/png,image/webp"></label>
+        </div>
+        <div class="actions">
+          <button class="btn">Brug billedet</button>
+          <?php if (!empty($ui['bg'])): ?><button class="btn ghost" name="reset" value="1">Tilbage til standard</button><?php endif; ?>
+        </div>
       </form>
 
       <?php $api = load_json('api'); $newToken = $_SESSION['new_token'] ?? null; unset($_SESSION['new_token']); ?>
