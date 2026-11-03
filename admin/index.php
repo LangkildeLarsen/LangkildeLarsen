@@ -777,7 +777,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <label>LinkedIn-URL<input type="url" name="linkedin" value="<?= e($profile['linkedin']) ?>" placeholder="https://www.linkedin.com/in/…"></label>
           <label>Dribbble-URL<input type="url" name="dribbble" value="<?= e($profile['dribbble']) ?>" placeholder="https://dribbble.com/…"></label>
         </div>
-        <label>Status øverst på forsiden <small>(kort, fx "Åben for nye projekter" – tom skjuler den)</small><input name="status" value="<?= e($profile['status']) ?>"></label>
         <input type="hidden" name="now" value="<?= e($profile['now']) ?>">
         <label>Om mig<textarea name="about" rows="4"><?= e($profile['about']) ?></textarea></label>
         <label>Kompetencer <small>(adskilt med komma)</small><input name="skills" value="<?= e(implode(', ', $profile['skills'])) ?>"></label>

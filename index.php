@@ -73,7 +73,6 @@ function exp_item(array $x): string
 <main class="page" id="top">
   <section class="hero">
     <div class="hero-text">
-      <?php if ($p['status']): ?><p class="status"><span><?= e($p['status']) ?></span></p><?php endif; ?>
       <h1 aria-label="<?= e($p['name']) ?>"><?php foreach ($words as $i => $w): ?><span class="w<?= $i ? ' dim' : '' ?>" style="--i: <?= $i ?>" aria-hidden="true"><?= e($w) ?></span> <?php endforeach; ?></h1>
       <p class="title"><?= e($p['title']) ?></p>
       <div class="links">
