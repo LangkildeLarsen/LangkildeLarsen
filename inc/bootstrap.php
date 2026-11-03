@@ -54,6 +54,7 @@ function default_profile(): array
         'dribbble' => 'https://dribbble.com/longkilos',
         'photo' => '',
         'about' => "Jeg er grafisk designer med speciale i UI/UX og har en iværksætters tilgang til design. I fem år byggede og drev jeg min egen webshop, Home Shoppen, som nåede en samlet omsætning på 15 mio. kr. – så jeg ved, hvad der skal til for at gøre en idé til en forretning.\n\nJeg er uddannet multimediedesigner og har arbejdet i Photoshop i over ti år. Jeg ser hvert projekt som en chance for at lære noget nyt og går til opgaverne både strategisk og kreativt.",
+        'status' => 'Åben for nye projekter',
         'now' => 'Grafisk webdesigner hos EFUTURE i Esbjerg, hvor jeg arbejder med webshoppen, design, indhold og markedsføring af elcykler.',
         'experience' => [
             ['role' => 'Grafisk webdesigner', 'company' => 'EFUTURE', 'url' => 'https://efuture.dk', 'period' => 'dec. 2024 – nu', 'text' => 'Webshop, grafisk design, produktindhold og markedsføring. WordPress og e-handel.'],

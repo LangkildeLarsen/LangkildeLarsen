@@ -401,7 +401,7 @@ if ($action) {
 
     if ($action === 'save_profile') {
         $p = get_profile();
-        foreach (['name', 'title', 'location', 'email', 'linkedin', 'dribbble', 'about', 'now'] as $f) {
+        foreach (['name', 'title', 'location', 'email', 'linkedin', 'dribbble', 'about', 'now', 'status'] as $f) {
             $p[$f] = trim((string)($_POST[$f] ?? ''));
         }
         $p['skills'] = array_values(array_filter(array_map('trim', explode(',', (string)($_POST['skills'] ?? '')))));
@@ -777,7 +777,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <label>LinkedIn-URL<input type="url" name="linkedin" value="<?= e($profile['linkedin']) ?>" placeholder="https://www.linkedin.com/in/…"></label>
           <label>Dribbble-URL<input type="url" name="dribbble" value="<?= e($profile['dribbble']) ?>" placeholder="https://dribbble.com/…"></label>
         </div>
-        <label>Lige nu<textarea name="now" rows="3"><?= e($profile['now']) ?></textarea></label>
+        <label>Status øverst på forsiden <small>(kort, fx "Åben for nye projekter" – tom skjuler den)</small><input name="status" value="<?= e($profile['status']) ?>"></label>
+        <input type="hidden" name="now" value="<?= e($profile['now']) ?>">
         <label>Om mig<textarea name="about" rows="4"><?= e($profile['about']) ?></textarea></label>
         <label>Kompetencer <small>(adskilt med komma)</small><input name="skills" value="<?= e(implode(', ', $profile['skills'])) ?>"></label>
         <label>Sprog <small>(adskilt med komma)</small><input name="languages" value="<?= e(implode(', ', $profile['languages'])) ?>"></label>

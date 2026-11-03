@@ -7,6 +7,7 @@ $wide = (3 - (count($shown) + 3) % 3) % 3;
 $wideAt = $wide ? array_slice([5, count($shown) - 1], 0, $wide) : [];
 $photo = $p['photo'] ? 'uploads/' . $p['photo'] : 'assets/brand/avatar-round.png';
 $first = explode(' ', $p['name'])[0];
+$words = preg_split('/\s+/', trim($p['name']));
 $rest = trim(mb_substr($p['name'], mb_strlen($first)));
 $logos = [];
 foreach (array_merge($p['experience'], $p['education']) as $x) {
@@ -51,10 +52,13 @@ function exp_item(array $x): string
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=<?= filemtime(__DIR__ . '/assets/style.css') ?>">
+<script>document.documentElement.classList.add('js')</script>
+<script src="assets/site.js?v=<?= filemtime(__DIR__ . '/assets/site.js') ?>" defer></script>
 </head>
 <body>
 <div class="orb" aria-hidden="true"></div>
+<div class="cursor-light" aria-hidden="true"></div>
 
 <header class="nav">
   <a href="#top" class="nav-brand"><img src="assets/brand/avatar-round.png" alt=""><span><?= e($first) ?></span></a>
@@ -69,8 +73,8 @@ function exp_item(array $x): string
 <main class="page" id="top">
   <section class="hero">
     <div class="hero-text">
-      <p class="now-line"><span class="pulse" aria-hidden="true"></span><?= e($p['now']) ?></p>
-      <h1><span><?= e($first) ?></span> <span class="dim"><?= e($rest) ?></span></h1>
+      <?php if ($p['status']): ?><p class="status"><span><?= e($p['status']) ?></span></p><?php endif; ?>
+      <h1 aria-label="<?= e($p['name']) ?>"><?php foreach ($words as $i => $w): ?><span class="w<?= $i ? ' dim' : '' ?>" style="--i: <?= $i ?>" aria-hidden="true"><?= e($w) ?></span> <?php endforeach; ?></h1>
       <p class="title"><?= e($p['title']) ?></p>
       <div class="links">
         <a class="btn" href="mailto:<?= e($p['email']) ?>">Skriv til mig</a>
@@ -79,7 +83,9 @@ function exp_item(array $x): string
       </div>
     </div>
     <div class="hero-photo">
-      <div class="frame glass"><img src="<?= e($photo) ?>" alt="<?= e($p['name']) ?>"></div>
+      <div class="tilt">
+        <div class="frame glass"><img src="<?= e($photo) ?>" alt="<?= e($p['name']) ?>"><span class="glare" aria-hidden="true"></span></div>
+      </div>
       <?php if (!empty($p['highlights'][1])): ?><div class="chip glass c1"><strong><?= e($p['highlights'][1]['value']) ?></strong><span><?= e($p['highlights'][1]['label']) ?></span></div><?php endif; ?>
       <div class="chip glass c2"><span><?= e($p['location']) ?></span></div>
     </div>
@@ -101,7 +107,7 @@ function exp_item(array $x): string
   <?php if ($p['highlights']): ?>
   <section class="numbers">
     <?php foreach ($p['highlights'] as $h): ?>
-      <div class="num glass"><strong><?= e($h['value']) ?></strong><span><?= e($h['label']) ?></span></div>
+      <div class="num glass reveal"><strong data-count="<?= e($h['value']) ?>"><?= e($h['value']) ?></strong><span><?= e($h['label']) ?></span></div>
     <?php endforeach; ?>
   </section>
   <?php endif; ?>
@@ -114,7 +120,7 @@ function exp_item(array $x): string
     </div>
     <div class="bento">
       <?php foreach ($shown as $i => $x): ?>
-        <a class="shot reveal<?= $i === 0 ? ' big' : (in_array($i, $wideAt, true) ? ' wide' : '') ?>" href="<?= e($x['url']) ?>" target="_blank" rel="noopener">
+        <a class="shot reveal<?= $i === 0 ? ' big' : (in_array($i, $wideAt, true) ? ' wide' : '') ?>" style="--d: <?= $i % 3 ?>" href="<?= e($x['url']) ?>" target="_blank" rel="noopener">
           <img src="<?= e(img_src($x['image'])) ?>" alt="<?= e($x['title']) ?>" loading="<?= $i < 3 ? 'eager' : 'lazy' ?>">
           <span class="label"><?= e($x['title']) ?> <i>↗</i></span>
         </a>
