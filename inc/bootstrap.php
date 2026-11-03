@@ -51,21 +51,40 @@ function default_profile(): array
         'location' => 'Esbjerg, Danmark',
         'email' => 'emil@langkildelarsen.dk',
         'linkedin' => 'https://www.linkedin.com/in/langkildelarsen/',
+        'dribbble' => 'https://dribbble.com/longkilos',
         'photo' => '',
         'about' => "Jeg er grafisk designer med speciale i UI/UX og har en iværksætters tilgang til design. I fem år byggede og drev jeg min egen webshop, Home Shoppen, som nåede en samlet omsætning på 15 mio. kr. – så jeg ved, hvad der skal til for at gøre en idé til en forretning.\n\nJeg er uddannet multimediedesigner og har arbejdet i Photoshop i over ti år. Jeg ser hvert projekt som en chance for at lære noget nyt og går til opgaverne både strategisk og kreativt.",
         'now' => 'Grafisk webdesigner hos EFUTURE i Esbjerg, hvor jeg arbejder med webshoppen, design, indhold og markedsføring af elcykler.',
         'experience' => [
-            ['role' => 'Grafisk webdesigner', 'company' => 'EFUTURE', 'period' => 'dec. 2024 – nu', 'text' => 'Webshop, grafisk design, produktindhold og markedsføring. WordPress og e-handel.'],
-            ['role' => 'Grafisk webdesigner, praktik', 'company' => 'Sikkerhedsgiganten', 'period' => 'jan. 2024 – mar. 2024', 'text' => 'Udvikling og lancering af en komplet ny Shopify Plus-hjemmeside.'],
-            ['role' => 'Visuel identitet, projekt', 'company' => 'Esbjerg Museum', 'period' => 'sep. 2023 – nov. 2023', 'text' => 'Komplet ny visuel identitet og branding. Projekt på Erhvervsakademi SydVest.'],
-            ['role' => 'E-commerce-ansvarlig', 'company' => 'Vores Verden', 'period' => 'sep. 2020 – maj 2022', 'text' => 'Etablering af webshop, content og procesflow samt kundeservice og butiksdrift.'],
-            ['role' => 'Ejer', 'company' => 'Home Shoppen', 'period' => 'nov. 2015 – jul. 2020', 'text' => "Etablerede webshoppen sammen med en partner og stod for branding, markedsføring, drift og professionalisering. Resultatet blev fordoblet tre år i træk, og shoppen aflønnede to fuldtidsmedarbejdere.\nSamlet omsætning på 15 mio. kr. over fire år og ca. 20.000 pakker sendt om året."],
-            ['role' => 'Webdesigner, freelance', 'company' => 'AirNet', 'period' => 'jan. 2016 – mar. 2020', 'text' => 'Komplet ny visuel identitet og branding samt udvikling af hjemmeside.'],
+            ['role' => 'Grafisk webdesigner', 'company' => 'EFUTURE', 'url' => 'https://efuture.dk', 'period' => 'dec. 2024 – nu', 'text' => 'Webshop, grafisk design, produktindhold og markedsføring. WordPress og e-handel.'],
+            ['role' => 'Grafisk webdesigner, praktik', 'company' => 'Sikkerhedsgiganten', 'url' => 'https://www.sikkerhedsgiganten.dk', 'period' => 'jan. 2024 – mar. 2024', 'text' => 'Udvikling og lancering af en komplet ny Shopify Plus-hjemmeside.'],
+            ['role' => 'Visuel identitet, projekt', 'company' => 'Esbjerg Museum', 'url' => 'https://esbjergmuseum.dk', 'period' => 'sep. 2023 – nov. 2023', 'text' => 'Komplet ny visuel identitet og branding. Projekt på Erhvervsakademi SydVest.'],
+            ['role' => 'E-commerce-ansvarlig', 'company' => 'Vores Verden', 'url' => 'https://www.voresverden.dk', 'period' => 'sep. 2020 – maj 2022', 'text' => 'Etablering af webshop, content og procesflow samt kundeservice og butiksdrift.'],
+            ['role' => 'Ejer', 'company' => 'Home Shoppen', 'url' => 'https://www.home-shoppen.dk', 'period' => 'nov. 2015 – jul. 2020', 'text' => "Etablerede webshoppen sammen med en partner og stod for branding, markedsføring, drift og professionalisering. Resultatet blev fordoblet tre år i træk, og shoppen aflønnede to fuldtidsmedarbejdere.\nSamlet omsætning på 15 mio. kr. over fire år og ca. 20.000 pakker sendt om året."],
+            ['role' => 'Webdesigner, freelance', 'company' => 'AirNet', 'url' => 'https://www.airnet.dk', 'period' => 'jan. 2016 – mar. 2020', 'text' => 'Komplet ny visuel identitet og branding samt udvikling af hjemmeside.'],
             ['role' => 'Ejer', 'company' => 'Shopathome', 'period' => 'sep. 2016 – jun. 2019', 'text' => 'Visuel identitet, branding og udvikling af webshop.'],
-            ['role' => 'Ejer', 'company' => 'blavand.dk', 'period' => 'jul. 2015 – jul. 2017', 'text' => 'Webcam, nyheder og information om Blåvand, finansieret via Google AdSense. Ca. 800.000 sidevisninger om året.'],
+            ['role' => 'Ejer', 'company' => 'blavand.dk', 'url' => 'https://www.blavand.dk', 'period' => 'jul. 2015 – jul. 2017', 'text' => 'Webcam, nyheder og information om Blåvand, finansieret via Google AdSense. Ca. 800.000 sidevisninger om året.'],
             ['role' => 'Marketing', 'company' => 'Inside Design House', 'period' => 'okt. 2015 – mar. 2016', 'text' => 'Sociale medier, grafisk design og markedsføring.'],
             ['role' => 'Studentermedhjælper', 'company' => 'Lammhults Biblioteksdesign', 'period' => '2012 – 2015', 'text' => 'Etablerede YouTube-kanalen LibraryPeople og producerede 100+ videoer, samt grafisk design og SEO.'],
-            ['role' => 'Salgsmedarbejder', 'company' => 'Vores Verden', 'period' => '2011 – mar. 2016', 'text' => 'Kasseekspedition, opfyldning og prismærkning.'],
+            ['role' => 'Salgsmedarbejder', 'company' => 'Vores Verden', 'url' => 'https://www.voresverden.dk', 'period' => '2011 – mar. 2016', 'text' => 'Kasseekspedition, opfyldning og prismærkning.'],
+        ],
+        'projects' => [
+            ['title' => 'Efuture', 'url' => 'https://dribbble.com/shots/25467502-Efuture', 'image' => '', 'show' => true],
+            ['title' => 'BilligParfume', 'url' => 'https://dribbble.com/shots/24280992-BilligParfume', 'image' => '', 'show' => true],
+            ['title' => 'Sikkerhedsgiganten.dk', 'url' => 'https://dribbble.com/shots/23587648-Sikkerhedsgiganten-dk', 'image' => '', 'show' => true],
+            ['title' => 'Barkworthy Dog Treats', 'url' => 'https://dribbble.com/shots/23213887-Barkworthy-Dog-Treats', 'image' => '', 'show' => true],
+            ['title' => 'Magazine Cover', 'url' => 'https://dribbble.com/shots/23195357-Magazine-Cover', 'image' => '', 'show' => true],
+            ['title' => 'Esbjerg Museum', 'url' => 'https://dribbble.com/shots/23156150-Esbjerg-Museum', 'image' => '', 'show' => true],
+            ['title' => 'Kanten Esbjerg', 'url' => 'https://dribbble.com/shots/21770978-Kanten-Esbjerg', 'image' => '', 'show' => true],
+            ['title' => 'Radiant Festival', 'url' => 'https://dribbble.com/shots/21305984-Radiant-Festival', 'image' => '', 'show' => true],
+            ['title' => 'Business Cards', 'url' => 'https://dribbble.com/shots/21255239-Business-Cards', 'image' => '', 'show' => true],
+            ['title' => 'Lammhults', 'url' => 'https://dribbble.com/shots/21255161-Lammhults', 'image' => '', 'show' => true],
+            ['title' => 'Home Shoppen', 'url' => 'https://dribbble.com/shots/21255035-Home-Shoppen', 'image' => '', 'show' => true],
+            ['title' => 'Blåvand', 'url' => 'https://dribbble.com/shots/21254985-Bl-vand', 'image' => '', 'show' => true],
+            ['title' => 'AirNet', 'url' => 'https://dribbble.com/shots/21254910-AirNet', 'image' => '', 'show' => true],
+            ['title' => 'Shopathome', 'url' => 'https://dribbble.com/shots/21254826-Shopathome', 'image' => '', 'show' => true],
+            ['title' => 'Longhorn BBQ DM', 'url' => 'https://dribbble.com/shots/21254806-Longhorn-BBQ-DM', 'image' => '', 'show' => true],
+            ['title' => 'Stop Childlabour Redesign', 'url' => 'https://dribbble.com/shots/20812553-Stop-Childlabour-Redesign', 'image' => '', 'show' => true],
         ],
         'education' => [
             ['title' => 'Multimediedesigner', 'school' => 'Erhvervsakademi SydVest', 'period' => '2022 – 2024'],
@@ -79,7 +98,32 @@ function default_profile(): array
 
 function get_profile(): array
 {
-    return array_merge(default_profile(), load_json('profile'));
+    $def = default_profile();
+    $p = array_merge($def, load_json('profile'));
+    $urls = [];
+    foreach ($def['experience'] as $x) {
+        $urls[mb_strtolower($x['company'])] = $x['url'] ?? '';
+    }
+    foreach ($p['experience'] as &$x) {
+        $x += ['url' => $urls[mb_strtolower($x['company'])] ?? '', 'logo' => ''];
+    }
+    unset($x);
+    $logos = load_json('logos');
+    foreach ($p['experience'] as &$x) {
+        if ($x['logo'] === '' && $x['url'] !== '') {
+            $x['logo'] = $logos[preg_replace('/^www\./', '', strtolower((string)parse_url($x['url'], PHP_URL_HOST)))] ?? '';
+        }
+    }
+    unset($x);
+    $images = load_json('project-images');
+    foreach ($p['projects'] as &$pr) {
+        $pr += ['image' => '', 'show' => true];
+        if ($pr['image'] === '' && isset($images[$pr['url']])) {
+            $pr['image'] = $images[$pr['url']];
+        }
+    }
+    unset($pr);
+    return $p;
 }
 
 function is_logged_in(): bool

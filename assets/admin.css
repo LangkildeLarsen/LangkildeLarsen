@@ -678,3 +678,55 @@ code {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
+.exp-top { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: end; }
+
+.logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .92);
+  color: #111;
+  margin-bottom: 2px;
+}
+
+.logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+
+.project-edit { margin: 0; padding: 14px; display: grid; gap: 10px; border-radius: 18px; }
+
+.project-edit .thumb {
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, .3);
+  border: 1px solid var(--edge);
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.project-edit .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.project-edit input[type="file"] { font-size: 13px; }
+
+.actions.sticky {
+  position: sticky;
+  bottom: 14px;
+  padding: 12px;
+  border-radius: 999px;
+  width: fit-content;
+  background: rgba(20, 20, 22, .6);
+  border: 1px solid var(--edge);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+@media (max-width: 860px) {
+  .exp-top { grid-template-columns: 1fr; }
+}

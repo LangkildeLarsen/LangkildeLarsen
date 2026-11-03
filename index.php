@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/inc/bootstrap.php';
 $p = get_profile();
+$projects = array_values(array_filter($p['projects'], fn($x) => $x['show'] && $x['image'] !== ''));
 $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(explode(' ', $p['name']), 0, 2)));
 ?><!doctype html>
 <html lang="da">
@@ -35,6 +36,9 @@ $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(exp
         <?php if ($p['linkedin']): ?>
           <a class="btn ghost" href="<?= e($p['linkedin']) ?>" target="_blank" rel="noopener">LinkedIn</a>
         <?php endif; ?>
+        <?php if ($p['dribbble']): ?>
+          <a class="btn ghost" href="<?= e($p['dribbble']) ?>" target="_blank" rel="noopener">Dribbble</a>
+        <?php endif; ?>
       </div>
     </div>
   </header>
@@ -54,6 +58,24 @@ $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(exp
   </section>
   <?php endif; ?>
 
+  <?php if ($projects): ?>
+  <section class="glass work">
+    <div class="work-head">
+      <h2>Udvalgte projekter</h2>
+      <?php if ($p['dribbble']): ?><a href="<?= e($p['dribbble']) ?>" target="_blank" rel="noopener" class="quiet">Alle på Dribbble ↗</a><?php endif; ?>
+    </div>
+    <div class="shots">
+      <?php $shown = array_slice($projects, 0, 9); $odd = count($shown) % 2 === 1; ?>
+      <?php foreach ($shown as $i => $x): ?>
+        <a class="shot<?= $i === 0 && $odd ? ' lead-shot' : '' ?>" href="<?= e($x['url']) ?>" target="_blank" rel="noopener">
+          <img src="uploads/<?= e($x['image']) ?>" alt="<?= e($x['title']) ?>" loading="lazy">
+          <span><?= e($x['title']) ?></span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <?php if ($p['experience']): ?>
   <section class="glass">
     <h2>Erfaring</h2>
@@ -61,7 +83,8 @@ $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(exp
       <?php foreach ($p['experience'] as $x): ?>
       <li>
         <div class="row">
-          <h3><?= e($x['role']) ?> <span>· <?= e($x['company']) ?></span></h3>
+          <?php if ($x['logo']): ?><span class="co-logo"><img src="uploads/<?= e($x['logo']) ?>" alt="<?= e($x['company']) ?>" loading="lazy"></span><?php endif; ?>
+          <h3><?= e($x['role']) ?> <span>· <?php if ($x['url']): ?><a href="<?= e($x['url']) ?>" target="_blank" rel="noopener"><?= e($x['company']) ?></a><?php else: ?><?= e($x['company']) ?><?php endif; ?></span></h3>
           <?php if ($x['period']): ?><time><?= e($x['period']) ?></time><?php endif; ?>
         </div>
         <?php if ($x['text']): ?><p><?= nl2br(e($x['text'])) ?></p><?php endif; ?>

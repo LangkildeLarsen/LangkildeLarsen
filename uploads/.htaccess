@@ -2,3 +2,8 @@ Options -Indexes
 <FilesMatch "\.(php|phtml|php\d|phar|pl|py|cgi|sh)$">
   Require all denied
 </FilesMatch>
+<FilesMatch "\.svg$">
+  <IfModule mod_headers.c>
+    Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'"
+  </IfModule>
+</FilesMatch>

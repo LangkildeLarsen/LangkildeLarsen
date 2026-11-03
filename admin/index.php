@@ -2,6 +2,7 @@
 require dirname(__DIR__) . '/inc/bootstrap.php';
 require dirname(__DIR__) . '/inc/budget.php';
 require dirname(__DIR__) . '/inc/calendar.php';
+require dirname(__DIR__) . '/inc/media.php';
 
 $auth = load_json('auth');
 $needsSetup = empty($auth['hash']);
@@ -310,6 +311,88 @@ if ($action) {
         redirect('index.php?view=settings#siri');
     }
 
+    if ($action === 'fetch_logos') {
+        @set_time_limit(120);
+        $logos = load_json('logos');
+        $ok = 0;
+        $fail = [];
+        foreach (get_profile()['experience'] as $x) {
+            $d = domain_of($x['url']);
+            if ($d === '' || (isset($logos[$d]) && empty($_POST['force']))) {
+                continue;
+            }
+            $saved = fetch_logo($x['url']);
+            if ($saved) {
+                $logos[$d] = $saved;
+                $ok++;
+            } else {
+                $fail[] = $x['company'];
+            }
+        }
+        save_json('logos', $logos);
+        flash("Hentede $ok logo" . ($ok === 1 ? '' : 'er') . '.' . ($fail ? ' Kunne ikke finde: ' . implode(', ', array_unique($fail)) . ' – upload dem selv.' : ''));
+        redirect('index.php?view=profile');
+    }
+
+    if ($action === 'fetch_projects') {
+        @set_time_limit(180);
+        $images = load_json('project-images');
+        $ok = 0;
+        $fail = [];
+        foreach (get_profile()['projects'] as $pr) {
+            if ($pr['image'] !== '' && empty($_POST['force'])) {
+                continue;
+            }
+            $saved = fetch_project_image($pr);
+            if ($saved) {
+                $images[$pr['url']] = $saved;
+                $ok++;
+            } else {
+                $fail[] = $pr['title'];
+            }
+        }
+        save_json('project-images', $images);
+        if (!empty($_POST['force'])) {
+            $p = get_profile();
+            foreach ($p['projects'] as &$pr) {
+                if (isset($images[$pr['url']])) {
+                    $pr['image'] = $images[$pr['url']];
+                }
+            }
+            unset($pr);
+            save_json('profile', $p);
+        }
+        flash("Hentede $ok billede" . ($ok === 1 ? '' : 'r') . '.' . ($fail ? ' Mangler: ' . implode(', ', $fail) . ' – upload dem selv.' : ''));
+        redirect('index.php?view=projects');
+    }
+
+    if ($action === 'save_projects') {
+        $p = get_profile();
+        $list = [];
+        foreach ($_POST['pr_title'] ?? [] as $i => $title) {
+            $row = [
+                'title' => trim((string)$title),
+                'url' => trim((string)($_POST['pr_url'][$i] ?? '')),
+                'image' => trim((string)($_POST['pr_image'][$i] ?? '')),
+                'show' => !empty($_POST['pr_show'][$i]),
+            ];
+            if ($row['title'] === '' && $row['url'] === '') {
+                continue;
+            }
+            if (isset($_FILES['pr_file']['error'][$i]) && $_FILES['pr_file']['error'][$i] === UPLOAD_ERR_OK) {
+                $saved = save_upload(['error' => UPLOAD_ERR_OK, 'tmp_name' => $_FILES['pr_file']['tmp_name'][$i]], 'projects', slug($row['title'] ?: 'projekt') . '-' . bin2hex(random_bytes(2)));
+                if ($saved) {
+                    $row['image'] = $saved;
+                }
+            }
+            $list[] = $row;
+        }
+        $p['projects'] = $list;
+        save_json('profile', $p);
+        flash('Projekter gemt.');
+        redirect('index.php?view=projects');
+    }
+
     if ($action === 'refresh_calendar') {
         cal_events(30, true);
         redirect('index.php?view=calendar');
@@ -317,7 +400,7 @@ if ($action) {
 
     if ($action === 'save_profile') {
         $p = get_profile();
-        foreach (['name', 'title', 'location', 'email', 'linkedin', 'about', 'now'] as $f) {
+        foreach (['name', 'title', 'location', 'email', 'linkedin', 'dribbble', 'about', 'now'] as $f) {
             $p[$f] = trim((string)($_POST[$f] ?? ''));
         }
         $p['skills'] = array_values(array_filter(array_map('trim', explode(',', (string)($_POST['skills'] ?? '')))));
@@ -335,9 +418,27 @@ if ($action) {
             $row = [
                 'role' => trim((string)$role),
                 'company' => trim((string)($_POST['exp_company'][$i] ?? '')),
+                'url' => trim((string)($_POST['exp_url'][$i] ?? '')),
                 'period' => trim((string)($_POST['exp_period'][$i] ?? '')),
                 'text' => trim((string)($_POST['exp_text'][$i] ?? '')),
+                'logo' => trim((string)($_POST['exp_logo'][$i] ?? '')),
             ];
+            if ($row['url'] !== '' && !preg_match('~^https?://~i', $row['url'])) {
+                $row['url'] = 'https://' . $row['url'];
+            }
+            if (!empty($_POST['exp_logo_remove'][$i])) {
+                $row['logo'] = '';
+            }
+            if (isset($_FILES['exp_logo_file']['error'][$i]) && $_FILES['exp_logo_file']['error'][$i] === UPLOAD_ERR_OK) {
+                $file = [
+                    'error' => UPLOAD_ERR_OK,
+                    'tmp_name' => $_FILES['exp_logo_file']['tmp_name'][$i],
+                ];
+                $saved = save_upload($file, 'logos', 'custom-' . slug($row['company'] ?: 'logo'));
+                if ($saved) {
+                    $row['logo'] = $saved;
+                }
+            }
             if ($row['role'] !== '' || $row['company'] !== '') {
                 $exp[] = $row;
             }
@@ -435,6 +536,7 @@ $titles = [
     'settings' => 'Indstillinger',
     'budget' => 'Budget',
     'calendar' => 'Kalender',
+    'projects' => 'Projekter',
 ];
 
 $budget = load_json('budget', ['income' => [], 'expenses' => []]);
@@ -507,6 +609,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <p class="nav-label">Side</p>
     <nav>
       <a href="./?view=profile" class="<?= $view === 'profile' ? 'active' : '' ?>">Profil & CV</a>
+      <a href="./?view=projects" class="<?= $view === 'projects' ? 'active' : '' ?>">Projekter</a>
       <a href="./?view=settings" class="<?= $view === 'settings' ? 'active' : '' ?>">Indstillinger</a>
       <a href="../" target="_blank">Se siden ↗</a>
     </nav>
@@ -662,27 +765,43 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <label>By<input name="location" value="<?= e($profile['location']) ?>"></label>
           <label>Mail<input type="email" name="email" value="<?= e($profile['email']) ?>"></label>
         </div>
-        <label>LinkedIn-URL<input type="url" name="linkedin" value="<?= e($profile['linkedin']) ?>" placeholder="https://www.linkedin.com/in/…"></label>
+        <div class="two">
+          <label>LinkedIn-URL<input type="url" name="linkedin" value="<?= e($profile['linkedin']) ?>" placeholder="https://www.linkedin.com/in/…"></label>
+          <label>Dribbble-URL<input type="url" name="dribbble" value="<?= e($profile['dribbble']) ?>" placeholder="https://dribbble.com/…"></label>
+        </div>
         <label>Lige nu<textarea name="now" rows="3"><?= e($profile['now']) ?></textarea></label>
         <label>Om mig<textarea name="about" rows="4"><?= e($profile['about']) ?></textarea></label>
         <label>Kompetencer <small>(adskilt med komma)</small><input name="skills" value="<?= e(implode(', ', $profile['skills'])) ?>"></label>
         <label>Sprog <small>(adskilt med komma)</small><input name="languages" value="<?= e(implode(', ', $profile['languages'])) ?>"></label>
         <label>Uddannelse <small>(én pr. linje: Titel | Sted | Periode)</small><textarea name="education" rows="4"><?= e(implode("\n", array_map(fn($x) => $x['title'] . ' | ' . $x['school'] . ' | ' . $x['period'], $profile['education']))) ?></textarea></label>
 
-        <h2 class="section-title">Erfaring</h2>
-        <p class="muted small">Tomme rækker ignoreres. Gem for at få flere tomme rækker.</p>
-        <?php foreach (array_merge($profile['experience'], array_fill(0, 2, ['role' => '', 'company' => '', 'period' => '', 'text' => ''])) as $x): ?>
+        <div class="panel-head">
+          <h2 class="section-title">Erfaring</h2>
+          <button class="btn ghost" form="fetch-logos">Hent logoer fra hjemmesider</button>
+        </div>
+        <p class="muted small">Logoer hentes automatisk fra virksomhedens hjemmeside. Ser et forkert ud, så upload det rigtige. Tomme rækker ignoreres; gem for at få flere.</p>
+        <?php foreach (array_merge($profile['experience'], array_fill(0, 2, ['role' => '', 'company' => '', 'url' => '', 'period' => '', 'text' => '', 'logo' => ''])) as $i => $x): ?>
           <fieldset class="exp">
-            <div class="three">
-              <label>Rolle<input name="exp_role[]" value="<?= e($x['role']) ?>"></label>
-              <label>Virksomhed<input name="exp_company[]" value="<?= e($x['company']) ?>"></label>
-              <label>Periode<input name="exp_period[]" value="<?= e($x['period']) ?>" placeholder="2020 – nu"></label>
+            <div class="exp-top">
+              <span class="logo"><?php if ($x['logo']): ?><img src="../uploads/<?= e($x['logo']) ?>" alt=""><?php else: ?><?= e(mb_substr($x['company'] ?: '+', 0, 1)) ?><?php endif; ?></span>
+              <div class="three">
+                <label>Rolle<input name="exp_role[]" value="<?= e($x['role']) ?>"></label>
+                <label>Virksomhed<input name="exp_company[]" value="<?= e($x['company']) ?>"></label>
+                <label>Periode<input name="exp_period[]" value="<?= e($x['period']) ?>" placeholder="2020 – nu"></label>
+              </div>
             </div>
+            <div class="two">
+              <label>Hjemmeside<input name="exp_url[<?= $i ?>]" value="<?= e($x['url']) ?>" placeholder="firma.dk"></label>
+              <label>Eget logo <small>(PNG, SVG, JPG)</small><input type="file" name="exp_logo_file[<?= $i ?>]" accept="image/png,image/svg+xml,image/jpeg,image/webp"></label>
+            </div>
+            <input type="hidden" name="exp_logo[<?= $i ?>]" value="<?= e($x['logo']) ?>">
             <label>Beskrivelse<textarea name="exp_text[]" rows="2"><?= e($x['text']) ?></textarea></label>
+            <?php if ($x['logo']): ?><label class="check"><input type="checkbox" name="exp_logo_remove[<?= $i ?>]" value="1"> Fjern logo</label><?php endif; ?>
           </fieldset>
         <?php endforeach; ?>
         <div class="actions"><button class="btn">Gem profil</button></div>
       </form>
+      <form method="post" id="fetch-logos"><?= csrf_field() ?><input type="hidden" name="action" value="fetch_logos"></form>
 
     <?php elseif ($view === 'settings'): ?>
       <div class="cols">
@@ -889,6 +1008,29 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           </div>
         <?php endif; ?>
       <?php endif; ?>
+
+    <?php elseif ($view === 'projects'): ?>
+      <div class="panel-head">
+        <p class="muted small">Vises på forsiden under Udvalgte projekter. Billeder hentes fra Dribbble – eller upload dit eget.</p>
+        <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="fetch_projects"><button class="btn ghost">Hent billeder fra Dribbble</button></form>
+      </div>
+      <form method="post" enctype="multipart/form-data" class="form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_projects">
+        <div class="project-grid">
+          <?php foreach (array_merge($profile['projects'], array_fill(0, 2, ['title' => '', 'url' => '', 'image' => '', 'show' => true])) as $i => $pr): ?>
+            <fieldset class="project-edit panel">
+              <div class="thumb"><?php if ($pr['image']): ?><img src="../uploads/<?= e($pr['image']) ?>" alt=""><?php else: ?><span><?= $pr['title'] ? 'Intet billede' : 'Nyt projekt' ?></span><?php endif; ?></div>
+              <input name="pr_title[<?= $i ?>]" value="<?= e($pr['title']) ?>" placeholder="Titel" aria-label="Titel">
+              <input name="pr_url[<?= $i ?>]" value="<?= e($pr['url']) ?>" placeholder="https://dribbble.com/shots/…" aria-label="Link">
+              <input type="hidden" name="pr_image[<?= $i ?>]" value="<?= e($pr['image']) ?>">
+              <input type="file" name="pr_file[<?= $i ?>]" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="Billede">
+              <label class="check"><input type="checkbox" name="pr_show[<?= $i ?>]" value="1" <?= $pr['show'] ? 'checked' : '' ?>> Vis på forsiden</label>
+            </fieldset>
+          <?php endforeach; ?>
+        </div>
+        <div class="actions sticky"><button class="btn">Gem projekter</button></div>
+      </form>
 
     <?php else: ?>
       <div class="empty"><p>Siden findes ikke.</p><a href="./" class="btn">Til oversigten</a></div>
