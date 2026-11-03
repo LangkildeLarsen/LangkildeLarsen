@@ -32,10 +32,13 @@ jobs:
             set net:max-retries 3;
             set net:timeout 30;
             mirror -R --verbose --parallel=4 \
+              --exclude ^\.git/ \
               --exclude-glob .git* \
               --exclude ^\.github/ \
               --exclude ^data/ \
               --exclude-glob *.md \
               ./ $SFTP_PATH;
+            rm -r -f $SFTP_PATH/.git;
+            rm -r -f $SFTP_PATH/.github;
             bye
           "
