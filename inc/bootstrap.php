@@ -120,8 +120,14 @@ function get_profile(): array
     unset($x);
     $logos = load_json('logos');
     foreach ($p['experience'] as &$x) {
+        if (str_starts_with($x['logo'], 'assets/') && !is_file(dirname(__DIR__) . '/' . $x['logo'])) {
+            $x['logo'] = '';
+        }
         if ($x['logo'] === '' && $x['url'] !== '') {
             $x['logo'] = $logos[site_domain($x['url'])] ?? bundled_logo($x['url']);
+        }
+        if ($x['logo'] === '') {
+            $x['logo'] = bundled_logo_key(company_key($x['company']));
         }
     }
     unset($x);
@@ -164,6 +170,21 @@ function bundled_logo(string $url): string
         return '';
     }
     $found = glob(dirname(__DIR__) . '/assets/logos/' . $d . '.*');
+    return $found ? 'assets/logos/' . basename($found[0]) : '';
+}
+
+function company_key(string $name): string
+{
+    $first = strtolower(preg_split('/[\s.]+/', trim($name))[0] ?? '');
+    return preg_replace('/[^a-z0-9]/', '', $first);
+}
+
+function bundled_logo_key(string $key): string
+{
+    if ($key === '') {
+        return '';
+    }
+    $found = glob(dirname(__DIR__) . '/assets/logos/' . $key . '.*');
     return $found ? 'assets/logos/' . basename($found[0]) : '';
 }
 
