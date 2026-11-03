@@ -42,3 +42,10 @@ jobs:
             rm -r -f $SFTP_PATH/.github;
             bye
           "
+
+      - name: Tjek siden
+        run: |
+          sleep 5
+          for u in https://langkildelarsen.dk/ https://langkildelarsen.dk/admin/ https://langkildelarsen.dk/inc/bootstrap.php https://langkildelarsen.dk/.git/config; do
+            echo "$(curl -s -o /tmp/p -w '%{http_code}' -L "$u") $u $(grep -o '<title>[^<]*' /tmp/p | head -1)"
+          done
