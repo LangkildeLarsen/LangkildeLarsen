@@ -1,0 +1,4 @@
+data/
+uploads/*
+!uploads/.htaccess
+.DS_Store

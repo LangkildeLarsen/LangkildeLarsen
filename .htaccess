@@ -1,0 +1,11 @@
+Options -Indexes
+DirectoryIndex index.php
+RedirectMatch 404 ^/(inc|data|\.git|\.github)(/|$)
+<FilesMatch "\.(md|json|yml|yaml|lock)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
