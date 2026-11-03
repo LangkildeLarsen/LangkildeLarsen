@@ -33,10 +33,13 @@ jobs:
             set sftp:auto-confirm yes;
             set sftp:connect-program "ssh -a -x -4";
             pwd;
-            cd /customers/9/9/3/c35b6990h;
-            cls -1 -d */;
-            cls -1 -d */*/;
-            cls -1 -d */*/*/;
-            cls -1 webroots/*/;
+            echo '--- hjem';
+            ls -la;
+            echo '--- kunde';
+            ls -la /customers/9/9/3/c35b6990h/;
+            echo '--- webroots';
+            ls -la /customers/9/9/3/c35b6990h/webroots/;
+            echo '--- httpd.www';
+            ls -la /customers/9/9/3/c35b6990h/httpd.www/;
             bye
           "
