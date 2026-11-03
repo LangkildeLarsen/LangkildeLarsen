@@ -31,6 +31,7 @@ jobs:
         run: |
           lftp -u "$SFTP_USER","$SFTP_PASSWORD" "sftp://$SFTP_HOST" -e "
             set sftp:auto-confirm yes;
+            set sftp:connect-program "ssh -a -x -4";
             pwd;
             cls -1 -d */;
             cls -1 -d */*/;

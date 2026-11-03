@@ -28,6 +28,7 @@ jobs:
           if [ -z "$SFTP_PATH" ]; then echo "SFTP_PATH mangler – deploy springes over."; exit 1; fi
           lftp -u "$SFTP_USER","$SFTP_PASSWORD" "sftp://$SFTP_HOST" -e "
             set sftp:auto-confirm yes;
+            set sftp:connect-program "ssh -a -x -4";
             set net:max-retries 3;
             set net:timeout 30;
             mirror -R --verbose --parallel=4 \
