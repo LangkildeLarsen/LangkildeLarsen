@@ -28,8 +28,24 @@ jobs:
             echo "OK $id.$ext"
           done < assets/projects-sources.txt
 
-      - name: Hent avatar og logoer
-        run: python3 .github/scripts-fetch.py efuture.dk sikkerhedsgiganten.dk esbjergmuseum.dk voresverden.dk home-shoppen.dk airnet.dk blavand.dk easv.dk lammhults-biblioteksdesign.dk
+      - name: Hent logoer fra liste
+        run: |
+          mkdir -p assets/logos
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+          while read d img; do
+            [ -z "$d" ] && continue
+            curl -sL -A "$UA" -o "/tmp/logo" "$img"
+            case "$(file -b --mime-type /tmp/logo)" in
+              image/webp) ext=webp;; image/jpeg) ext=jpg;; image/png) ext=png;; image/gif) ext=gif;;
+              *) echo "LISTE FEJL $d"; continue;;
+            esac
+            rm -f assets/logos/$d.*
+            mv /tmp/logo "assets/logos/$d.$ext"
+            echo "LISTE OK $d.$ext"
+          done < assets/logos-sources.txt
+
+      - name: Hent avatar
+        run: python3 .github/scripts-fetch.py
 
       - name: Gem i repoet
         run: |
