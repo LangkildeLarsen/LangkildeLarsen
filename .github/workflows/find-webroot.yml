@@ -10,6 +10,16 @@ jobs:
       - name: Installer lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      - name: Tjek host
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+        run: |
+          echo "Længde på SFTP_HOST: ${#SFTP_HOST} (forventet 25)"
+          case "$SFTP_HOST" in *" "*) echo "SFTP_HOST indeholder mellemrum";; esac
+          case "$SFTP_HOST" in *:*) echo "SFTP_HOST indeholder kolon";; esac
+          echo "Opslag af ssh.c35b6990h.service.one:"
+          getent hosts ssh.c35b6990h.service.one || echo "kunne ikke slås op"
+
       - name: Vis mapper på serveren
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
