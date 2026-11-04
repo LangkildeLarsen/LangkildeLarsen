@@ -929,7 +929,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['calendar', './?view=calendar', 'calendar', 'Kalender'],
             ['messages', './?view=messages', 'inbox', 'Beskeder'],
             ['chat', './?view=chat', 'ai', 'Jarvis'],
-            ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
         $unreadCount = dm_unread($me['email']);
         $activeView = in_array($view, ['hack', 'edit'], true) ? 'hacks' : (in_array($view, ['profile', 'projects'], true) ? 'settings' : $view);
@@ -994,7 +993,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php endif; ?>
         </div>
       </div>
-      <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
+      <a class="me" href="./?view=settings" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
         <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
       </a>
     </header>
