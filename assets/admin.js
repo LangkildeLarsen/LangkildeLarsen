@@ -247,6 +247,29 @@
   let seeking = false;
   let apiPromise = null;
 
+  const marquee = (el, text) => {
+    if (!el) return;
+    let inner = el.querySelector(':scope > .mq');
+    if (!inner || inner.textContent !== text) {
+      el.textContent = '';
+      inner = document.createElement('span');
+      inner.className = 'mq';
+      inner.textContent = text;
+      el.appendChild(inner);
+    }
+    el.title = text;
+    requestAnimationFrame(() => {
+      const over = inner.scrollWidth - el.clientWidth;
+      if (over > 4 && el.clientWidth > 0) {
+        el.classList.add('mq-on');
+        el.style.setProperty('--mq', -over + 'px');
+        el.style.setProperty('--mq-t', Math.max(7, 4 + over / 22).toFixed(1) + 's');
+      } else {
+        el.classList.remove('mq-on');
+      }
+    });
+  };
+
   const fmt = s => {
     s = Math.max(0, Math.floor(s || 0));
     return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
@@ -342,9 +365,9 @@
     try {
       const d = player.getVideoData();
       if (d && d.title) {
-        title.textContent = d.title + (d.author ? ' · ' + d.author : '');
+        marquee(title, d.title + (d.author ? ' · ' + d.author : ''));
         store.set('mp-track', d.title);
-        document.querySelectorAll('.mp-dock-t').forEach(t => { t.textContent = d.title; });
+        document.querySelectorAll('.mp-dock-t').forEach(t => marquee(t, d.title));
       }
     } catch (e) {}
   };
@@ -505,7 +528,7 @@
     }
     VIDEO = data.v;
     LIST = data.list;
-    title.textContent = 'Henter…';
+    marquee(title, 'Henter…');
     urlForm.hidden = true;
     linkBtn.classList.remove('on');
     linkBtn.setAttribute('aria-expanded', 'false');
@@ -521,7 +544,7 @@
 
   const paintDock = () => {
     const t = store.get('mp-track', '');
-    if (t) document.querySelectorAll('.mp-dock-t').forEach(el => { el.textContent = t; });
+    if (t) document.querySelectorAll('.mp-dock-t').forEach(el => marquee(el, t));
   };
   paintDock();
   new MutationObserver(() => { paintDock(); paintVol(); }).observe(document.body, { childList: true, subtree: false });
