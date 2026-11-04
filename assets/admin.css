@@ -1159,3 +1159,5 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
 @media (max-width: 900px) {
   .flag { margin: 4px; border-radius: 9px; padding: 5px 0; }
 }
+
+.donut circle { stroke-linecap: butt; }

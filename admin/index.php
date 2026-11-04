@@ -839,8 +839,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             <div class="donut-wrap">
               <div class="donut">
                 <svg viewBox="0 0 120 120" aria-hidden="true">
-                  <?php foreach ($donut as $seg): $len = max(0, $seg['pct'] - 3); ?>
-                    <circle cx="60" cy="60" r="48" pathLength="100" stroke="<?= $seg['color'] ?>" stroke-dasharray="<?= round($len, 2) ?> <?= round(100 - $len, 2) ?>" stroke-dashoffset="<?= round(25 - $seg['start'] - 1.5, 2) ?>"><title><?= e($seg['name'] . ': ' . kr($seg['value'])) ?></title></circle>
+                  <?php foreach ($donut as $seg): $len = max(0, $seg['pct'] - (count($donut) > 1 ? 1 : 0)); ?>
+                    <circle cx="60" cy="60" r="48" pathLength="100" stroke="<?= $seg['color'] ?>" stroke-dasharray="<?= round($len, 2) ?> <?= round(100 - $len, 2) ?>" stroke-dashoffset="<?= round(25 - $seg['start'] - (count($donut) > 1 ? .5 : 0), 2) ?>"><title><?= e($seg['name'] . ': ' . kr($seg['value'])) ?></title></circle>
                   <?php endforeach; ?>
                 </svg>
                 <div class="donut-c"><strong><?= e($fmt($sum['expenses'])) ?> kr.</strong><span>I alt</span></div>
