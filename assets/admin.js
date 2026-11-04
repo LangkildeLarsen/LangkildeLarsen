@@ -128,6 +128,110 @@
   document.addEventListener('pointerover', warm, { passive: true });
   document.addEventListener('touchstart', warm, { passive: true });
 
+  const sx = document.getElementById('sx');
+  if (sx) {
+    const q = document.getElementById('sx-q');
+    const list = document.getElementById('sx-list');
+    let data = null;
+    let loadedAt = 0;
+    let results = [];
+    let sel = 0;
+    const norm = t => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a');
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mark = (t, terms) => {
+      let out = esc(t);
+      terms.forEach(term => {
+        if (term.length < 2) return;
+        const i = norm(t).indexOf(term);
+        if (i < 0) return;
+        const raw = t.slice(i, i + term.length);
+        out = out.replace(esc(raw), '<mark>' + esc(raw) + '</mark>');
+      });
+      return out;
+    };
+    const load = async () => {
+      if (data && Date.now() - loadedAt < 30000) return data;
+      try {
+        const r = await fetch('index.php?ajax=search', { credentials: 'same-origin' });
+        data = await r.json();
+        data.forEach(d => { d._t = norm(d.title); d._x = norm(d.text); });
+        loadedAt = Date.now();
+      } catch (e) { data = data || []; }
+      return data;
+    };
+    const render = () => {
+      const terms = norm(q.value).trim().split(/\s+/).filter(Boolean);
+      if (!data) { list.innerHTML = '<li class="sx-empty">Henter…</li>'; return; }
+      if (!terms.length) {
+        results = data.filter(d => d.type === 'Side').concat(data.filter(d => d.type === 'Lifehack').slice(0, 5));
+      } else {
+        results = data.map(d => {
+          let score = 0;
+          for (const t of terms) {
+            if (d._t.startsWith(t)) score += 6;
+            else if (d._t.includes(t)) score += 4;
+            else if (d._x.includes(t)) score += 1;
+            else return null;
+          }
+          if (d.type === 'Side') score += 1;
+          return [score, d];
+        }).filter(Boolean).sort((a, b) => b[0] - a[0]).slice(0, 12).map(x => x[1]);
+      }
+      sel = Math.min(sel, Math.max(0, results.length - 1));
+      if (!results.length) {
+        list.innerHTML = '<li class="sx-empty">Ingen resultater for "' + esc(q.value) + '"</li>';
+        return;
+      }
+      list.innerHTML = results.map((d, i) => '<li role="option" data-i="' + i + '" class="' + (i === sel ? 'on' : '') + '"><span class="sx-type">' + esc(d.type) + '</span><span class="sx-t">' + mark(d.title, terms) + (d.sub ? '<small>' + esc(d.sub) + '</small>' : '') + '</span></li>').join('');
+    };
+    const go = d => {
+      if (!d) return;
+      closeS();
+      const url = new URL(d.url, location.href);
+      const a = navLinks.find(l => new URL(l.href).search === url.search);
+      if (a) setActive(a);
+      swap(url.href);
+    };
+    const openS = async () => {
+      sx.hidden = false;
+      requestAnimationFrame(() => sx.classList.add('show'));
+      q.value = '';
+      sel = 0;
+      render();
+      q.focus();
+      await load();
+      render();
+    };
+    const closeS = () => {
+      sx.classList.remove('show');
+      setTimeout(() => { sx.hidden = true; }, 200);
+    };
+    q.addEventListener('input', () => { sel = 0; render(); });
+    q.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(results.length - 1, sel + 1); render(); list.querySelector('.on')?.scrollIntoView({ block: 'nearest' }); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); render(); list.querySelector('.on')?.scrollIntoView({ block: 'nearest' }); }
+      else if (e.key === 'Enter') { e.preventDefault(); go(results[sel]); }
+      else if (e.key === 'Escape') { closeS(); }
+    });
+    list.addEventListener('mousemove', e => {
+      const li = e.target.closest('li[data-i]');
+      if (li && Number(li.dataset.i) !== sel) { sel = Number(li.dataset.i); list.querySelectorAll('li').forEach(x => x.classList.toggle('on', x === li)); }
+    });
+    list.addEventListener('click', e => {
+      const li = e.target.closest('li[data-i]');
+      if (li) go(results[Number(li.dataset.i)]);
+    });
+    sx.addEventListener('click', e => { if (e.target === sx) closeS(); });
+    document.addEventListener('click', e => { if (e.target.closest('[data-search-open]')) openS(); });
+    document.addEventListener('keydown', e => {
+      const typing = /input|textarea|select/i.test(document.activeElement?.tagName || '') || document.activeElement?.isContentEditable;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); sx.hidden ? openS() : closeS(); }
+      else if (e.key === '/' && !typing && sx.hidden) { e.preventDefault(); openS(); }
+      else if (e.key === 'Escape' && !sx.hidden) closeS();
+    });
+    document.addEventListener('submit', () => { data = null; }, true);
+  }
+
   const mobile = () => matchMedia('(max-width: 900px)').matches || matchMedia('(pointer: coarse)').matches;
   const mp = document.getElementById('mp');
   if (!mp || mobile()) return;

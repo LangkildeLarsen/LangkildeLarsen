@@ -757,6 +757,30 @@ $titles = [
 ];
 
 $budget = load_json(ukey('budget'), ['income' => [], 'expenses' => []]);
+
+if (($_GET['ajax'] ?? '') === 'search') {
+    $items = [];
+    $pages = [['Oversigt', './'], ['Lifehacks', './?view=hacks'], ['Ny lifehack', './?view=edit'], ['Budget', './?view=budget'], ['Rediger budget', './?view=budget&edit=1'], ['Kalender', './?view=calendar'], ['Indstillinger', './?view=settings']];
+    if ($isOwner) {
+        array_push($pages, ['Profil & CV', './?view=profile'], ['Projekter', './?view=projects']);
+    }
+    foreach ($pages as [$t, $u]) {
+        $items[] = ['type' => 'Side', 'title' => $t, 'sub' => '', 'url' => $u, 'text' => $t];
+    }
+    foreach ($hacks as $h) {
+        $items[] = ['type' => 'Lifehack', 'title' => $h['title'], 'sub' => $h['category'], 'url' => './?view=hack&id=' . $h['id'], 'text' => $h['title'] . ' ' . $h['content'] . ' ' . implode(' ', $h['tags']) . ' ' . $h['category']];
+    }
+    foreach ($categories as $c) {
+        $items[] = ['type' => 'Kategori', 'title' => $c, 'sub' => ($counts[$c] ?? 0) . ' lifehacks', 'url' => './?view=hacks&cat=' . rawurlencode($c), 'text' => $c];
+    }
+    foreach (array_merge($budget['income'] ?? [], $budget['expenses'] ?? []) as $x) {
+        $items[] = ['type' => 'Budget', 'title' => $x['name'], 'sub' => kr((float)$x['amount']) . ' · ' . mb_strtolower(BUDGET_FREQ[$x['freq'] ?? 'month'][0]), 'url' => './?view=budget', 'text' => $x['name'] . ' ' . ($x['category'] ?? '')];
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode($items, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 $sum = budget_summary($budget);
 $cal = in_array($view, ['dashboard', 'calendar'], true) ? cal_events($view === 'calendar' ? 30 : 62) : ['events' => [], 'errors' => []];
 $hasCal = (bool)cal_sources();
@@ -816,16 +840,9 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         </span>
         <button type="button" class="dk-title" data-player-open aria-label="Udvid musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span><?= icon('down') ?></button>
       </div>
-      <form class="search" action="./">
-        <input type="hidden" name="view" value="hacks">
-        <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>"><?php endif; ?>
-        <?= icon('search') ?>
-        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Søg" aria-label="Søg i lifehacks">
-      </form>
-      <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>">
+      <button type="button" class="bell search-btn" data-search-open aria-label="Søg (Cmd+K)"><?= icon('search') ?></button>
+      <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
         <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
-        <span><strong><?= e(implode(' ', array_slice(preg_split('/\s+/', trim($me['name'])), 0, 2))) ?></strong><small><?= e($me['email']) ?></small></span>
-        <?= icon('down') ?>
       </a>
       <a class="bell music-btn" href="spotify:" data-player-open aria-label="Musik"><?= icon('music') ?></a>
     </header>
@@ -1435,6 +1452,12 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   </main>
 </div>
 <?php $music = ($ui['music'] ?? null) ?: ['v' => 'byOVTxnILMU', 'list' => 'RDbyOVTxnILMU', 'url' => 'https://www.youtube.com/watch?v=byOVTxnILMU&list=RDbyOVTxnILMU']; ?>
+<div class="sx" id="sx" hidden>
+  <div class="sx-box" role="dialog" aria-modal="true" aria-label="Søg">
+    <label class="sx-field"><?= icon('search') ?><input id="sx-q" type="search" placeholder="Søg i lifehacks, budget og sider…" autocomplete="off" spellcheck="false"><kbd>esc</kbd></label>
+    <ul class="sx-list" id="sx-list" role="listbox"></ul>
+  </div>
+</div>
 <div class="mp-bg" aria-hidden="true"><div id="mp-yt"></div></div>
 <section class="mp" id="mp" hidden aria-label="Musikafspiller" data-v="<?= e($music['v']) ?>" data-list="<?= e($music['list']) ?>">
   <div class="mp-head" data-drag>
