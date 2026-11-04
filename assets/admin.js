@@ -239,6 +239,11 @@
   const updateTitle = () => {
     try {
       const d = player.getVideoData();
+      if (d && d.video_id) {
+        const cover = mp.querySelector('.mp-cover');
+        cover.hidden = false;
+        cover.src = 'https://i.ytimg.com/vi/' + d.video_id + '/hqdefault.jpg';
+      }
       if (d && d.title) {
         title.textContent = d.title + (d.author ? ' · ' + d.author : '');
         store.set('mp-track', d.title);
