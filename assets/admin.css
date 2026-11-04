@@ -2245,3 +2245,59 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 .boot-bar i { border-radius: 99px; }
 
 .jv-wave { display: none !important; }
+
+.boot { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; overflow: hidden; }
+.boot::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgb(255 255 255 / 2.2%) 0 1px, transparent 1px 3px); pointer-events: none; }
+.boot::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgb(0 0 0 / 70%)); pointer-events: none; }
+.boot-frame { position: absolute; inset: 20px; pointer-events: none; }
+.boot-frame i { position: absolute; width: 26px; height: 26px; border: 1px solid var(--faint); }
+.boot-frame i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.boot-frame i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.boot-frame i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+.boot-frame i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.boot-hud { position: absolute; z-index: 2; font-size: 11px; line-height: 1.7; color: var(--muted); letter-spacing: .04em; opacity: 0; transition: opacity .8s ease; }
+.boot.on .boot-hud { opacity: 1; }
+.boot-hud .v { color: var(--ink); }
+.boot-tl { top: 44px; left: 48px; width: 340px; }
+.boot-tr { top: 44px; right: 48px; text-align: right; }
+.boot-bl { bottom: 44px; left: 48px; width: 260px; }
+.boot-br { bottom: 44px; right: 48px; text-align: right; width: 260px; }
+.boot-tag { display: inline-block; color: #000; background: var(--ink); padding: 0 6px; margin-bottom: 8px; }
+.boot-log { height: 136px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.boot-log div { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: boot-swap .25s ease; }
+.boot-log .ok { color: #3ddc84; }
+.boot-clock { font-size: 28px; color: var(--ink); letter-spacing: .06em; line-height: 1.2; }
+.boot-stat { display: grid; grid-template-columns: 44px 1fr 40px; gap: 10px; align-items: center; }
+.boot-stat .b { height: 4px; border-radius: 99px; background: rgb(255 255 255 / 10%); overflow: hidden; }
+.boot-stat .b i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--ink); transition: width .6s ease; }
+.boot-stat span:last-child { text-align: right; color: var(--ink); }
+.boot-spark { width: 100%; height: 34px; margin-top: 8px; }
+.boot-spark polyline { fill: none; stroke: var(--ink); stroke-width: 1; stroke-opacity: .7; }
+.boot-hex { height: 102px; overflow: hidden; color: var(--faint); }
+.boot-hex div { animation: boot-swap .2s ease; }
+.boot-sig { display: inline-flex; gap: 3px; align-items: flex-end; height: 12px; margin-left: 6px; vertical-align: -1px; }
+.boot-sig i { width: 3px; background: var(--ink); border-radius: 1px; animation: jv-blink 1.4s ease-in-out infinite; }
+.boot-sig i:nth-child(1) { height: 30%; }
+.boot-sig i:nth-child(2) { height: 55%; animation-delay: .1s; }
+.boot-sig i:nth-child(3) { height: 80%; animation-delay: .2s; }
+.boot-sig i:nth-child(4) { height: 100%; animation-delay: .3s; opacity: .35; }
+.boot-in { position: relative; z-index: 2; width: min(380px, 84vw); }
+.boot-name { font-size: 14px; letter-spacing: .7em; padding-left: .7em; }
+.boot-row { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: -8px; }
+.boot-text { font-size: 13px; letter-spacing: 0; }
+.boot-text::after { content: "_"; margin-left: 2px; animation: boot-cursor 1s steps(1) infinite; }
+.boot-text.final { font-size: 16px; letter-spacing: 0; }
+.boot-tap { font-family: inherit; font-size: 13px; }
+@keyframes boot-cursor { 50% { opacity: 0; } }
+@media (max-width: 760px) {
+  .boot-tl { top: 40px; left: 36px; right: 36px; width: auto; }
+  .boot-log { height: 70px; }
+  .boot-tr { top: auto; bottom: 40px; right: 36px; left: 36px; text-align: center; }
+  .boot-clock { font-size: 22px; }
+  .boot-bl, .boot-br { display: none; }
+}
+@media (max-width: 760px) {
+  .boot-orb { width: min(230px, 58vw); }
+  .boot-in { gap: 14px; margin-top: -20px; }
+  .boot-tr { line-height: 1.5; }
+}

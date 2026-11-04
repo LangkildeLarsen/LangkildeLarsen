@@ -248,7 +248,7 @@ if (!is_logged_in()) {
 <meta name="theme-color" content="#050505">
 <?= app_head() ?>
 <title>Jarvis</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 </head>
 <body class="auth">
@@ -988,7 +988,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <meta name="theme-color" content="#050506">
 <?= app_head() ?>
 <title>Jarvis</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 <script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
 </head>
@@ -1834,11 +1834,35 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <?php $music = ($ui['music'] ?? null) ?: ['v' => 'byOVTxnILMU', 'list' => 'RDbyOVTxnILMU', 'url' => 'https://www.youtube.com/watch?v=byOVTxnILMU&list=RDbyOVTxnILMU']; ?>
 <?php if (($ui['splash'] ?? true)): ?>
 <div class="boot" id="boot" hidden data-sound="<?= is_file(sound_path()) ? 'index.php?ajax=sound&amp;v=' . filemtime(sound_path()) : '' ?>" data-name="<?= e(first_name($me)) ?>">
+  <div class="boot-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="boot-hud boot-tl" aria-hidden="true">
+    <span class="boot-tag">JARVIS OS 5.5</span>
+    <div class="boot-log" data-boot-log></div>
+  </div>
+  <div class="boot-hud boot-tr" aria-hidden="true">
+    <div class="boot-clock" data-boot-clock>00:00:00</div>
+    <div data-boot-date></div>
+    <div>LANGKILDELARSEN.DK</div>
+    <div>UPLINK <span class="v">SECURE</span><span class="boot-sig"><i></i><i></i><i></i><i></i></span></div>
+  </div>
+  <div class="boot-hud boot-bl" aria-hidden="true">
+    <div class="boot-stat"><span>CPU</span><span class="b"><i data-stat="cpu"></i></span><span data-stat-v="cpu">0%</span></div>
+    <div class="boot-stat"><span>MEM</span><span class="b"><i data-stat="mem"></i></span><span data-stat-v="mem">0%</span></div>
+    <div class="boot-stat"><span>NET</span><span class="b"><i data-stat="net"></i></span><span data-stat-v="net">0%</span></div>
+    <div class="boot-stat"><span>KAFFE</span><span class="b"><i data-stat="cof"></i></span><span data-stat-v="cof">0%</span></div>
+    <svg class="boot-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline data-boot-spark points=""/></svg>
+  </div>
+  <div class="boot-hud boot-br" aria-hidden="true">
+    <div>MEMORY DUMP</div>
+    <div class="boot-hex" data-boot-hex></div>
+    <div>SEKTOR <span class="v" data-boot-sec>7G</span> · TEMP <span class="v" data-boot-tmp>36.6°</span></div>
+  </div>
   <div class="boot-in">
     <?= jarvis_orb('boot-orb') ?>
     <p class="boot-name">JARVIS</p>
     <div class="boot-bar"><i></i></div>
-    <p class="boot-text" data-boot-text>Starter systemer…</p>
+    <div class="boot-row"><span data-boot-pct>000%</span><span data-boot-step>0/6</span></div>
+    <p class="boot-text" data-boot-text></p>
     <button type="button" class="boot-tap" data-boot-tap hidden>Tryk for at starte</button>
   </div>
 </div>

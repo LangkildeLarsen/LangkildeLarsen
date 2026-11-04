@@ -961,30 +961,74 @@
 (() => {
   const boot = document.getElementById('boot');
   if (!boot) return;
-  const inner = boot.querySelector('.boot-in');
-  const text = boot.querySelector('[data-boot-text]');
-  const bar = boot.querySelector('.boot-bar i');
-  const tap = boot.querySelector('[data-boot-tap]');
+  const q = sel => boot.querySelector(sel);
+  const inner = q('.boot-in');
+  const text = q('[data-boot-text]');
+  const bar = q('.boot-bar i');
+  const tap = q('[data-boot-tap]');
+  const logEl = q('[data-boot-log]');
+  const hexEl = q('[data-boot-hex]');
   const name = boot.dataset.name || '';
-  const steps = ['Starter systemer…', 'Indlæser lifehacks…', 'Synkroniserer budget…', 'Henter kalender…', 'Forbinder til Jarvis…', 'Alle systemer klar'];
+  const fun = [
+    'Varmer reaktoren op…', 'Kalibrerer sarkasme-modul…', 'Brygger kaffe til ' + name + '…', 'Tæller pixels… 1, 2, mange…',
+    'Fjerner bugs med pincet…', 'Overtaler Wi-Fi\'en til at samarbejde…', 'Vækker hamstrene i serveren…', 'Polerer ikoner…',
+    'Indlæser dårlige jokes… 42%', 'Sletter Internet Explorer… igen…', 'Downloader mere RAM…', 'Retter sidste bug (for real denne gang)…',
+    'Spørger Siri om vej… nej, vent…', 'Stiller skærmen på dark mode…', 'Forhandler med firewall\'en…', 'Kompilerer gode vibes…'
+  ];
+  const sys = ['init kernel.sys', 'mount /dev/brain', 'load ui.dark', 'check coffee.level', 'sync lifehacks.db', 'handshake uplink', 'patch humor.dll', 'spin reactor.core', 'verify user.' + name.toLowerCase(), 'calibrate hud', 'decrypt vault', 'ping langkildelarsen.dk'];
+  const rnd = (a, b) => Math.round(a + Math.random() * (b - a));
+  const pad = n => String(n).padStart(2, '0');
+  const pick = (arr, n) => arr.slice().sort(() => Math.random() - .5).slice(0, n);
   let audio = null;
   let timers = [];
+  let loops = [];
   let running = false;
+  const spark = [];
 
-  const say = (t, final) => {
-    text.textContent = t;
-    text.classList.toggle('final', !!final);
-    text.classList.remove('swap');
-    void text.offsetWidth;
-    text.classList.add('swap');
+  const stopAll = () => { timers.forEach(clearTimeout); loops.forEach(clearInterval); timers = []; loops = []; };
+  const say = (t, final) => { text.textContent = t; text.classList.toggle('final', !!final); };
+  const tickClock = () => {
+    const d = new Date();
+    q('[data-boot-clock]').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    q('[data-boot-date]').textContent = d.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+  };
+  const logLine = t => {
+    const div = document.createElement('div');
+    div.innerHTML = '&gt; ' + t + ' ' + '.'.repeat(Math.max(2, 26 - t.length)) + ' <span class="ok">OK</span>';
+    logEl.appendChild(div);
+    while (logEl.children.length > 12) logEl.firstChild.remove();
+  };
+  const tickStats = () => {
+    [['cpu', 20, 95], ['mem', 30, 80], ['net', 5, 100], ['cof', 60, 100]].forEach(([k, a, b]) => {
+      const v = rnd(a, b);
+      q('[data-stat="' + k + '"]').style.width = v + '%';
+      q('[data-stat-v="' + k + '"]').textContent = v + '%';
+    });
+    spark.push(rnd(4, 28));
+    if (spark.length > 30) spark.shift();
+    q('[data-boot-spark]').setAttribute('points', spark.map((v, i) => (i * 100 / 29).toFixed(1) + ',' + (30 - v)).join(' '));
+    const hx = Array.from({ length: 4 }, () => rnd(0, 65535).toString(16).toUpperCase().padStart(4, '0')).join(' ');
+    const div = document.createElement('div');
+    div.textContent = '0x' + rnd(4096, 65535).toString(16).toUpperCase() + '  ' + hx;
+    hexEl.appendChild(div);
+    while (hexEl.children.length > 6) hexEl.firstChild.remove();
+    q('[data-boot-sec]').textContent = rnd(1, 9) + 'ABCDEFGH'[rnd(0, 7)];
+    q('[data-boot-tmp]').textContent = (36 + Math.random()).toFixed(1) + '°';
   };
 
   const finish = () => {
-    timers.forEach(clearTimeout);
-    timers = [];
+    stopAll();
     boot.classList.add('out');
     try { sessionStorage.setItem('jv-booted', '1'); } catch (e) {}
     setTimeout(() => { boot.hidden = true; boot.classList.remove('out', 'on'); running = false; }, 950);
+  };
+
+  const hudOn = () => {
+    tickClock();
+    loops.push(setInterval(tickClock, 1000));
+    loops.push(setInterval(tickStats, 450));
+    let n = 0;
+    loops.push(setInterval(() => { logLine(sys[n % sys.length]); n++; }, 380));
   };
 
   const sequence = () => {
@@ -992,30 +1036,41 @@
     tap.hidden = true;
     inner.dataset.s = 'thinking';
     boot.classList.add('on');
-    const per = 950;
-    steps.forEach((t, i) => timers.push(setTimeout(() => { say(t); bar.style.width = Math.round((i + 1) / steps.length * 100) + '%'; }, 500 + i * per)));
+    if (!loops.length) hudOn();
+    const steps = pick(fun, 6);
+    const per = 1000;
+    steps.forEach((t, i) => timers.push(setTimeout(() => {
+      say(t);
+      const p = Math.round((i + 1) / steps.length * 100);
+      bar.style.width = p + '%';
+      q('[data-boot-pct]').textContent = String(p).padStart(3, '0') + '%';
+      q('[data-boot-step]').textContent = (i + 1) + '/' + steps.length;
+    }, 500 + i * per)));
     const end = 500 + steps.length * per;
-    timers.push(setTimeout(() => { inner.dataset.s = 'speaking'; say('Velkommen hjem' + (name ? ', ' + name : '') + '.', true); }, end));
-    timers.push(setTimeout(finish, end + 2600));
+    timers.push(setTimeout(() => { inner.dataset.s = 'speaking'; say('Velkommen hjem' + (name ? ', ' + name : '') + '.', true); logLine('all systems'); }, end));
+    timers.push(setTimeout(finish, end + 2800));
   };
 
   const run = () => {
     if (running) return;
-    timers.forEach(clearTimeout);
-    timers = [];
+    stopAll();
+    logEl.innerHTML = '';
+    hexEl.innerHTML = '';
     bar.style.width = '0';
+    q('[data-boot-pct]').textContent = '000%';
+    q('[data-boot-step]').textContent = '0/6';
     inner.dataset.s = 'idle';
-    say(steps[0]);
+    say('');
     boot.hidden = false;
     boot.classList.remove('out', 'on');
     void boot.offsetWidth;
     if (!boot.dataset.sound) { sequence(); return; }
-    if (audio) { audio.pause(); }
+    if (audio) audio.pause();
     audio = new Audio(boot.dataset.sound);
     audio.volume = 0.9;
     audio.play().then(sequence).catch(() => {
       boot.classList.add('on');
-      text.textContent = '';
+      hudOn();
       tap.hidden = false;
     });
   };
