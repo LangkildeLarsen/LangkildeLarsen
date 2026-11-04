@@ -2240,3 +2240,6 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 
 .topbar .me.bell { padding: 0; gap: 0; }
 .topbar .me.bell .ic { width: 22px; height: 22px; margin: 0; color: var(--ink); }
+
+.boot-bar { height: 6px; border-radius: 99px; }
+.boot-bar i { border-radius: 99px; }
