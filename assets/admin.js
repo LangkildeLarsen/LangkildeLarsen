@@ -239,10 +239,20 @@
     const vs = synth.getVoices();
     return vs.find(v => v.name === voice.name) || vs.find(v => /^da/i.test(v.lang)) || null;
   };
+  const jvText = { idle: ['Klar', '<span>Klar.</span> Skriv eller tal til mig.'], listening: ['Lytter', '<span>Lytter…</span>'], thinking: ['Tænker', '<span>Tænker…</span> slår op i dine data'], speaking: ['Taler', '<span>Svarer…</span>'] };
+  const jvSet = st => {
+    const jv = document.querySelector('[data-jv]');
+    if (!jv) return;
+    jv.dataset.s = st;
+    jv.querySelector('[data-jv-label]').textContent = jvText[st][0];
+    jv.querySelector('[data-jv-log]').innerHTML = jvText[st][1];
+  };
   const speak = text => {
-    if (!synth || !voice.on) return;
+    if (!synth || !voice.on) { jvSet('idle'); return; }
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/\*\*/g, ''));
+    u.onstart = () => jvSet('speaking');
+    u.onend = u.onerror = () => { if (!synth.speaking) jvSet('idle'); };
     const v = pickVoice();
     if (v) u.voice = v;
     u.lang = v ? v.lang : 'da-DK';
@@ -272,7 +282,7 @@
       chat.classList.toggle('voice-on', voice.on);
     };
     paintToggle();
-    toggle.addEventListener('click', () => { voice.on = !voice.on; store.set('voice-on', voice.on); if (!voice.on && synth) synth.cancel(); paintToggle(); });
+    toggle.addEventListener('click', () => { voice.on = !voice.on; store.set('voice-on', voice.on); if (!voice.on && synth) { synth.cancel(); jvSet('idle'); } paintToggle(); });
 
     const fillVoices = () => {
       if (!synth) return;
@@ -306,6 +316,7 @@
       chat.querySelector('.chat-hello')?.remove();
       list.insertAdjacentHTML('beforeend', '<div class="bubble mine"><p>' + fmtText(text) + '</p></div><div class="bubble ai typing"><p><i></i><i></i><i></i></p></div>');
       scrollDown();
+      jvSet('thinking');
       const fd = new FormData(form);
       fd.set('text', text);
       let j;
@@ -321,6 +332,7 @@
       scrollDown();
       busy = false;
       if (!j.error) speak(msg);
+      else jvSet('idle');
       input.focus();
     });
 
@@ -336,6 +348,7 @@
       let finalText = '';
       mic.classList.add('live');
       if (synth) synth.cancel();
+      jvSet('listening');
       rec.onresult = ev => {
         let interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
@@ -348,6 +361,7 @@
       rec.onend = () => {
         mic.classList.remove('live');
         rec = null;
+        if (!busy) jvSet('idle');
         if (input.value.trim()) {
           if (!voice.on) { voice.on = true; store.set('voice-on', true); paintToggle(); }
           form.requestSubmit();

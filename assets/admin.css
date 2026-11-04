@@ -2147,3 +2147,66 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 .usage-grid dt { font-size: 12px; color: var(--muted); }
 .usage-grid dd { margin: 0; font-size: 15px; color: var(--ink); }
 @media (max-width: 600px) { .usage-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.jv-layout { display: grid; grid-template-columns: 320px minmax(0, 980px); gap: 16px; align-items: stretch; }
+.jv-layout .chat { max-width: none; }
+.jv { display: grid; grid-template-rows: auto 1fr auto; gap: 16px; height: calc(100vh - 190px); min-height: 520px; }
+.jv-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.jv-name { font-size: 22px; letter-spacing: .02em; }
+.jv-state { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); background: var(--card-2); padding: 6px 12px; border-radius: 99px; }
+.jv-state i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 10px #3ddc84; transition: background .3s; }
+.jv[data-s="thinking"] .jv-state i { background: #fff; box-shadow: 0 0 12px #fff; animation: jv-blink 1.2s ease-in-out infinite; }
+.jv[data-s="speaking"] .jv-state i { background: #7cc4ff; box-shadow: 0 0 12px #7cc4ff; }
+.jv[data-s="listening"] .jv-state i { background: #ff5a5a; box-shadow: 0 0 12px #ff5a5a; animation: jv-blink 1s ease-in-out infinite; }
+.jv-orb { position: relative; width: 100%; aspect-ratio: 1; max-width: 270px; margin: auto; display: grid; place-items: center; }
+.jv-orb::before { content: ""; position: absolute; inset: 14%; border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 10%), transparent 65%); transition: opacity .6s, transform .6s; opacity: .5; }
+.jv-orb svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.jv-r { transform-origin: 50% 50%; transform-box: view-box; fill: none; stroke: #fff; }
+.jv-r1 { stroke-width: .6; stroke-opacity: .18; stroke-dasharray: .6 2.4; animation: jv-spin 60s linear infinite; }
+.jv-r2 { stroke-width: 1.4; stroke-opacity: .55; stroke-dasharray: 40 18 8 18 60 30; stroke-linecap: round; animation: jv-spin 24s linear infinite reverse; transition: stroke .3s; }
+.jv-r3 { stroke-width: .5; stroke-opacity: .25; animation: jv-spin 40s linear infinite; }
+.jv-r4 { stroke-width: 3; stroke-opacity: .9; stroke-dasharray: 22 80; stroke-linecap: round; animation: jv-spin 9s linear infinite; }
+.jv-r5 { stroke-width: 1; stroke-opacity: .35; stroke-dasharray: 2 4; animation: jv-spin 18s linear infinite reverse; }
+.jv-ticks { transform-origin: 50% 50%; transform-box: view-box; animation: jv-spin 90s linear infinite; }
+.jv-ticks line { stroke: #fff; stroke-opacity: .3; stroke-width: .7; }
+.jv-core { position: relative; width: 22%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #d9d9de 45%, #8d8d94 100%); box-shadow: 0 0 30px rgb(255 255 255 / 25%), inset 0 0 12px rgb(0 0 0 / 35%); animation: jv-breathe 4s ease-in-out infinite; transition: box-shadow .4s; }
+.jv-wave { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 3px; opacity: 0; transition: opacity .3s; }
+.jv-wave i { width: 3px; height: 20%; border-radius: 3px; background: #000; animation: jv-wave .9s ease-in-out infinite; }
+.jv-wave i:nth-child(2) { animation-delay: -.15s; }
+.jv-wave i:nth-child(3) { animation-delay: -.3s; }
+.jv-wave i:nth-child(4) { animation-delay: -.45s; }
+.jv-wave i:nth-child(5) { animation-delay: -.6s; }
+.jv-pulse { position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid rgb(255 255 255 / 70%); opacity: 0; pointer-events: none; }
+.jv[data-s="thinking"] .jv-r1 { animation-duration: 30s; stroke-opacity: .3; }
+.jv[data-s="thinking"] .jv-r2 { animation-duration: 10s; stroke-opacity: .8; }
+.jv[data-s="thinking"] .jv-r3 { animation-duration: 20s; }
+.jv[data-s="thinking"] .jv-r4 { animation-duration: 4.5s; }
+.jv[data-s="thinking"] .jv-r5 { animation-duration: 8s; stroke-opacity: .6; }
+.jv[data-s="thinking"] .jv-ticks { animation-duration: 45s; }
+.jv[data-s="thinking"] .jv-core { animation: jv-think 2.4s ease-in-out infinite; box-shadow: 0 0 46px rgb(255 255 255 / 45%), inset 0 0 12px rgb(0 0 0 / 35%); }
+.jv[data-s="thinking"] .jv-orb::before { opacity: 1; transform: scale(1.1); }
+.jv[data-s="thinking"] .jv-pulse { animation: jv-pulse 2.4s cubic-bezier(.2, .6, .3, 1) infinite; }
+.jv[data-s="thinking"] .jv-p2 { animation-delay: 1.2s; }
+.jv[data-s="speaking"] .jv-r4 { animation-duration: 4s; }
+.jv[data-s="speaking"] .jv-wave { opacity: 1; }
+.jv[data-s="speaking"] .jv-core { animation: none; box-shadow: 0 0 40px rgb(124 196 255 / 45%), inset 0 0 12px rgb(0 0 0 / 35%); }
+.jv[data-s="listening"] .jv-r2 { stroke: #ff5a5a; }
+.jv[data-s="listening"] .jv-core { animation: jv-listen 1.4s ease-out infinite; }
+.jv-log { margin: 0; font-size: 13px; color: var(--muted); min-height: 2.8em; line-height: 1.4; }
+.jv-log span { color: var(--ink); }
+@keyframes jv-spin { to { transform: rotate(360deg); } }
+@keyframes jv-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes jv-think { 0%, 100% { transform: scale(.96); } 50% { transform: scale(1.08); } }
+@keyframes jv-pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(3.6); opacity: 0; } }
+@keyframes jv-listen { 0% { box-shadow: 0 0 0 0 rgb(255 90 90 / 45%), inset 0 0 12px rgb(0 0 0 / 35%); } 100% { box-shadow: 0 0 0 26px rgb(255 90 90 / 0%), inset 0 0 12px rgb(0 0 0 / 35%); } }
+@keyframes jv-wave { 0%, 100% { height: 18%; } 50% { height: 55%; } }
+@keyframes jv-blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .jv * { animation-duration: 0s !important; animation-iteration-count: 1 !important; } }
+@media (max-width: 1100px) {
+  .jv-layout { grid-template-columns: 1fr; gap: 12px; }
+  .jv { height: auto; min-height: 0; grid-template-columns: 96px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 16px; row-gap: 4px; padding: 14px 18px; }
+  .jv-top { grid-column: 2; }
+  .jv-orb { grid-column: 1; grid-row: 1 / span 2; max-width: 96px; }
+  .jv-log { grid-column: 2; min-height: 0; }
+  .jv-layout .chat { height: calc(100vh - 330px); min-height: 380px; }
+}
