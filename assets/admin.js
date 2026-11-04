@@ -1152,18 +1152,6 @@
       .catch(() => {})
       .finally(() => { delete box.dataset.busy; });
   };
-  const loadMail = () => {
-    const box = document.querySelector('[data-ml]');
-    if (!box || box.dataset.busy) return;
-    if (!box.hasAttribute('data-ml-refresh') && !box.querySelector('[data-ml-load]')) return;
-    box.dataset.busy = '1';
-    fetch('index.php?ajax=mail', { credentials: 'same-origin' })
-      .then(r => r.ok ? r.text() : Promise.reject())
-      .then(html => { box.innerHTML = html; box.removeAttribute('data-ml-refresh'); })
-      .catch(() => {})
-      .finally(() => { delete box.dataset.busy; });
-  };
-  document.addEventListener('page:ready', () => { load(); loadMail(); });
+  document.addEventListener('page:ready', load);
   load();
-  loadMail();
 })();

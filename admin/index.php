@@ -8,7 +8,6 @@ require dirname(__DIR__) . '/inc/claude.php';
 require dirname(__DIR__) . '/inc/weather.php';
 require dirname(__DIR__) . '/inc/training.php';
 require dirname(__DIR__) . '/inc/reminders.php';
-require dirname(__DIR__) . '/inc/mail.php';
 require dirname(__DIR__) . '/inc/watch.php';
 
 users_migrate();
@@ -534,34 +533,6 @@ if ($action) {
             flash('Kunne ikke finde byen "' . $q . '". Prøv en anden stavemåde.');
         }
         redirect('index.php?view=settings#vejr');
-    }
-
-    if ($action === 'save_mail') {
-        $cfg = mail_cfg();
-        if (!empty($_POST['remove'])) {
-            save_json(ukey('mail'), []);
-            save_json(ukey('mail-cache'), []);
-            save_json(ukey('mail-seen'), []);
-            flash('Mailen er koblet fra.');
-            redirect('index.php?view=settings#mail');
-        }
-        $cfg['user'] = trim((string)($_POST['user'] ?? $cfg['user']));
-        if (trim((string)($_POST['pass'] ?? '')) !== '') {
-            $cfg['pass'] = (string)$_POST['pass'];
-        }
-        $cfg['push'] = !empty($_POST['push']);
-        $cfg['link'] = trim((string)($_POST['link'] ?? ''));
-        save_json(ukey('mail'), $cfg);
-        save_json(ukey('mail-cache'), []);
-        if (mail_ready($cfg)) {
-            try {
-                $d = mail_fetch($cfg, 1);
-                flash('Mailen er forbundet. Du har ' . $d['count'] . ' ulæste.');
-            } catch (Throwable $e) {
-                flash('Kunne ikke logge ind på mailen: ' . $e->getMessage());
-            }
-        }
-        redirect('index.php?view=settings#mail');
     }
 
     if ($action === 'watch_add') {
@@ -1096,32 +1067,6 @@ function training_card(array $t): string
     return $h . '</form>';
 }
 
-function mail_card(?array $d, array $cfg): string
-{
-    if (!mail_ready($cfg)) {
-        return '<div class="ml-empty"><p class="muted small">Forbind din mail under Indstillinger for at se ulæste mails her.</p><a href="./?view=settings#mail" class="btn ghost">Forbind mail</a></div>';
-    }
-    if (!$d) {
-        return '<div class="wx-empty" data-ml-load><span class="wx-spin"></span><p class="muted small">Henter mail…</p></div>';
-    }
-    $h = '';
-    if (empty($d['ok'])) {
-        $h .= '<p class="ml-err small">' . e($d['error'] ?? 'Kunne ikke hente mail.') . '</p>';
-    }
-    $n = (int)($d['count'] ?? 0);
-    $h .= '<p class="ml-count"><strong>' . $n . '</strong> <span>ulæst' . ($n === 1 ? '' : 'e') . '</span></p>';
-    if (!empty($d['items'])) {
-        $h .= '<ul class="ml-list">';
-        foreach (array_slice($d['items'], 0, 4) as $it) {
-            $h .= '<li><span class="ml-av">' . e(mb_strtoupper(mb_substr($it['from'], 0, 1))) . '</span><span class="ml-tx"><strong>' . e($it['from']) . '</strong><small>' . e($it['subject']) . '</small></span><time>' . e(mail_ago($it['ts'])) . '</time></li>';
-        }
-        $h .= '</ul>';
-    } elseif (!empty($d['ok'])) {
-        $h .= '<p class="muted small">Indbakken er tom for ulæste. Nice.</p>';
-    }
-    return $h;
-}
-
 function app_version(): string
 {
     $root = dirname(__DIR__);
@@ -1154,13 +1099,6 @@ if (($_GET['ajax'] ?? '') === 'sound') {
     header('Cache-Control: private, max-age=86400');
     header('Accept-Ranges: none');
     readfile($path);
-    exit;
-}
-
-if (($_GET['ajax'] ?? '') === 'mail') {
-    header('Content-Type: text/html; charset=utf-8');
-    header('Cache-Control: no-store');
-    echo mail_card(mail_get(null, !empty($_GET['fresh'])), mail_cfg());
     exit;
 }
 
@@ -1358,10 +1296,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         if ($hasCal) {
             $summary[] = $next7 ? "Du har $next7 aftale" . ($next7 === 1 ? '' : 'r') . ' de næste 7 dage.' : 'Kalenderen er tom de næste 7 dage.';
         }
-        $mlC = load_json(ukey('mail-cache'));
-        if (!empty($mlC['count'])) {
-            $summary[] = 'Du har ' . $mlC['count'] . ' ulæst' . ($mlC['count'] === 1 ? '' : 'e') . ' mail' . ($mlC['count'] === 1 ? '' : 's') . '.';
-        }
         foreach (watch_load() as $w) {
             $wd = watch_days($w['date']);
             if ($wd !== null && $wd >= 0 && $wd <= 3) {
@@ -1390,7 +1324,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
               <div class="hj-chips">
                 <button type="button" data-hj-q="Hvordan ser min dag ud?">Min dag</button>
                 <button type="button" data-hj-q="Jeg har trænet i dag">Log træning</button>
-                <button type="button" data-hj-q="Har jeg nogen vigtige mails?">Mail</button>
+                <button type="button" data-hj-q="Hvad holder jeg øje med?">Udgivelser</button>
               </div>
             </div>
           </div>
@@ -1474,15 +1408,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php else: ?>
             <p class="muted small rem-empty">Ingen påmindelser. Skriv en ovenfor eller sig "Jarvis, mind mig om …".</p>
           <?php endif; ?>
-        </section>
-
-        <section class="card c-mail">
-          <div class="card-head">
-            <h2>Mail</h2>
-            <?php $mcfg = mail_cfg(); if ($mcfg['link'] !== ''): ?><a href="<?= e($mcfg['link']) ?>" class="round" target="_blank" rel="noopener" aria-label="Åbn mail"><?= icon('arrow') ?></a><?php endif; ?>
-          </div>
-          <?php $mlc = load_json(ukey('mail-cache')); ?>
-          <div class="ml-wrap" data-ml<?= mail_ready($mcfg) && (($mlc['t'] ?? 0) < time() - 120) ? ' data-ml-refresh' : '' ?>><?= mail_card(($mlc['t'] ?? 0) ? $mlc : null, $mcfg) ?></div>
         </section>
 
         <section class="card c-watch">
@@ -1780,22 +1705,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li><strong>Min dag</strong> / <strong>Mit budget</strong>: <code>token</code> og <code>action</code> = <code>agenda</code> eller <code>budget</code> → Læs tekst op.</li>
         </ol>
       </div>
-
-      <?php $mc = mail_cfg(); ?>
-      <form method="post" class="panel form" id="mail">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="save_mail">
-        <h2 class="section-title">Mail</h2>
-        <p class="muted small">Viser ulæste mails på oversigten og sender push ved ny mail. Jarvis læser kun afsender og emne, og mails bliver ikke markeret som læst. Kodeordet gemmes kun på din server.</p>
-        <label>Mailadresse<input type="email" name="user" value="<?= e($mc['user'] ?: $me['email']) ?>" autocomplete="off"></label>
-        <label>Kodeord til mailen<input type="password" name="pass" placeholder="<?= $mc['pass'] !== '' ? 'Gemt – lad stå tomt for at beholde' : 'Kodeordet til din one.com-mail' ?>" autocomplete="new-password"></label>
-        <label>Link til at åbne mailen (valgfrit)<input name="link" value="<?= e($mc['link']) ?>" placeholder="Fx din webmail-adresse"></label>
-        <label class="check"><input type="checkbox" name="push" value="1"<?= $mc['push'] ? ' checked' : '' ?>> Push-notifikation ved ny mail</label>
-        <div class="actions">
-          <button class="btn">Gem og test</button>
-          <?php if (mail_ready($mc)): ?><button class="btn ghost danger" name="remove" value="1">Kobl fra</button><?php endif; ?>
-        </div>
-      </form>
 
       <?php $tr = training_load(); ?>
       <form method="post" class="panel form" id="traening">

@@ -5,7 +5,6 @@ require dirname(__DIR__) . '/inc/calendar.php';
 require dirname(__DIR__) . '/inc/messages.php';
 require dirname(__DIR__) . '/inc/training.php';
 require dirname(__DIR__) . '/inc/reminders.php';
-require dirname(__DIR__) . '/inc/mail.php';
 require dirname(__DIR__) . '/inc/watch.php';
 require dirname(__DIR__) . '/inc/claude.php';
 
