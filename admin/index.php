@@ -937,7 +937,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['dashboard', './', 'home', 'Oversigt'],
             ['hacks', './?view=hacks', 'bulb', 'Lifehacks'],
             ['budget', './?view=budget', 'wallet', 'Budget'],
-            ['calendar', './?view=calendar', 'calendar', 'Kalender'],
             ['messages', './?view=messages', 'inbox', 'Beskeder'],
             ['chat', './?view=chat', 'ai', 'Jarvis'],
         ];
