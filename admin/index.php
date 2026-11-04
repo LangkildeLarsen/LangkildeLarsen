@@ -1453,6 +1453,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   <div class="mp-screen">
     <img class="mp-cover" src="<?= $music['v'] ? 'https://i.ytimg.com/vi/' . e($music['v']) . '/hqdefault.jpg' : '' ?>" alt=""<?= $music['v'] ? '' : ' hidden' ?>>
     <span class="mp-ph"><?= icon('music') ?></span>
+    <img class="mp-vinyl" src="../assets/brand/vinyl.webp" alt="" width="560" height="560">
   </div>
   <p class="mp-title" id="mp-title">YouTube Mix</p>
   <input type="range" class="mp-seek" id="mp-seek" min="0" max="1000" value="0" aria-label="Spol">
