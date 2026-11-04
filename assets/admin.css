@@ -2121,3 +2121,7 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
 @media (max-width: 900px) {
   .update-toast { top: max(10px, env(safe-area-inset-top)); width: max-content; max-width: calc(100vw - 20px); font-size: 13px; }
 }
+
+.rail-logo { background: transparent; }
+.rail-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+.auth-logo { border-radius: 22%; }

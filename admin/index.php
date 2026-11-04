@@ -133,7 +133,7 @@ function app_head(): string
 <meta name="apple-mobile-web-app-title" content="Emil">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="../assets/brand/dash-180.png">
-<link rel="icon" type="image/svg+xml" href="../assets/brand/dash-logo.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/brand/dash-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/dash-32.png">';
 }
 
@@ -254,7 +254,7 @@ if (!is_logged_in()) {
 <body class="auth">
 <form method="post" class="auth-box" action="index.php">
   <?= csrf_field() ?>
-  <img src="../assets/brand/dash-logo.svg" alt="" class="auth-logo">
+  <img src="../assets/brand/dash-192.png" alt="" class="auth-logo">
   <h1><?= $mode === 'invite' ? 'Velkommen, ' . e(first_name($invite)) : ($mode === 'setup' ? 'Opret adgang' : 'Log ind') ?></h1>
   <?php if ($mode === 'invite'): ?>
     <p class="muted">Vælg en adgangskode til dit dashboard. Du logger ind med <?= e($invite['email']) ?>.</p>
@@ -896,7 +896,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <body>
 <div class="app">
   <aside class="rail" aria-label="Menu">
-    <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/dash-mark.svg" alt=""></a>
+    <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/dash-mark.png" alt=""></a>
     <nav class="rail-nav">
       <span class="rail-pill" aria-hidden="true"></span>
       <?php
