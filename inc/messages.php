@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/push.php';
+
 function dm_all(): array
 {
     return load_json('messages');
@@ -22,6 +24,10 @@ function dm_send(string $from, string $to, string $text, string $type = 'text'):
         $all = array_slice($all, -2000);
     }
     save_json('messages', $all);
+    try {
+        push_message($m);
+    } catch (Throwable $e) {
+    }
     return $m;
 }
 

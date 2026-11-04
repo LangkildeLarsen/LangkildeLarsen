@@ -460,6 +460,21 @@ if ($action) {
         exit;
     }
 
+    if (in_array($action, ['push_subscribe', 'push_unsubscribe', 'push_test'], true)) {
+        header('Content-Type: application/json; charset=utf-8');
+        $sub = json_decode((string)($_POST['sub'] ?? ''), true);
+        if ($action === 'push_subscribe') {
+            echo json_encode(['ok' => is_array($sub) && push_subscribe($me, $sub)]);
+        } elseif ($action === 'push_unsubscribe') {
+            push_unsubscribe($me, (string)($sub['endpoint'] ?? ''));
+            echo json_encode(['ok' => true]);
+        } else {
+            $n = push_send($me, ['title' => 'Dashboard', 'body' => 'Notifikationer virker.', 'url' => '/admin/?view=messages', 'tag' => 'test']);
+            echo json_encode(['ok' => $n > 0, 'sent' => $n]);
+        }
+        exit;
+    }
+
     if ($action === 'send_message') {
         $to = mb_strtolower(trim((string)($_POST['to'] ?? '')));
         $text = trim((string)($_POST['text'] ?? ''));
@@ -845,6 +860,13 @@ if (($_GET['ajax'] ?? '') === 'version') {
     exit;
 }
 
+if (($_GET['ajax'] ?? '') === 'push_key') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['key' => push_public_key(), 'count' => count(push_subs($me))]);
+    exit;
+}
+
 if (($_GET['ajax'] ?? '') === 'unread') {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
@@ -975,7 +997,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
         <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
       </a>
-      <a class="bell music-btn" href="spotify:" data-player-open aria-label="Musik"><?= icon('music') ?></a>
     </header>
 
     <?php if ($flash): ?><p class="alert"><?= e($flash) ?></p><?php endif; ?>
@@ -1438,6 +1459,17 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li>Tilføj <strong>Læs tekst op</strong>. Lav én magen til med navnet <strong>Mit budget</strong> og <code>action</code> = <code>budget</code>.</li>
         </ol>
       </div>
+
+      <section class="panel push-panel" id="notifikationer" data-push>
+        <h2 class="section-title">Notifikationer</h2>
+        <p class="muted small">Få besked på telefonen og i Chrome, når der kommer en ny besked – også når dashboardet er lukket. Slå det til på hver enhed for sig.</p>
+        <p class="push-status small" data-push-status>Tjekker…</p>
+        <div class="actions">
+          <button type="button" class="btn" data-push-on hidden>Slå notifikationer til</button>
+          <button type="button" class="btn ghost" data-push-test hidden>Send en test</button>
+          <button type="button" class="btn ghost" data-push-off hidden>Slå fra på denne enhed</button>
+        </div>
+      </section>
 
       <div class="panel">
         <h2 class="section-title">Admin som app på iPhone</h2>

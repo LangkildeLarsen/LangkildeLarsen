@@ -809,3 +809,116 @@
   if (store.get('mp-open', true)) open(true);
   else document.documentElement.classList.add('mp-closed');
 })();
+
+(() => {
+  const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const csrf = () => (document.querySelector('input[name="csrf"]') || {}).value || '';
+  const post = (action, sub) => {
+    const fd = new FormData();
+    fd.append('csrf', csrf());
+    fd.append('action', action);
+    if (sub) fd.append('sub', JSON.stringify(sub));
+    return fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).catch(() => ({}));
+  };
+  const keyBytes = b64 => {
+    const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(s, c => c.charCodeAt(0));
+  };
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  let reg = null;
+  let vapid = '';
+
+  const ready = ok ? navigator.serviceWorker.register('sw.js', { scope: './' }).then(r => { reg = r; return navigator.serviceWorker.ready; }).catch(() => null) : Promise.resolve(null);
+
+  const current = async () => {
+    await ready;
+    return reg ? reg.pushManager.getSubscription() : null;
+  };
+
+  const subscribe = async () => {
+    await ready;
+    if (!reg) return null;
+    if (!vapid) {
+      const j = await fetch('index.php?ajax=push_key', { credentials: 'same-origin' }).then(r => r.json()).catch(() => ({}));
+      vapid = j.key || '';
+    }
+    if (!vapid) return null;
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const k = sub.options && sub.options.applicationServerKey;
+      const same = k && btoa(String.fromCharCode(...new Uint8Array(k))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') === vapid;
+      if (!same) { await sub.unsubscribe(); sub = null; }
+    }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapid) });
+    await post('push_subscribe', sub.toJSON());
+    return sub;
+  };
+
+  if (ok && Notification.permission === 'granted') subscribe().catch(() => {});
+
+  const paint = async () => {
+    const box = document.querySelector('[data-push]');
+    if (!box) return;
+    const status = box.querySelector('[data-push-status]');
+    const on = box.querySelector('[data-push-on]');
+    const test = box.querySelector('[data-push-test]');
+    const off = box.querySelector('[data-push-off]');
+    on.hidden = test.hidden = off.hidden = true;
+    if (!ok) {
+      status.textContent = ios && !standalone
+        ? 'På iPhone skal dashboardet først føjes til hjemmeskærmen og åbnes derfra. Så kan du slå notifikationer til her.'
+        : 'Denne browser understøtter ikke notifikationer.';
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      status.textContent = 'Notifikationer er blokeret. Tillad dem i browserens eller telefonens indstillinger for siden.';
+      return;
+    }
+    const sub = Notification.permission === 'granted' ? await current() : null;
+    if (sub) {
+      status.textContent = 'Slået til på denne enhed.';
+      test.hidden = off.hidden = false;
+    } else {
+      status.textContent = 'Slået fra på denne enhed.';
+      on.hidden = false;
+    }
+  };
+
+  document.addEventListener('click', async e => {
+    const t = e.target.closest('[data-push-on], [data-push-test], [data-push-off]');
+    if (!t) return;
+    const status = document.querySelector('[data-push-status]');
+    t.disabled = true;
+    try {
+      if (t.matches('[data-push-on]')) {
+        const p = await Notification.requestPermission();
+        if (p === 'granted') await subscribe();
+      } else if (t.matches('[data-push-test]')) {
+        const j = await post('push_test');
+        if (status) status.textContent = j.ok ? 'Test sendt – den dukker op om et øjeblik.' : 'Testen kunne ikke sendes. Prøv at slå notifikationer fra og til igen.';
+        t.disabled = false;
+        return;
+      } else {
+        const sub = await current();
+        if (sub) { await post('push_unsubscribe', { endpoint: sub.endpoint }); await sub.unsubscribe(); }
+      }
+    } catch (err) {
+      if (status) status.textContent = 'Det lykkedes ikke: ' + (err && err.message ? err.message : 'ukendt fejl');
+      t.disabled = false;
+      return;
+    }
+    t.disabled = false;
+    paint();
+  });
+
+  const clearBadge = () => {
+    if (document.hidden || !('clearAppBadge' in navigator)) return;
+    if (!document.querySelector('[data-unread-dot]:not([hidden])')) navigator.clearAppBadge().catch(() => {});
+  };
+
+  document.addEventListener('page:ready', () => { paint(); clearBadge(); });
+  document.addEventListener('visibilitychange', clearBadge);
+  paint();
+  clearBadge();
+})();

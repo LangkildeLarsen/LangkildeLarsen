@@ -2125,3 +2125,11 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
 .rail-logo { background: transparent; }
 .rail-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
 .auth-logo { border-radius: 22%; }
+
+button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.chat .round:hover { transform: none; }
+.chat .card-head form { display: contents; }
+
+.push-status { margin: 4px 0 14px; color: var(--ink); }
+.push-panel .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.push-panel [hidden] { display: none !important; }
