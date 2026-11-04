@@ -28,7 +28,7 @@ function cal_fetch(string $url): ?string
 function cal_sources(): array
 {
     $out = [];
-    foreach (load_json('calendars') as $c) {
+    foreach (load_json(ukey('calendars')) as $c) {
         if (!empty($c['url'])) {
             $out[] = $c;
         }
@@ -42,7 +42,7 @@ function cal_events(int $days = 30, bool $force = false): array
     if (!$sources) {
         return ['events' => [], 'errors' => []];
     }
-    $cache = load_json('cal-cache');
+    $cache = load_json(ukey('cal-cache'));
     $tz = new DateTimeZone(date_default_timezone_get());
     $from = new DateTime('now', $tz);
     $to = (new DateTime('today', $tz))->modify("+$days days");
@@ -72,7 +72,7 @@ function cal_events(int $days = 30, bool $force = false): array
     }
 
     if ($dirty) {
-        save_json('cal-cache', $cache);
+        save_json(ukey('cal-cache'), $cache);
     }
     usort($events, fn($a, $b) => [$a['start'], !$a['allday']] <=> [$b['start'], !$b['allday']]);
     return ['events' => $events, 'errors' => $errors];

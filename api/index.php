@@ -27,7 +27,21 @@ if ($entry['count'] >= 10 && time() - $entry['last'] < 900) {
 
 $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
 $token = preg_match('/^Bearer\s+(\S+)$/i', $header, $m) ? $m[1] : (string)($_POST['token'] ?? '');
-$api = load_json('api');
+users_migrate();
+$apiUser = null;
+if ($token !== '') {
+    foreach (users_all() as $u) {
+        $cand = load_json(ukey('api', $u));
+        if (!empty($cand['hash']) && hash_equals($cand['hash'], hash('sha256', $token))) {
+            $apiUser = $u;
+            break;
+        }
+    }
+}
+$api = $apiUser ? ['hash' => hash('sha256', $token)] : [];
+if ($apiUser) {
+    $GLOBALS['ctx_user'] = $apiUser;
+}
 
 if ($token === '' || empty($api['hash']) || !hash_equals($api['hash'], hash('sha256', $token))) {
     $entry['count'] = time() - $entry['last'] > 900 ? 1 : $entry['count'] + 1;
@@ -54,7 +68,7 @@ if ($action === 'lifehack') {
     if ($text === '') {
         reply('Jeg hørte ikke noget. Prøv igen.', 422);
     }
-    $categories = load_json('categories', ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser']);
+    $categories = load_json(ukey('categories'), ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser']);
     $category = trim((string)($input['category'] ?? ''));
     if ($category === '' && preg_match('/^([\p{L}]+)[\s:,.\-]+(.+)$/u', $text, $m)) {
         foreach ($categories as $c) {
@@ -71,7 +85,7 @@ if ($action === 'lifehack') {
         $first = preg_split('/(?<=[.!?])\s+/u', $text)[0];
         $title = mb_strlen($first) > 60 ? rtrim(mb_substr($first, 0, 57)) . '…' : rtrim($first, '.');
     }
-    $hacks = load_json('lifehacks');
+    $hacks = load_json(ukey('lifehacks'));
     $id = bin2hex(random_bytes(6));
     $hacks[$id] = [
         'id' => $id,
@@ -84,7 +98,7 @@ if ($action === 'lifehack') {
         'created' => date('c'),
         'updated' => date('c'),
     ];
-    save_json('lifehacks', $hacks);
+    save_json(ukey('lifehacks'), $hacks);
     reply('Gemt' . ($category ? " under $category" : '') . ': ' . $title);
 }
 
@@ -113,7 +127,7 @@ if ($action === 'agenda' || $action === 'kalender') {
 }
 
 if ($action === 'budget') {
-    $sum = budget_summary(load_json('budget', ['income' => [], 'expenses' => []]));
+    $sum = budget_summary(load_json(ukey('budget'), ['income' => [], 'expenses' => []]));
     if ($sum['income'] <= 0) {
         reply('Du har ikke lagt et budget ind endnu.');
     }

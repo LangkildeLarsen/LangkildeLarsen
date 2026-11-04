@@ -14,6 +14,7 @@ define('DATA_DIR', dirname(__DIR__) . '/data');
 define('UPLOAD_DIR', dirname(__DIR__) . '/uploads');
 
 require_once __DIR__ . '/icons.php';
+require_once __DIR__ . '/users.php';
 
 function e($s): string
 {
@@ -37,6 +38,9 @@ function save_json(string $name, array $data): void
     }
     if (!is_file(DATA_DIR . '/.htaccess')) {
         file_put_contents(DATA_DIR . '/.htaccess', "Require all denied\n");
+    }
+    if (!is_dir(dirname(DATA_DIR . '/' . $name . '.json'))) {
+        mkdir(dirname(DATA_DIR . '/' . $name . '.json'), 0755, true);
     }
     file_put_contents(
         DATA_DIR . '/' . $name . '.json',
@@ -225,7 +229,7 @@ function img_src(string $path, string $prefix = ''): string
 
 function is_logged_in(): bool
 {
-    return !empty($_SESSION['admin']);
+    return !empty($_SESSION['uid']);
 }
 
 function csrf_token(): string

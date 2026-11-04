@@ -62,8 +62,8 @@ function exp_item(array $x): string
     <a href="#top" class="brand"><img src="assets/brand/avatar-round.png" alt=""><span><?= e($first) ?></span></a>
     <nav class="seg" aria-label="Sektioner">
       <?php if ($shown): ?><a href="#projekter">Projekter</a><?php endif; ?>
-      <a href="#erfaring">Erfaring</a>
       <a href="#om">Om mig</a>
+      <a href="#erfaring">Erfaring</a>
     </nav>
     <a href="mailto:<?= e($p['email']) ?>" class="btn">Kontakt</a>
   </header>

@@ -1161,3 +1161,61 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
 }
 
 .donut circle { stroke-linecap: butt; }
+
+.initials {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: .02em;
+}
+
+.users { margin-top: 14px; }
+
+.user-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.user-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 20px; background: var(--card-2); box-shadow: var(--inset); flex-wrap: wrap; }
+
+.user-list .who { display: grid; flex: 1; min-width: 160px; line-height: 1.3; }
+
+.user-list .who small { color: var(--muted); }
+
+.user-list form { display: inline; }
+
+.st { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--card-3); font-size: 13px; }
+
+.st i { width: 8px; height: 8px; border-radius: 50%; }
+
+.st.green i { background: var(--green); }
+
+.st.red i { background: var(--orange); }
+
+.invite-link { display: grid !important; gap: 10px; }
+
+.invite-link .btn { justify-self: start; }
+
+.add-user { display: grid; grid-template-columns: 1fr 1.3fr auto; gap: 8px; }
+
+@media (max-width: 900px) {
+  .add-user { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  html, body { overflow-x: hidden; }
+  .rail { border-radius: 999px; padding: 7px; }
+  .rail nav { overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+  .rail nav::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .install { border-radius: 28px; }
+}
+
+@media (max-width: 900px) and (display-mode: standalone) {
+  .rail { bottom: max(6px, calc(env(safe-area-inset-bottom) - 14px)); }
+  .app { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
+}
+
+::-webkit-scrollbar { width: 0; height: 0; }

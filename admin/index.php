@@ -4,11 +4,20 @@ require dirname(__DIR__) . '/inc/budget.php';
 require dirname(__DIR__) . '/inc/calendar.php';
 require dirname(__DIR__) . '/inc/media.php';
 
-$auth = load_json('auth');
-$needsSetup = empty($auth['hash']);
+users_migrate();
+if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
+    foreach (users_all() as $u) {
+        if ($u['role'] === 'owner') {
+            $_SESSION['uid'] = $u['email'];
+        }
+    }
+    unset($_SESSION['admin']);
+}
+$needsSetup = !users_all();
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 $error = null;
+$invite = null;
 
 function flash(string $msg): void
 {
@@ -62,39 +71,54 @@ function remember_cookie(string $value, int $expires): void
     ]);
 }
 
-function remember_issue(array $auth): void
+function remember_issue(string $uid): void
 {
+    $users = users_all();
+    if (!isset($users[$uid])) {
+        return;
+    }
     $token = bin2hex(random_bytes(32));
     $expires = time() + 60 * 86400;
-    $tokens = array_filter($auth['tokens'] ?? [], fn($t) => $t > time());
+    $tokens = array_filter($users[$uid]['tokens'] ?? [], fn($t) => $t > time());
     $tokens[hash('sha256', $token)] = $expires;
-    $auth['tokens'] = $tokens;
-    save_json('auth', $auth);
-    remember_cookie($token, $expires);
+    $users[$uid]['tokens'] = $tokens;
+    users_save($users);
+    remember_cookie($uid . ':' . $token, $expires);
 }
 
-function remember_check(array $auth): bool
+function remember_check(): bool
 {
-    $token = (string)($_COOKIE['ll_remember'] ?? '');
-    if ($token === '') {
+    $raw = (string)($_COOKIE['ll_remember'] ?? '');
+    if ($raw === '') {
         return false;
     }
-    $exp = $auth['tokens'][hash('sha256', $token)] ?? 0;
+    $users = users_all();
+    if (str_contains($raw, ':')) {
+        [$uid, $token] = explode(':', $raw, 2);
+    } else {
+        $owner = array_values(array_filter($users, fn($u) => $u['role'] === 'owner'))[0] ?? null;
+        [$uid, $token] = [$owner['email'] ?? '', $raw];
+    }
+    $exp = $users[$uid]['tokens'][hash('sha256', $token)] ?? 0;
     if ($exp > time()) {
         session_regenerate_id(true);
-        $_SESSION['admin'] = true;
+        $_SESSION['uid'] = $uid;
         return true;
     }
     remember_cookie('', time() - 3600);
     return false;
 }
 
-function remember_clear(array $auth): void
+function remember_clear(): void
 {
-    $token = (string)($_COOKIE['ll_remember'] ?? '');
-    if ($token !== '' && isset($auth['tokens'][hash('sha256', $token)])) {
-        unset($auth['tokens'][hash('sha256', $token)]);
-        save_json('auth', $auth);
+    $raw = (string)($_COOKIE['ll_remember'] ?? '');
+    if ($raw !== '' && str_contains($raw, ':')) {
+        [$uid, $token] = explode(':', $raw, 2);
+        $users = users_all();
+        if (isset($users[$uid]['tokens'][hash('sha256', $token)])) {
+            unset($users[$uid]['tokens'][hash('sha256', $token)]);
+            users_save($users);
+        }
     }
     remember_cookie('', time() - 3600);
 }
@@ -128,12 +152,21 @@ function greeting(): array
 }
 
 
-$ui = load_json('ui');
-$bgUrl = !empty($ui['bg']) ? '../uploads/' . $ui['bg'] : '../assets/brand/dashboard-bg.jpg';
-
 $action = $_POST['action'] ?? '';
 
-if ($action === 'setup' && $needsSetup) {
+$inviteToken = (string)($_GET['invite'] ?? $_POST['invite'] ?? '');
+if ($inviteToken !== '') {
+    foreach (users_all() as $u) {
+        if (!empty($u['invite']) && hash_equals($u['invite']['hash'], hash('sha256', $inviteToken)) && $u['invite']['expires'] > time()) {
+            $invite = $u;
+        }
+    }
+    if (!$invite) {
+        $error = 'Invitationslinket er ugyldigt eller udløbet. Bed om et nyt.';
+    }
+}
+
+if ($action === 'accept_invite' && $invite) {
     verify_csrf();
     $pw = (string)($_POST['password'] ?? '');
     if (mb_strlen($pw) < 10) {
@@ -141,11 +174,33 @@ if ($action === 'setup' && $needsSetup) {
     } elseif ($pw !== ($_POST['password2'] ?? '')) {
         $error = 'De to adgangskoder er ikke ens.';
     } else {
-        $auth = ['hash' => password_hash($pw, PASSWORD_DEFAULT)];
-        save_json('auth', $auth);
+        $users = users_all();
+        $users[$invite['email']]['hash'] = password_hash($pw, PASSWORD_DEFAULT);
+        unset($users[$invite['email']]['invite']);
+        users_save($users);
         session_regenerate_id(true);
-        $_SESSION['admin'] = true;
-        remember_issue($auth);
+        $_SESSION['uid'] = $invite['email'];
+        remember_issue($invite['email']);
+        flash('Velkommen, ' . first_name($invite) . '! Dit dashboard er klar.');
+        redirect('index.php');
+    }
+}
+
+if ($action === 'setup' && $needsSetup) {
+    verify_csrf();
+    $pw = (string)($_POST['password'] ?? '');
+    $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Skriv en gyldig mail.';
+    } elseif (mb_strlen($pw) < 10) {
+        $error = 'Adgangskoden skal være mindst 10 tegn.';
+    } elseif ($pw !== ($_POST['password2'] ?? '')) {
+        $error = 'De to adgangskoder er ikke ens.';
+    } else {
+        users_save([$email => ['email' => $email, 'name' => get_profile()['name'], 'role' => 'owner', 'hash' => password_hash($pw, PASSWORD_DEFAULT), 'tokens' => [], 'created' => date('c')]]);
+        session_regenerate_id(true);
+        $_SESSION['uid'] = $email;
+        remember_issue($email);
         flash('Velkommen! Din adgangskode er gemt.');
         redirect('index.php');
     }
@@ -153,58 +208,70 @@ if ($action === 'setup' && $needsSetup) {
 
 if ($action === 'login' && !$needsSetup) {
     verify_csrf();
+    $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+    $user = users_all()[$email] ?? null;
     if ($mins = locked_out()) {
         $error = "For mange forsøg. Prøv igen om $mins min.";
-    } elseif (password_verify((string)($_POST['password'] ?? ''), $auth['hash'])) {
+    } elseif ($user && !empty($user['hash']) && password_verify((string)($_POST['password'] ?? ''), $user['hash'])) {
         clear_fails();
         session_regenerate_id(true);
-        $_SESSION['admin'] = true;
+        $_SESSION['uid'] = $email;
         if (!empty($_POST['remember'])) {
-            remember_issue($auth);
+            remember_issue($email);
         }
         redirect('index.php');
     } else {
         register_fail();
         sleep(1);
-        $error = 'Forkert adgangskode.';
+        $error = 'Forkert mail eller adgangskode.';
     }
 }
 
-if (!is_logged_in() && !$needsSetup) {
-    remember_check($auth);
+if (is_logged_in() && !current_user()) {
+    unset($_SESSION['uid']);
+}
+
+if (!is_logged_in() && !$needsSetup && !$invite) {
+    remember_check();
 }
 
 if (!is_logged_in()) {
+    $mode = $invite ? 'invite' : ($needsSetup ? 'setup' : 'login');
     ?><!doctype html>
 <html lang="da">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050505">
 <?= app_head() ?>
 <title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
 <body class="auth">
-<form method="post" class="auth-box">
+<form method="post" class="auth-box" action="index.php">
   <?= csrf_field() ?>
   <img src="../assets/brand/dash-logo.svg" alt="" class="auth-logo">
-  <h1><?= $needsSetup ? 'Opret adgangskode' : 'Log ind' ?></h1>
-  <?php if ($needsSetup): ?>
-    <p class="muted">Første gang: vælg den adgangskode, du vil logge ind med.</p>
+  <h1><?= $mode === 'invite' ? 'Velkommen, ' . e(first_name($invite)) : ($mode === 'setup' ? 'Opret adgang' : 'Log ind') ?></h1>
+  <?php if ($mode === 'invite'): ?>
+    <p class="muted">Vælg en adgangskode til dit dashboard. Du logger ind med <?= e($invite['email']) ?>.</p>
+    <input type="hidden" name="invite" value="<?= e($inviteToken) ?>">
+  <?php elseif ($mode === 'setup'): ?>
+    <p class="muted">Første gang: vælg den mail og adgangskode, du vil logge ind med.</p>
   <?php endif; ?>
   <?php if ($error): ?><p class="alert error"><?= e($error) ?></p><?php endif; ?>
-  <input type="hidden" name="action" value="<?= $needsSetup ? 'setup' : 'login' ?>">
-  <label>Adgangskode<input type="password" name="password" required autofocus autocomplete="<?= $needsSetup ? 'new-password' : 'current-password' ?>"></label>
-  <?php if ($needsSetup): ?>
-    <label>Gentag adgangskode<input type="password" name="password2" required autocomplete="new-password"></label>
+  <input type="hidden" name="action" value="<?= $mode === 'invite' ? 'accept_invite' : $mode ?>">
+  <?php if ($mode !== 'invite'): ?>
+    <label>Mail<input type="email" name="email" required autofocus autocomplete="username" value="<?= e($_POST['email'] ?? '') ?>"></label>
   <?php endif; ?>
-  <?php if (!$needsSetup): ?>
+  <label>Adgangskode<input type="password" name="password" required <?= $mode === 'invite' ? 'autofocus' : '' ?> autocomplete="<?= $mode === 'login' ? 'current-password' : 'new-password' ?>"></label>
+  <?php if ($mode !== 'login'): ?>
+    <label>Gentag adgangskode<input type="password" name="password2" required autocomplete="new-password"></label>
+  <?php else: ?>
     <label class="check"><input type="checkbox" name="remember" value="1" checked> Forbliv logget ind på denne enhed</label>
   <?php endif; ?>
-  <button class="btn"><?= $needsSetup ? 'Gem og fortsæt' : 'Log ind' ?></button>
+  <button class="btn"><?= $mode === 'login' ? 'Log ind' : 'Gem og fortsæt' ?></button>
   <a href="../" class="muted small back"><?= icon('left') ?> Tilbage til siden</a>
 </form>
 </body>
@@ -213,14 +280,18 @@ if (!is_logged_in()) {
     exit;
 }
 
-$hacks = load_json('lifehacks');
-$categories = load_json('categories', default_categories());
+$me = current_user();
+$isOwner = is_owner($me);
+$ui = load_json(ukey('ui'));
+
+$hacks = load_json(ukey('lifehacks'));
+$categories = load_json(ukey('categories'), default_categories());
 
 if ($action) {
     verify_csrf();
 
     if ($action === 'logout') {
-        remember_clear($auth);
+        remember_clear();
         $_SESSION = [];
         session_destroy();
         redirect('../');
@@ -245,7 +316,7 @@ if ($action) {
             'created' => date('c'),
             'updated' => date('c'),
         ];
-        save_json('lifehacks', $hacks);
+        save_json(ukey('lifehacks'), $hacks);
         flash('Lifehack gemt. Giv den en kategori, når du har tid.');
         redirect('index.php');
     }
@@ -260,7 +331,7 @@ if ($action) {
         $cat = trim((string)($_POST['category'] ?? ''));
         if ($cat !== '' && !in_array($cat, $categories, true)) {
             $categories[] = $cat;
-            save_json('categories', $categories);
+            save_json(ukey('categories'), $categories);
         }
         $tags = array_values(array_filter(array_map('trim', explode(',', (string)($_POST['tags'] ?? '')))));
         $existing = $hacks[$id] ?? null;
@@ -275,49 +346,95 @@ if ($action) {
             'created' => $existing['created'] ?? date('c'),
             'updated' => date('c'),
         ];
-        save_json('lifehacks', $hacks);
+        save_json(ukey('lifehacks'), $hacks);
         flash('Lifehack gemt.');
         redirect('index.php?view=hack&id=' . urlencode($id));
     }
 
     if ($action === 'delete_hack') {
         unset($hacks[$_POST['id'] ?? '']);
-        save_json('lifehacks', $hacks);
+        save_json(ukey('lifehacks'), $hacks);
         flash('Lifehack slettet.');
         redirect('index.php?view=hacks');
     }
 
     if ($action === 'toggle_pin' && isset($hacks[$_POST['id'] ?? ''])) {
         $hacks[$_POST['id']]['pinned'] = empty($hacks[$_POST['id']]['pinned']);
-        save_json('lifehacks', $hacks);
+        save_json(ukey('lifehacks'), $hacks);
         redirect($_POST['back'] ?? './');
     }
 
     if ($action === 'save_categories') {
         $new = array_values(array_unique(array_filter(array_map('trim', explode("\n", (string)($_POST['categories'] ?? ''))))));
-        save_json('categories', $new);
+        save_json(ukey('categories'), $new);
         flash('Kategorier gemt.');
         redirect('index.php?view=settings');
     }
 
     if ($action === 'change_password') {
-        if (!password_verify((string)($_POST['current'] ?? ''), $auth['hash'])) {
+        if (!password_verify((string)($_POST['current'] ?? ''), $me['hash'] ?? '')) {
             flash('Nuværende adgangskode er forkert.');
         } elseif (mb_strlen((string)($_POST['new'] ?? '')) < 10) {
             flash('Ny adgangskode skal være mindst 10 tegn.');
         } elseif ($_POST['new'] !== ($_POST['new2'] ?? '')) {
             flash('De nye adgangskoder er ikke ens.');
         } else {
-            $auth = ['hash' => password_hash($_POST['new'], PASSWORD_DEFAULT)];
-            save_json('auth', $auth);
-            remember_issue($auth);
+            $users = users_all();
+            $users[$me['email']]['hash'] = password_hash($_POST['new'], PASSWORD_DEFAULT);
+            $users[$me['email']]['tokens'] = [];
+            users_save($users);
+            remember_issue($me['email']);
             flash('Adgangskode ændret. Andre enheder er logget ud.');
         }
         redirect('index.php?view=settings');
     }
 
+    $ownerOnly = ['save_profile', 'save_projects', 'fetch_logos', 'fetch_projects', 'add_user', 'user_invite', 'remove_user'];
+    if (in_array($action, $ownerOnly, true) && !$isOwner) {
+        flash('Det har du ikke adgang til.');
+        redirect('index.php');
+    }
+
+    if ($action === 'add_user' || $action === 'user_invite') {
+        $users = users_all();
+        $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+        if ($action === 'add_user') {
+            $name = trim((string)($_POST['name'] ?? ''));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $name === '') {
+                flash('Skriv navn og en gyldig mail.');
+                redirect('index.php?view=settings#brugere');
+            }
+            if (isset($users[$email])) {
+                flash('Der findes allerede en bruger med den mail.');
+                redirect('index.php?view=settings#brugere');
+            }
+            $users[$email] = ['email' => $email, 'name' => $name, 'role' => 'user', 'hash' => '', 'tokens' => [], 'created' => date('c')];
+        }
+        if (!isset($users[$email]) || $users[$email]['role'] === 'owner') {
+            redirect('index.php?view=settings#brugere');
+        }
+        $token = bin2hex(random_bytes(24));
+        $users[$email]['invite'] = ['hash' => hash('sha256', $token), 'expires' => time() + 7 * 86400];
+        users_save($users);
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' ? 'https' : 'http';
+        $_SESSION['invite_link'] = ['email' => $email, 'url' => $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'langkildelarsen.dk') . '/admin/?invite=' . $token];
+        flash('Invitationslink lavet til ' . $users[$email]['name'] . '. Det virker i 7 dage.');
+        redirect('index.php?view=settings#brugere');
+    }
+
+    if ($action === 'remove_user') {
+        $users = users_all();
+        $email = (string)($_POST['email'] ?? '');
+        if (isset($users[$email]) && $users[$email]['role'] !== 'owner') {
+            unset($users[$email]);
+            users_save($users);
+            flash('Brugeren er fjernet. Deres data ligger stadig på serveren.');
+        }
+        redirect('index.php?view=settings#brugere');
+    }
+
     if ($action === 'save_budget') {
-        save_json('budget', budget_from_post($_POST));
+        save_json(ukey('budget'), budget_from_post($_POST));
         flash('Budget gemt.');
         redirect('index.php?view=budget' . (!empty($_POST['edit']) ? '&edit=1' : ''));
     }
@@ -331,15 +448,15 @@ if ($action) {
             }
             $cals[] = ['name' => trim((string)($_POST['cal_name'][$i] ?? '')) ?: 'Kalender', 'url' => $url];
         }
-        save_json('calendars', $cals);
-        save_json('cal-cache', []);
+        save_json(ukey('calendars'), $cals);
+        save_json(ukey('cal-cache'), []);
         $res = cal_events(30, true);
         flash($res['errors'] ? 'Gemt, men disse kunne ikke hentes: ' . implode(', ', $res['errors']) . '. Tjek linket.' : 'Kalendere gemt.');
         redirect('index.php?view=settings');
     }
 
     if ($action === 'save_background') {
-        $ui = load_json('ui');
+        $ui = load_json(ukey('ui'));
         if (!empty($_POST['reset'])) {
             if (!empty($ui['bg'])) {
                 @unlink(UPLOAD_DIR . '/' . $ui['bg']);
@@ -358,20 +475,20 @@ if ($action) {
                 flash('Vælg et billede (JPG, PNG eller WebP).');
             }
         }
-        save_json('ui', $ui);
+        save_json(ukey('ui'), $ui);
         redirect('index.php?view=settings#baggrund');
     }
 
     if ($action === 'api_token') {
         $token = bin2hex(random_bytes(20));
-        save_json('api', ['hash' => hash('sha256', $token), 'created' => date('c')]);
+        save_json(ukey('api'), ['hash' => hash('sha256', $token), 'created' => date('c')]);
         $_SESSION['new_token'] = $token;
         flash('Ny nøgle lavet. Kopiér den nu – den vises kun én gang.');
         redirect('index.php?view=settings#siri');
     }
 
     if ($action === 'api_revoke') {
-        save_json('api', []);
+        save_json(ukey('api'), []);
         flash('Nøglen er slået fra. Dine genveje virker ikke længere.');
         redirect('index.php?view=settings#siri');
     }
@@ -547,6 +664,9 @@ if ($action) {
 }
 
 $view = $_GET['view'] ?? 'dashboard';
+if (!$isOwner && in_array($view, ['profile', 'projects'], true)) {
+    $view = 'dashboard';
+}
 $q = trim((string)($_GET['q'] ?? ''));
 $cat = $_GET['cat'] ?? '';
 
@@ -611,7 +731,7 @@ $titles = [
     'projects' => 'Projekter',
 ];
 
-$budget = load_json('budget', ['income' => [], 'expenses' => []]);
+$budget = load_json(ukey('budget'), ['income' => [], 'expenses' => []]);
 $sum = budget_summary($budget);
 $cal = in_array($view, ['dashboard', 'calendar'], true) ? cal_events($view === 'calendar' ? 30 : 62) : ['events' => [], 'errors' => []];
 $hasCal = (bool)cal_sources();
@@ -644,6 +764,9 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['profile', './?view=profile', 'user', 'Profil & CV'],
             ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
+        if (!$isOwner) {
+            $railItems = array_values(array_filter($railItems, fn($r) => !in_array($r[0], ['projects', 'profile'], true)));
+        }
         $activeView = in_array($view, ['hack', 'edit'], true) ? 'hacks' : $view;
       ?>
       <?php foreach ($railItems as [$v, $href, $ic, $label]): ?>
@@ -667,16 +790,16 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     ?>
     <header class="topbar">
       <?php [$greet, $emoji] = greeting(); ?>
-      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . explode(' ', $profile['name'])[0]) ?> <span class="wave" aria-hidden="true"><?= $emoji ?></span><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
+      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?> <span class="wave" aria-hidden="true"><?= $emoji ?></span><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
       <form class="search" action="./">
         <input type="hidden" name="view" value="hacks">
         <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>"><?php endif; ?>
         <?= icon('search') ?>
         <input type="search" name="q" value="<?= e($q) ?>" placeholder="Søg" aria-label="Søg i lifehacks">
       </form>
-      <a class="me" href="./?view=profile">
-        <img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt="">
-        <span><strong><?= e(explode(' ', $profile['name'])[0] . ' ' . (preg_split('/\s+/', $profile['name'])[1] ?? '')) ?></strong><small><?= e($profile['email']) ?></small></span>
+      <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>">
+        <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
+        <span><strong><?= e(implode(' ', array_slice(preg_split('/\s+/', trim($me['name'])), 0, 2))) ?></strong><small><?= e($me['email']) ?></small></span>
         <?= icon('down') ?>
       </a>
       <a class="bell" href="./?view=calendar" aria-label="Notifikationer"><?= icon('bell') ?><?php if ($bellItems): ?><i></i><?php endif; ?></a>
@@ -1028,7 +1151,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         </form>
       </div>
 
-      <?php $cals = load_json('calendars'); ?>
+      <?php $cals = load_json(ukey('calendars')); ?>
       <form method="post" class="panel form" id="kalender">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="save_calendars">
@@ -1048,7 +1171,44 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <div class="actions"><button class="btn">Gem kalendere</button></div>
       </form>
 
-      <?php $api = load_json('api'); $newToken = $_SESSION['new_token'] ?? null; unset($_SESSION['new_token']); ?>
+      <?php if ($isOwner): ?>
+        <?php $allUsers = users_all(); $newLink = $_SESSION['invite_link'] ?? null; unset($_SESSION['invite_link']); ?>
+        <section class="panel form users" id="brugere">
+          <h2 class="section-title">Brugere</h2>
+          <p class="muted small">Andre brugere får deres eget dashboard med eget budget, egne lifehacks og egen kalender. De kan ikke se dine ting og kan ikke rette forsiden.</p>
+          <ul class="user-list">
+            <?php foreach ($allUsers as $u): ?>
+              <li>
+                <span class="initials"><?= e(initials($u)) ?></span>
+                <span class="who"><strong><?= e($u['name']) ?></strong><small><?= e($u['email']) ?></small></span>
+                <span class="st <?= $u['role'] === 'owner' ? 'green' : (empty($u['hash']) ? 'red' : 'green') ?>"><i></i><?= $u['role'] === 'owner' ? 'Ejer' : (empty($u['hash']) ? 'Inviteret' : 'Aktiv') ?></span>
+                <?php if ($u['role'] !== 'owner'): ?>
+                  <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="user_invite"><input type="hidden" name="email" value="<?= e($u['email']) ?>"><button class="btn small ghost"><?= empty($u['hash']) ? 'Nyt link' : 'Nulstil kode' ?></button></form>
+                  <details class="confirm">
+                    <summary class="btn small ghost danger">Fjern</summary>
+                    <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="remove_user"><input type="hidden" name="email" value="<?= e($u['email']) ?>"><button class="btn small danger">Ja, fjern</button></form>
+                  </details>
+                <?php endif; ?>
+              </li>
+              <?php if ($newLink && $newLink['email'] === $u['email']): ?>
+                <li class="invite-link">
+                  <label>Send dette link til <?= e(first_name($u)) ?> – det virker én gang i 7 dage<input value="<?= e($newLink['url']) ?>" readonly onfocus="this.select()"></label>
+                  <a class="btn small" href="mailto:<?= e($u['email']) ?>?subject=<?= rawurlencode('Dit dashboard') ?>&body=<?= rawurlencode("Hej " . first_name($u) . "\n\nHer er dit link til at oprette din adgangskode:\n" . $newLink['url'] . "\n\nLinket virker i 7 dage.") ?>">Send på mail</a>
+                </li>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </ul>
+          <form method="post" class="add-user">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="add_user">
+            <input name="name" placeholder="Navn" aria-label="Navn" required>
+            <input type="email" name="email" placeholder="Mail" aria-label="Mail" required>
+            <button class="btn"><?= icon('plus') ?> Tilføj bruger</button>
+          </form>
+        </section>
+      <?php endif; ?>
+
+      <?php $api = load_json(ukey('api')); $newToken = $_SESSION['new_token'] ?? null; unset($_SESSION['new_token']); ?>
       <?php $base = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'langkildelarsen.dk') . '/api/'; ?>
       <div class="panel siri" id="siri">
         <h2 class="section-title">Siri & Genveje</h2>
