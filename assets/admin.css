@@ -1653,3 +1653,5 @@ html:has(.mp.playing) .mp-bg,
 html.mp-closed.mp-playing .mp-bg { opacity: .32 !important; }
 
 html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app { background-color: rgba(5, 5, 5, .82); }
+
+.i-pause .ic, .mp-b.big .i-pause .ic { stroke-width: 1.5; }
