@@ -2349,3 +2349,17 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 }
 @keyframes boot-glitch { 0% { transform: translateX(-4px); clip-path: inset(0 60% 0 0); } 30% { transform: translateX(3px); clip-path: inset(0 20% 0 0); } 60% { transform: translateX(-1px); } 100% { transform: none; clip-path: inset(0 0 0 0); } }
 @media (prefers-reduced-motion: reduce) { .boot *, .boot *::after, .boot-frame::after { animation: none !important; transition: none !important; } .boot-hud, .boot-orb .jv-r, .boot-orb .jv-ticks, .boot-orb .jv-core { opacity: 1 !important; } }
+
+@media (min-width: 901px) {
+  html, body { background: var(--app); }
+  body { padding: 0; }
+  .app { max-width: none; min-height: 100vh; margin: 0; border-radius: 0; box-shadow: none; }
+  .chat, .jv { height: calc(100vh - 134px); }
+  .dm-thread { height: calc(100vh - 134px); }
+}
+@media (min-width: 901px) {
+  .rail { top: 14px; height: calc(100vh - 28px); }
+}
+
+.topbar h1 { text-wrap: balance; }
+@media (max-width: 900px) { .topbar h1 { font-size: clamp(22px, 6.4vw, 30px); line-height: 1.15; } }

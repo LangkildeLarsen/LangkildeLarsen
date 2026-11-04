@@ -145,13 +145,28 @@ function default_categories(): array
 function greeting(): array
 {
     $h = (int)date('G');
-    if ($h < 5) return ['God nat', '🌙'];
-    if ($h < 10) return ['Godmorgen', '☀️'];
-    if ($h < 12) return ['God formiddag', '☕'];
-    if ($h < 18) return ['God eftermiddag', '👋'];
-    if ($h < 22) return ['God aften', '🌆'];
-    return ['God nat', '🌙'];
+    $d = (int)date('N');
+    $pools = [
+        'nat' => ['Natteravn-mode aktiveret, {n}', 'Stadig vågen, {n}?', 'Sover hamstrene også ikke, {n}?', 'Kun os to og serveren nu, {n}', 'Månen er oppe. Det er du også, {n}', 'Sengen savner dig, {n}'],
+        'morgen' => ['Godmorgen, {n}. Kaffen er (næsten) klar', 'Op med humøret, {n}', 'Systemer online. Er du, {n}?', 'Ny dag, nye bugs, {n}', 'Morgenmad først, {n}?', 'Rise and shine, {n}'],
+        'formiddag' => ['Godt i gang, {n}?', 'Formiddagsform på max, {n}', 'Klar til at erobre verden, {n}?', 'Hvad skal vi knuse i dag, {n}?', 'Produktivitetsmodul indlæst, {n}'],
+        'eftermiddag' => ['Hvad så, {n}?', 'Eftermiddagsdip? Ikke på min vagt, {n}', 'Halvvejs der, {n}', 'Tid til en kage, {n}?', 'Jarvis til tjeneste, {n}', 'Hej igen, {n}'],
+        'aften' => ['God aften, {n}', 'Fyraften, {n}?', 'Sofa-mode klar, {n}', 'Velkommen hjem, {n}', 'Aftenvagten er bemandet, {n}', 'Netflix eller kode, {n}?'],
+    ];
+    $slot = $h < 5 ? 'nat' : ($h < 10 ? 'morgen' : ($h < 12 ? 'formiddag' : ($h < 18 ? 'eftermiddag' : ($h < 23 ? 'aften' : 'nat'))));
+    $list = $pools[$slot];
+    if ($d === 1 && $h >= 5 && $h < 12) {
+        $list[] = 'Mandag igen, {n}. Vi klarer den';
+    }
+    if ($d === 5 && $h >= 12) {
+        $list[] = 'Fredag, {n}! Weekenden kalder';
+    }
+    if ($d >= 6 && $h >= 5 && $h < 18) {
+        $list[] = 'Weekend-mode, {n}';
+    }
+    return [$list[array_rand($list)], ''];
 }
+
 
 
 $action = $_POST['action'] ?? '';
@@ -1023,7 +1038,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   <main class="content">
     <header class="topbar">
       <?php [$greet, $emoji] = greeting(); ?>
-      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
+      <h1><?php if ($view === 'dashboard'): ?><?= e(str_replace('{n}', first_name($me), $greet)) ?><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
       <div class="mp-dock" role="group" aria-label="Musik">
         <button type="button" class="dk-b" data-mp="prev" aria-label="Forrige"><?= icon('prev') ?></button>
         <button type="button" class="dk-b big" data-mp="toggle" aria-label="Afspil/pause"><span class="i-play"><?= icon('play') ?></span><span class="i-pause"><?= icon('pause') ?></span></button>
