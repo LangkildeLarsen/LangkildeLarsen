@@ -1878,3 +1878,5 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
   -webkit-backdrop-filter: blur(40px);
   backdrop-filter: blur(40px);
 }
+
+.mp-bg #mp-yt, .mp-bg iframe { filter: blur(18px) grayscale(100%); }
