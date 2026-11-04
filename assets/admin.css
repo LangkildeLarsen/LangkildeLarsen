@@ -1431,3 +1431,19 @@ html.loading .content { opacity: .55; transition: opacity .2s ease .1s; }
 .mp-screen #mp-yt, .mp-screen iframe { z-index: 2; }
 
 .mp:not(.has-video) .mp-screen iframe { opacity: 0; }
+
+@media (max-width: 900px), (pointer: coarse) {
+  .mp { display: none !important; }
+}
+
+@media (max-width: 900px) {
+  .rail {
+    left: 50%;
+    right: auto;
+    width: max-content;
+    max-width: calc(100vw - 20px);
+    transform: translateX(-50%);
+  }
+  .rail nav { width: auto; justify-content: center; gap: 6px; }
+  .rail nav a { width: 50px; height: 50px; }
+}

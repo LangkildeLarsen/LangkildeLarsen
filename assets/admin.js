@@ -128,8 +128,9 @@
   document.addEventListener('pointerover', warm, { passive: true });
   document.addEventListener('touchstart', warm, { passive: true });
 
+  const mobile = () => matchMedia('(max-width: 900px)').matches || matchMedia('(pointer: coarse)').matches;
   const mp = document.getElementById('mp');
-  if (!mp) return;
+  if (!mp || mobile()) return;
   let VIDEO = mp.dataset.v || '';
   let LIST = mp.dataset.list || '';
   const $ = id => document.getElementById(id);
@@ -247,7 +248,11 @@
   });
 
   document.addEventListener('click', e => {
-    if (e.target.closest('[data-player-open]')) mp.hidden ? open() : close();
+    if (e.target.closest('[data-player-open]')) {
+      if (mobile()) return;
+      e.preventDefault();
+      mp.hidden ? open() : close();
+    }
     if (e.target.closest('[data-player-close]')) close();
   });
 

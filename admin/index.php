@@ -803,12 +803,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   </aside>
 
   <main class="content">
-    <?php
-      $bellItems = array_merge(
-          array_filter($cal['events'], fn($ev) => date('Y-m-d', $ev['start']) === date('Y-m-d')),
-          array_filter(upcoming_payments($budget, 1), fn($x) => true)
-      );
-    ?>
     <header class="topbar">
       <?php [$greet, $emoji] = greeting(); ?>
       <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?> <span class="wave" aria-hidden="true"><?= $emoji ?></span><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
@@ -823,8 +817,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <span><strong><?= e(implode(' ', array_slice(preg_split('/\s+/', trim($me['name'])), 0, 2))) ?></strong><small><?= e($me['email']) ?></small></span>
         <?= icon('down') ?>
       </a>
-      <button class="bell music-btn" type="button" data-player-open aria-label="Åbn musikafspiller"><?= icon('music') ?></button>
-      <a class="bell" href="./?view=calendar" aria-label="Notifikationer"><?= icon('bell') ?><?php if ($bellItems): ?><i></i><?php endif; ?></a>
+      <a class="bell music-btn" href="spotify:" data-player-open aria-label="Musik"><?= icon('music') ?></a>
     </header>
 
     <?php if ($flash): ?><p class="alert"><?= e($flash) ?></p><?php endif; ?>
