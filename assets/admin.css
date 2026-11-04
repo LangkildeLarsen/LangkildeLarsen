@@ -1865,3 +1865,5 @@ kbd { padding: 3px 8px; border-radius: 7px; background: var(--card-3); color: va
 @media (max-width: 900px) {
   .rail .ic { width: 25px; height: 25px; }
 }
+
+html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app { background-color: rgb(5 5 5 / 64%); }
