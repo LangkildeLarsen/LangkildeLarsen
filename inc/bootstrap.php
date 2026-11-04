@@ -61,7 +61,6 @@ function default_profile(): array
         'experience' => [
             ['role' => 'Grafisk webdesigner', 'company' => 'EFUTURE', 'url' => 'https://efuture.dk', 'period' => 'dec. 2024 – nu', 'text' => 'Webshop, grafisk design, produktindhold og markedsføring. WordPress og e-handel.'],
             ['role' => 'Grafisk webdesigner, praktik', 'company' => 'Sikkerhedsgiganten', 'url' => 'https://www.sikkerhedsgiganten.dk', 'period' => 'jan. 2024 – mar. 2024', 'text' => 'Udvikling og lancering af en komplet ny Shopify Plus-hjemmeside.'],
-            ['role' => 'Visuel identitet, projekt', 'company' => 'Esbjerg Museum', 'url' => 'https://esbjergmuseum.dk', 'period' => 'sep. 2023 – nov. 2023', 'text' => 'Komplet ny visuel identitet og branding. Projekt på Erhvervsakademi SydVest.'],
             ['role' => 'E-commerce-ansvarlig', 'company' => 'Vores Verden', 'url' => 'https://www.voresverden.dk', 'period' => 'sep. 2020 – maj 2022', 'text' => 'Etablering af webshop, content og procesflow samt kundeservice og butiksdrift.'],
             ['role' => 'Ejer', 'company' => 'Home Shoppen', 'url' => 'https://www.home-shoppen.dk', 'period' => 'nov. 2015 – jul. 2020', 'text' => "Etablerede webshoppen sammen med en partner og stod for branding, markedsføring, drift og professionalisering. Resultatet blev fordoblet tre år i træk, og shoppen aflønnede to fuldtidsmedarbejdere.\nSamlet omsætning på 15 mio. kr. over fire år og ca. 20.000 pakker sendt om året."],
             ['role' => 'Webdesigner, freelance', 'company' => 'AirNet', 'url' => 'https://www.airnet.dk', 'period' => 'jan. 2016 – mar. 2020', 'text' => 'Komplet ny visuel identitet og branding samt udvikling af hjemmeside.'],
@@ -105,8 +104,23 @@ function default_profile(): array
     ];
 }
 
+function run_migrations(): void
+{
+    $done = load_json('migrations');
+    if (empty($done['remove-esbjerg-museum'])) {
+        $saved = load_json('profile');
+        if (!empty($saved['experience'])) {
+            $saved['experience'] = array_values(array_filter($saved['experience'], fn($x) => mb_strtolower(trim($x['company'] ?? '')) !== 'esbjerg museum'));
+            save_json('profile', $saved);
+        }
+        $done['remove-esbjerg-museum'] = date('c');
+        save_json('migrations', $done);
+    }
+}
+
 function get_profile(): array
 {
+    run_migrations();
     $def = default_profile();
     $p = array_merge($def, load_json('profile'));
     if ($p['name'] === 'Emil Langkilde Larsen') {

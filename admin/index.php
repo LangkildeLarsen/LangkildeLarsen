@@ -106,9 +106,9 @@ function app_head(): string
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Emil">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="../assets/icon-180.png">
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="../assets/icon-192.png">';
+<link rel="apple-touch-icon" href="../assets/brand/dash-180.png">
+<link rel="icon" type="image/svg+xml" href="../assets/brand/dash-logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/dash-32.png">';
 }
 
 function default_categories(): array
@@ -190,6 +190,7 @@ if (!is_logged_in()) {
 <body class="auth">
 <form method="post" class="auth-box">
   <?= csrf_field() ?>
+  <img src="../assets/brand/dash-logo.svg" alt="" class="auth-logo">
   <h1><?= $needsSetup ? 'Opret adgangskode' : 'Log ind' ?></h1>
   <?php if ($needsSetup): ?>
     <p class="muted">Første gang: vælg den adgangskode, du vil logge ind med.</p>
@@ -631,7 +632,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <body>
 <div class="app">
   <aside class="rail" aria-label="Menu">
-    <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/avatar-round.png" alt=""></a>
+    <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/dash-mark.svg" alt=""></a>
     <nav>
       <?php
         $railItems = [
@@ -1242,7 +1243,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   </main>
 </div>
 <aside class="install" id="install" hidden>
-  <img src="../assets/icon-180.png" alt="" class="install-ic">
+  <img src="../assets/brand/dash-180.png" alt="" class="install-ic">
   <div class="install-txt">
     <strong>Læg dashboardet på hjemmeskærmen</strong>
     <span class="ios-only">Tryk på <b class="share-ic" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M12 3L8 7M12 3l4 4M8 11H6.5C5.12 11 4 12.12 4 13.5v4C4 18.88 5.12 20 6.5 20h11c1.38 0 2.5-1.12 2.5-2.5v-4c0-1.38-1.12-2.5-2.5-2.5H16"/></svg></b> og vælg <b>Føj til hjemmeskærm</b>.</span>

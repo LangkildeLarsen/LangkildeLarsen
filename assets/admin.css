@@ -1143,3 +1143,9 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
   .rail { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
   .rail nav a.active { box-shadow: none; }
 }
+
+.rail-logo { background: #141415; display: grid; place-items: center; }
+
+.rail-logo img { width: 70%; height: 70%; object-fit: contain; }
+
+.auth-logo { width: 64px; height: 64px; margin-bottom: 4px; }
