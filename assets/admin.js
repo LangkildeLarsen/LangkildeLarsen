@@ -961,6 +961,7 @@
 (() => {
   const boot = document.getElementById('boot');
   if (!boot) return;
+  if (matchMedia('(max-width: 900px)').matches || matchMedia('(pointer: coarse)').matches) { boot.remove(); return; }
   const q = sel => boot.querySelector(sel);
   const inner = q('.boot-in');
   const text = q('[data-boot-text]');
