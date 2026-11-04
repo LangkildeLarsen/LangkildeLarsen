@@ -1461,9 +1461,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <div class="mp-bg" aria-hidden="true"><div id="mp-yt"></div></div>
 <section class="mp" id="mp" hidden aria-label="Musikafspiller" data-v="<?= e($music['v']) ?>" data-list="<?= e($music['list']) ?>">
   <div class="mp-head" data-drag>
-    <button type="button" class="mp-x mp-link" data-mp-link aria-label="Skift YouTube-link" aria-expanded="false"><?= icon('link') ?></button>
-    <span class="mp-label">Musik</span>
-    <span class="mp-grip"><?= icon('drag') ?></span>
+    <span class="mp-label">Pladespiller</span>
+    <button type="button" class="mp-x mp-link" data-mp-link aria-label="Skift YouTube-link" aria-expanded="false"><?= icon('drag') ?></button>
     <button type="button" class="mp-x" data-player-close aria-label="Luk afspilleren"><?= icon('cross') ?></button>
   </div>
   <form class="mp-url" id="mp-url" hidden>
@@ -1474,7 +1473,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <p class="mp-err" id="mp-err" hidden></p>
   </form>
   <div class="mp-screen">
-    <img class="mp-cover" src="<?= $music['v'] ? 'https://i.ytimg.com/vi/' . e($music['v']) . '/hqdefault.jpg' : '' ?>" alt=""<?= $music['v'] ? '' : ' hidden' ?>>
     <span class="mp-ph"><?= icon('music') ?></span>
     <img class="mp-vinyl" src="../assets/brand/vinyl.webp" alt="" width="560" height="560">
   </div>

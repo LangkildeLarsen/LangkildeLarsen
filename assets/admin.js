@@ -182,7 +182,7 @@
         list.innerHTML = '<li class="sx-empty">Ingen resultater for "' + esc(q.value) + '"</li>';
         return;
       }
-      list.innerHTML = results.map((d, i) => '<li role="option" data-i="' + i + '" class="' + (i === sel ? 'on' : '') + '"><span class="sx-type">' + esc(d.type) + '</span><span class="sx-t">' + mark(d.title, terms) + (d.sub ? '<small>' + esc(d.sub) + '</small>' : '') + '</span></li>').join('');
+      list.innerHTML = results.map((d, i) => '<li role="option" data-i="' + i + '" class="' + (i === sel ? 'on' : '') + '"><span class="sx-type">' + esc(d.type) + '</span><span class="sx-t"><span class="sx-name">' + mark(d.title, terms) + '</span>' + (d.sub ? '<small>' + esc(d.sub) + '</small>' : '') + '</span></li>').join('');
     };
     const go = d => {
       if (!d) return;
@@ -341,11 +341,6 @@
   const updateTitle = () => {
     try {
       const d = player.getVideoData();
-      if (d && d.video_id) {
-        const cover = mp.querySelector('.mp-cover');
-        cover.hidden = false;
-        cover.src = 'https://i.ytimg.com/vi/' + d.video_id + '/hqdefault.jpg';
-      }
       if (d && d.title) {
         title.textContent = d.title + (d.author ? ' · ' + d.author : '');
         store.set('mp-track', d.title);
@@ -510,9 +505,6 @@
     }
     VIDEO = data.v;
     LIST = data.list;
-    const cover = mp.querySelector('.mp-cover');
-    cover.hidden = !VIDEO;
-    if (VIDEO) cover.src = 'https://i.ytimg.com/vi/' + VIDEO + '/hqdefault.jpg';
     title.textContent = 'Henter…';
     urlForm.hidden = true;
     linkBtn.classList.remove('on');

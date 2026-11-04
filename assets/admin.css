@@ -1799,3 +1799,29 @@ kbd { padding: 3px 8px; border-radius: 7px; background: var(--card-3); color: va
 .sx-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .mp-vinyl { animation-duration: 7s; }
+
+.mp-head { padding-left: 6px; }
+
+.mp-label { flex: 1; font-size: 15px; color: var(--ink); }
+
+.mp-head .mp-link { margin-left: auto; }
+
+.mp { width: 212px; padding: 10px 16px 16px; border-radius: 28px; }
+
+.mp-screen { height: 180px; border-radius: 18px; }
+
+.mp-vinyl { width: 164px; height: 164px; }
+
+.mp-title { margin: 12px 0 8px; font-size: 14px; }
+
+.mp-times { margin: 6px 0; }
+
+.mp-ctrl { gap: 14px; margin: 4px 0 12px; }
+
+.mp-vol { padding: 0; gap: 8px; }
+
+.mp-url { grid-template-columns: 1fr; }
+
+.mp-url .btn { justify-self: stretch; }
+
+.mp-head { padding-left: 2px; }
