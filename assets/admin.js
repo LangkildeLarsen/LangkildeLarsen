@@ -279,6 +279,7 @@
     if (what === 'mute') {
       const muted = !mp.classList.contains('muted');
       mp.classList.toggle('muted', muted);
+      document.documentElement.classList.toggle('mp-muted', muted);
       store.set('mp-muted', muted);
       if (player && ready) muted ? player.mute() : player.unMute();
       return;
@@ -313,14 +314,28 @@
 
   vol.value = store.get('mp-volume', 60);
   mp.classList.toggle('muted', store.get('mp-muted', false));
-  const paintVol = () => vol.style.setProperty('--v', vol.value + '%');
+  document.documentElement.classList.toggle('mp-muted', store.get('mp-muted', false));
+  const paintVol = () => {
+    const v = String(store.get('mp-volume', 60));
+    document.querySelectorAll('.mp-volume').forEach(r => {
+      if (r.value !== v) r.value = v;
+      r.style.setProperty('--v', v + '%');
+    });
+  };
   paintVol();
-  vol.addEventListener('input', () => {
-    store.set('mp-volume', Number(vol.value));
+  document.addEventListener('input', e => {
+    if (!e.target.classList || !e.target.classList.contains('mp-volume')) return;
+    const v = Number(e.target.value);
+    store.set('mp-volume', v);
     paintVol();
     if (player && ready) {
-      player.setVolume(Number(vol.value));
-      if (Number(vol.value) > 0 && mp.classList.contains('muted')) { player.unMute(); mp.classList.remove('muted'); store.set('mp-muted', false); }
+      player.setVolume(v);
+      if (v > 0 && mp.classList.contains('muted')) {
+        player.unMute();
+        mp.classList.remove('muted');
+        document.documentElement.classList.remove('mp-muted');
+        store.set('mp-muted', false);
+      }
     }
   });
 
@@ -413,8 +428,8 @@
     if (t) document.querySelectorAll('.mp-dock-t').forEach(el => { el.textContent = t; });
   };
   paintDock();
-  new MutationObserver(paintDock).observe(document.body, { childList: true, subtree: false });
-  document.addEventListener('click', () => setTimeout(paintDock, 400));
+  new MutationObserver(() => { paintDock(); paintVol(); }).observe(document.body, { childList: true, subtree: false });
+  document.addEventListener('click', () => setTimeout(() => { paintDock(); paintVol(); }, 400));
 
   if (store.get('mp-open', true)) open(true);
   else document.documentElement.classList.add('mp-closed');

@@ -810,6 +810,10 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <button type="button" class="dk-b" data-mp="prev" aria-label="Forrige"><?= icon('prev') ?></button>
         <button type="button" class="dk-b big" data-mp="toggle" aria-label="Afspil/pause"><span class="i-play"><?= icon('play') ?></span><span class="i-pause"><?= icon('pause') ?></span></button>
         <button type="button" class="dk-b" data-mp="next" aria-label="Næste"><?= icon('next') ?></button>
+        <span class="dk-vol">
+          <button type="button" class="dk-b" data-mp="mute" aria-label="Slå lyd fra/til"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
+          <input type="range" class="mp-volume" min="0" max="100" value="60" aria-label="Lydstyrke">
+        </span>
         <button type="button" class="dk-title" data-player-open aria-label="Udvid musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span><?= icon('down') ?></button>
       </div>
       <form class="search" action="./">
@@ -1460,7 +1464,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   </div>
   <div class="mp-vol">
     <button type="button" class="mp-b small" data-mp="mute" aria-label="Slå lyd fra"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
-    <input type="range" id="mp-volume" min="0" max="100" value="60" aria-label="Lydstyrke">
+    <input type="range" id="mp-volume" class="mp-volume" min="0" max="100" value="60" aria-label="Lydstyrke">
   </div>
 </section>
 <aside class="install" id="install" hidden>
