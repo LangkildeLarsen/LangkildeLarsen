@@ -115,13 +115,13 @@ function exp_item(array $x): string
   <section class="block" id="projekter">
     <div class="block-head">
       <h2>Udvalgte projekter</h2>
-      <?php if ($p['dribbble']): ?><a href="<?= e($p['dribbble']) ?>" target="_blank" rel="noopener" class="more">Se alle på Dribbble ↗</a><?php endif; ?>
+      <?php if ($p['dribbble']): ?><a href="<?= e($p['dribbble']) ?>" target="_blank" rel="noopener" class="more">Se alle på Dribbble <?= icon('arrow') ?></a><?php endif; ?>
     </div>
     <div class="bento">
       <?php foreach ($shown as $i => $x): ?>
         <a class="shot reveal<?= $i === 0 ? ' big' : (in_array($i, $wideAt, true) ? ' wide' : '') ?>" style="--d: <?= $i % 3 ?>" href="<?= e($x['url']) ?>" target="_blank" rel="noopener">
           <img src="<?= e(img_src($x['image'])) ?>" alt="<?= e($x['title']) ?>" loading="<?= $i < 3 ? 'eager' : 'lazy' ?>">
-          <span class="label"><?= e($x['title']) ?> <i>↗</i></span>
+          <span class="label"><?= e($x['title']) ?> <i><?= icon('arrow') ?></i></span>
         </a>
       <?php endforeach; ?>
     </div>

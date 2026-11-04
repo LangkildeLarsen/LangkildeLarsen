@@ -13,6 +13,8 @@ session_start();
 define('DATA_DIR', dirname(__DIR__) . '/data');
 define('UPLOAD_DIR', dirname(__DIR__) . '/uploads');
 
+require_once __DIR__ . '/icons.php';
+
 function e($s): string
 {
     return htmlspecialchars((string)($s ?? ''), ENT_QUOTES, 'UTF-8');

@@ -851,3 +851,28 @@ h1 .w.dim { background-image: linear-gradient(180deg, rgba(255, 255, 255, .58), 
   .chip.c1 { bottom: 40px; }
   .cursor-light { display: none; }
 }
+
+h1 .w,
+h1 .w.dim,
+h1 span,
+h1 .dim,
+.num strong,
+.cta h2,
+.status span {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+}
+
+h1 .w, h1 span, .num strong, .cta h2 { color: var(--ink); }
+
+h1 .w.dim, h1 .dim { color: rgba(255, 255, 255, .42); }
+
+body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-system, sans-serif; font-optical-sizing: auto; font-feature-settings: "cv11", "ss01"; }
+
+.ic { width: 1em; height: 1em; flex: none; vertical-align: -.12em; }
+
+.more .ic, .shot .label i .ic { transform: rotate(-45deg); }
+
+.shot .label i { display: inline-flex; }

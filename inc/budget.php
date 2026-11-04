@@ -93,3 +93,24 @@ function amount_value(float $v): string
     }
     return number_format($v, fmod($v, 1) ? 2 : 0, ',', '.');
 }
+
+function upcoming_payments(array $budget, int $days): array
+{
+    $out = [];
+    $today = strtotime('today');
+    foreach ($budget['expenses'] ?? [] as $x) {
+        if (empty($x['day']) || ($x['freq'] ?? 'month') !== 'month') {
+            continue;
+        }
+        for ($m = 0; $m <= 1; $m++) {
+            $base = strtotime(date('Y-m-01', strtotime("+$m month", strtotime(date('Y-m-01', $today)))));
+            $dim = (int)date('t', $base);
+            $ts = $base + (min($x['day'], $dim) - 1) * 86400;
+            if ($ts >= $today && $ts < $today + $days * 86400) {
+                $out[] = ['ts' => $ts, 'name' => $x['name'], 'amount' => $x['amount']];
+            }
+        }
+    }
+    usort($out, fn($a, $b) => $a['ts'] <=> $b['ts']);
+    return $out;
+}
