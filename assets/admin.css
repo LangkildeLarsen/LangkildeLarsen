@@ -1899,3 +1899,5 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
   .mq-on .mq { animation: none; }
   .mq-on { text-overflow: ellipsis; }
 }
+
+.rail { border-radius: 9999px; }
