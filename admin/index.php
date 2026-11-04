@@ -183,7 +183,7 @@ if (!is_logged_in()) {
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050506">
 <?= app_head() ?>
-<title>Log ind</title>
+<title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
@@ -625,7 +625,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050506">
 <?= app_head() ?>
-<title><?= e($pageTitle) ?> · Admin</title>
+<title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
@@ -813,7 +813,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 
         <section class="card c-ai">
           <div class="card-head">
-            <h2 class="ai-title"><span class="spark"><?= icon('sparkle') ?></span>Overblik</h2>
+            <h2>Overblik</h2>
             <a href="./?view=hacks" class="round" aria-label="Alle lifehacks"><?= icon('arrow') ?></a>
           </div>
           <h3>Dit overblik i dag</h3>

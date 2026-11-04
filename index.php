@@ -133,7 +133,7 @@ function exp_item(array $x): string
 
     <section class="card c-about reveal" id="om">
       <div class="card-head">
-        <h2 class="ai-title"><span class="spark"><?= icon('sparkle') ?></span>Om mig</h2>
+        <h2>Om mig</h2>
       </div>
       <?php foreach (preg_split('/\R\s*\R/', trim($p['about'])) as $k => $para): ?>
         <p class="<?= $k ? '' : 'lead' ?>"><?= nl2br(e($para)) ?></p>
