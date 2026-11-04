@@ -116,10 +116,15 @@ function default_categories(): array
     return ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser'];
 }
 
-function greeting(): string
+function greeting(): array
 {
     $h = (int)date('G');
-    return $h < 5 ? 'God nat' : ($h < 10 ? 'Godmorgen' : ($h < 12 ? 'God formiddag' : ($h < 18 ? 'God eftermiddag' : 'Godaften')));
+    if ($h < 5) return ['God nat', '🌙'];
+    if ($h < 10) return ['Godmorgen', '☀️'];
+    if ($h < 12) return ['God formiddag', '☕'];
+    if ($h < 18) return ['God eftermiddag', '👋'];
+    if ($h < 22) return ['God aften', '🌆'];
+    return ['God nat', '🌙'];
 }
 
 
@@ -660,7 +665,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       );
     ?>
     <header class="topbar">
-      <h1><?= e($view === 'dashboard' ? 'Oversigt' : $pageTitle) ?></h1>
+      <?php [$greet, $emoji] = greeting(); ?>
+      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . explode(' ', $profile['name'])[0]) ?> <span class="wave" aria-hidden="true"><?= $emoji ?></span><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
       <form class="search" action="./">
         <input type="hidden" name="view" value="hacks">
         <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>"><?php endif; ?>

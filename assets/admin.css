@@ -1067,3 +1067,21 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
 .when strong { white-space: nowrap; }
 
 .per { left: 0; top: 0; width: 1px; height: 1px; margin: 0; }
+
+.rail { z-index: 60; }
+
+.content { position: relative; z-index: 1; }
+
+.tip { z-index: 70; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+
+@media (max-width: 900px) {
+  .rail nav a, .rail nav a.active { border-radius: 50%; }
+}
+
+.wave { display: inline-block; transform-origin: 70% 70%; animation: wave 2.2s ease-in-out 1 .4s; }
+
+@keyframes wave {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-8deg); }
+}
