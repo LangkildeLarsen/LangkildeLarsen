@@ -901,7 +901,7 @@ function jarvis_orb(string $class = ''): string
             $ticks .= sprintf('<line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f"/>', 50 + 44 * cos($a), 50 + 44 * sin($a), 50 + (44 - $l) * cos($a), 50 + (44 - $l) * sin($a));
         }
     }
-    return '<div class="jv-orb ' . $class . '" aria-hidden="true"><svg viewBox="0 0 100 100"><circle class="jv-r jv-r1" cx="50" cy="50" r="48"/><g class="jv-ticks">' . $ticks . '</g><circle class="jv-r jv-r2" cx="50" cy="50" r="40"/><circle class="jv-r jv-r3" cx="50" cy="50" r="34"/><circle class="jv-r jv-r4" cx="50" cy="50" r="29" pathLength="100"/><circle class="jv-r jv-r5" cx="50" cy="50" r="23"/></svg><span class="jv-pulse"></span><span class="jv-pulse jv-p2"></span><div class="jv-core"><div class="jv-wave"><i></i><i></i><i></i><i></i><i></i></div></div></div>';
+    return '<div class="jv-orb ' . $class . '" aria-hidden="true"><svg viewBox="0 0 100 100"><circle class="jv-r jv-r1" cx="50" cy="50" r="48"/><g class="jv-ticks">' . $ticks . '</g><circle class="jv-r jv-r2" cx="50" cy="50" r="40"/><circle class="jv-r jv-r3" cx="50" cy="50" r="34"/><circle class="jv-r jv-r4" cx="50" cy="50" r="29" pathLength="100"/><circle class="jv-r jv-r5" cx="50" cy="50" r="23"/></svg><span class="jv-pulse"></span><span class="jv-pulse jv-p2"></span><div class="jv-core"></div></div>';
 }
 
 function sound_path(?array $user = null): string

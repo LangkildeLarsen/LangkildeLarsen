@@ -2243,3 +2243,5 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 
 .boot-bar { height: 6px; border-radius: 99px; }
 .boot-bar i { border-radius: 99px; }
+
+.jv-wave { display: none !important; }
