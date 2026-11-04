@@ -1019,6 +1019,7 @@
 
   const finish = () => {
     stopAll();
+    if (audio && audio.paused) audio = null;
     boot.classList.add('out');
     try { sessionStorage.setItem('jv-booted', '1'); } catch (e) {}
     setTimeout(() => { boot.hidden = true; boot.classList.remove('out', 'on'); running = false; }, 950);
@@ -1073,7 +1074,7 @@
     audio.play().catch(() => {
       const unlock = () => {
         ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.removeEventListener(ev, unlock, true));
-        if (audio && audio.paused) audio.play().catch(() => {});
+        if (running && audio && audio.paused) audio.play().catch(() => {});
       };
       ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, unlock, true));
     });
