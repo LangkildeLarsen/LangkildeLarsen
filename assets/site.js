@@ -113,3 +113,43 @@
     }, { passive: true });
   }
 })();
+
+(() => {
+  const seg = document.querySelector('.seg');
+  const pill = seg && seg.querySelector('.seg-pill');
+  if (!seg || !pill) return;
+  const links = [...seg.querySelectorAll('a')];
+  let current = null;
+
+  const place = el => {
+    current = el;
+    links.forEach(a => a.classList.toggle('on', a === el));
+    if (!el) {
+      pill.style.opacity = '0';
+      return;
+    }
+    pill.style.width = el.offsetWidth + 'px';
+    pill.style.transform = `translateX(${el.offsetLeft}px)`;
+    pill.style.opacity = '1';
+  };
+
+  const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const spy = () => {
+    const y = innerHeight * 0.35;
+    let hit = null;
+    sections.forEach((sec, i) => {
+      const r = sec.getBoundingClientRect();
+      if (r.top <= y && r.bottom > y) hit = links[i];
+    });
+    if (hit !== current) place(hit);
+  };
+
+  let lock = 0;
+  links.forEach(a => a.addEventListener('click', () => {
+    place(a);
+    lock = Date.now() + 900;
+  }));
+  addEventListener('scroll', () => { if (Date.now() > lock) spy(); }, { passive: true });
+  addEventListener('resize', () => place(current));
+  spy();
+})();

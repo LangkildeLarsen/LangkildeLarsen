@@ -53,7 +53,7 @@ function default_profile(): array
 {
     return [
         'name' => 'Emil Langkilde Oehlenschläger Larsen',
-        'title' => 'UI/UX- og grafisk designer · E-commerce · Marketing',
+        'title' => 'UI/UX · Grafisk designer · E-commerce · Marketing',
         'location' => 'Esbjerg, Danmark',
         'email' => 'emil@langkildelarsen.dk',
         'linkedin' => 'https://www.linkedin.com/in/langkildelarsen/',
@@ -118,6 +118,15 @@ function run_migrations(): void
             save_json('profile', $saved);
         }
         $done['remove-esbjerg-museum'] = date('c');
+        save_json('migrations', $done);
+    }
+    if (empty($done['title-v2'])) {
+        $saved = load_json('profile');
+        if (isset($saved['title']) && in_array(trim($saved['title']), ['UI/UX- og grafisk designer · E-commerce · Marketing', 'E-commerce, webudvikling & grafisk design', ''], true)) {
+            $saved['title'] = 'UI/UX · Grafisk designer · E-commerce · Marketing';
+            save_json('profile', $saved);
+        }
+        $done['title-v2'] = date('c');
         save_json('migrations', $done);
     }
 }

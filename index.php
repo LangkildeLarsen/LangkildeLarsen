@@ -61,6 +61,7 @@ function exp_item(array $x): string
   <header class="topbar">
     <a href="#top" class="brand"><img src="assets/brand/avatar-round.png" alt=""><span><?= e($first) ?></span></a>
     <nav class="seg" aria-label="Sektioner">
+      <span class="seg-pill" aria-hidden="true"></span>
       <?php if ($shown): ?><a href="#projekter">Projekter</a><?php endif; ?>
       <a href="#om">Om mig</a>
       <a href="#erfaring">Erfaring</a>

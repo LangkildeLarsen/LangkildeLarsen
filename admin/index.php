@@ -247,7 +247,7 @@ if (!is_logged_in()) {
 <?= app_head() ?>
 <title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/admin.css">
+<link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 </head>
 <body class="auth">
 <form method="post" class="auth-box" action="index.php">
@@ -747,13 +747,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <?= app_head() ?>
 <title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/admin.css">
+<link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
+<script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
 </head>
 <body>
 <div class="app">
   <aside class="rail" aria-label="Menu">
     <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/dash-mark.svg" alt=""></a>
-    <nav>
+    <nav class="rail-nav">
+      <span class="rail-pill" aria-hidden="true"></span>
       <?php
         $railItems = [
             ['dashboard', './', 'home', 'Oversigt'],

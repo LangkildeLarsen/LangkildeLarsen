@@ -1219,3 +1219,53 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
 }
 
 ::-webkit-scrollbar { width: 0; height: 0; }
+
+.rail-nav { position: relative; }
+
+.rail-pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  border-radius: 20px;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .45s cubic-bezier(.3, 1.3, .4, 1), width .35s var(--ease), height .35s var(--ease), opacity .2s ease;
+}
+
+.rail-nav a { z-index: 1; }
+
+.rail-nav.has-pill a.active { background: transparent; box-shadow: none; color: #000; transition: color .3s ease; }
+
+.rail-nav.has-pill a:hover { background: transparent; }
+
+.rail-nav.has-pill a:not(.active):hover { color: var(--ink); }
+
+@media (max-width: 900px) {
+  .rail-pill { border-radius: 50%; }
+}
+
+.seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+
+.seg::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc((100% - 10px) / 3);
+  border-radius: 999px;
+  background: #fff;
+  transition: transform .45s cubic-bezier(.3, 1.3, .4, 1);
+}
+
+.c-budget:has(#per-q:checked) .seg::before { transform: translateX(100%); }
+
+.c-budget:has(#per-y:checked) .seg::before { transform: translateX(200%); }
+
+.seg label { position: relative; z-index: 1; text-align: center; transition: color .3s ease; }
+
+.c-budget:has(#per-m:checked) label[for="per-m"],
+.c-budget:has(#per-q:checked) label[for="per-q"],
+.c-budget:has(#per-y:checked) label[for="per-y"] { background: transparent; color: #000; }
