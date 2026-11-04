@@ -130,7 +130,7 @@ function app_head(): string
     return '<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Emil">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="../assets/brand/dash-180.png">
 <link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/fav-96.png">
@@ -247,7 +247,7 @@ if (!is_logged_in()) {
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050505">
 <?= app_head() ?>
-<title>Dashboard</title>
+<title>Jarvis</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 </head>
@@ -469,7 +469,7 @@ if ($action) {
             push_unsubscribe($me, (string)($sub['endpoint'] ?? ''));
             echo json_encode(['ok' => true]);
         } else {
-            $n = push_send($me, ['title' => 'Dashboard', 'body' => 'Notifikationer virker.', 'url' => '/admin/?view=messages', 'tag' => 'test']);
+            $n = push_send($me, ['title' => 'Jarvis', 'body' => 'Notifikationer virker.', 'url' => '/admin/?view=messages', 'tag' => 'test']);
             echo json_encode(['ok' => $n > 0, 'sent' => $n]);
         }
         exit;
@@ -910,7 +910,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#050506">
 <?= app_head() ?>
-<title>Dashboard</title>
+<title>Jarvis</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 <script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
@@ -928,7 +928,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['budget', './?view=budget', 'wallet', 'Budget'],
             ['calendar', './?view=calendar', 'calendar', 'Kalender'],
             ['messages', './?view=messages', 'inbox', 'Beskeder'],
-            ['chat', './?view=chat', 'chat', 'Claude'],
+            ['chat', './?view=chat', 'ai', 'Claude'],
             ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
         $unreadCount = dm_unread($me['email']);
@@ -1462,7 +1462,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 
       <section class="panel push-panel" id="notifikationer" data-push>
         <h2 class="section-title">Notifikationer</h2>
-        <p class="muted small">Få besked på telefonen og i Chrome, når der kommer en ny besked – også når dashboardet er lukket. Slå det til på hver enhed for sig.</p>
+        <p class="muted small">Få besked på telefonen og i Chrome, når der kommer en ny besked – også når Jarvis er lukket. Slå det til på hver enhed for sig.</p>
         <p class="push-status small" data-push-status>Tjekker…</p>
         <div class="actions">
           <button type="button" class="btn" data-push-on hidden>Slå notifikationer til</button>
@@ -1478,7 +1478,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li>Tryk på <strong>Del</strong>-ikonet (firkant med pil op).</li>
           <li>Vælg <strong>Føj til hjemmeskærm</strong> → <strong>Tilføj</strong>.</li>
         </ol>
-        <p class="muted small">Så åbner dashboardet i fuld skærm som en app, og du forbliver logget ind i 60 dage.</p>
+        <p class="muted small">Så åbner Jarvis i fuld skærm som en app, og du forbliver logget ind i 60 dage.</p>
       </div>
 
     <?php elseif ($view === 'budget'): ?>
@@ -1754,13 +1754,13 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 </section>
 <div class="update-toast" id="update-toast" hidden role="status">
   <span class="u-dot" aria-hidden="true"></span>
-  <span>Der er en ny version af dashboardet</span>
+  <span>Der er en ny version af Jarvis</span>
   <button type="button" class="btn small" data-update>Opdater</button>
 </div>
 <aside class="install" id="install" hidden>
   <img src="../assets/brand/dash-180.png" alt="" class="install-ic">
   <div class="install-txt">
-    <strong>Læg dashboardet på hjemmeskærmen</strong>
+    <strong>Læg Jarvis på hjemmeskærmen</strong>
     <span class="ios-only">Tryk på <b class="share-ic" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M12 3L8 7M12 3l4 4M8 11H6.5C5.12 11 4 12.12 4 13.5v4C4 18.88 5.12 20 6.5 20h11c1.38 0 2.5-1.12 2.5-2.5v-4c0-1.38-1.12-2.5-2.5-2.5H16"/></svg></b> og vælg <b>Føj til hjemmeskærm</b>.</span>
     <span class="other-only">Så åbner det i fuld skærm som en app, og du forbliver logget ind.</span>
   </div>
