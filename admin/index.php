@@ -535,6 +535,18 @@ if ($action) {
         redirect('index.php?view=settings#vejr');
     }
 
+    if ($action === 'add_event') {
+        ev_add((string)($_POST['title'] ?? ''), (string)($_POST['date'] ?? ''), ($_POST['time'] ?? '') !== '' ? (string)$_POST['time'] : null);
+        $cmBack = preg_match('/^\d{4}-\d{2}$/', (string)($_POST['cm'] ?? '')) ? '?cm=' . $_POST['cm'] : '';
+        redirect('index.php' . $cmBack);
+    }
+
+    if ($action === 'remove_event') {
+        ev_remove((string)($_POST['id'] ?? ''));
+        $cmBack = preg_match('/^\d{4}-\d{2}$/', (string)($_POST['cm'] ?? '')) ? '?cm=' . $_POST['cm'] : '';
+        redirect('index.php' . $cmBack);
+    }
+
     if ($action === 'watch_add') {
         $q = trim((string)($_POST['q'] ?? ''));
         if ($q !== '') {
@@ -1262,8 +1274,17 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         $prevM = date('Y-m', strtotime('-1 month', $firstDay));
         $nextM = date('Y-m', strtotime('+1 month', $firstDay));
         $marks = [];
-        foreach ($cal['events'] as $ev) $marks[date('Y-m-d', $ev['start'])] = 'm-ev';
-        foreach (upcoming_payments($budget, 62) as $pp) $marks[date('Y-m-d', $pp['ts'])] = $marks[date('Y-m-d', $pp['ts'])] ?? 'm-pay';
+        $dayEv = [];
+        $monthEnd = strtotime(date('Y-m-t 23:59', $firstDay));
+        $calM = cal_events(max(1, (int)ceil(($monthEnd - strtotime('today')) / 86400) + 1), false, $firstDay);
+        foreach ($calM['events'] as $ev) {
+            $k = date('Y-m-d', $ev['start']);
+            if ($ev['start'] > $monthEnd) {
+                continue;
+            }
+            $marks[$k] = 'm-ev';
+            $dayEv[$k][] = ['t' => $ev['title'], 'h' => $ev['allday'] ? 'Hele dagen' : event_time($ev), 'l' => !empty($ev['local']), 'id' => $ev['id'] ?? '', 'c' => $ev['calendar'] ?? ''];
+        }
 
         $items = [];
         foreach ($cal['events'] as $ev) if ($ev['start'] < strtotime('+30 days')) $items[] = ['ts' => $ev['start'], 'kind' => 'ev', 'name' => $ev['title'], 'value' => event_time($ev)];
@@ -1353,13 +1374,38 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             <h2><?= e(ucfirst($months[(int)date('n', $firstDay) - 1]) . ' ' . date('Y', $firstDay)) ?></h2>
             <a href="./?cm=<?= $nextM ?>" class="round" aria-label="Næste måned"><?= icon('right') ?></a>
           </div>
-          <div class="cal-grid">
+          <div class="cal-grid" data-cal-days="<?= e(json_encode($dayEv, JSON_UNESCAPED_UNICODE)) ?>" data-cm="<?= e($cm) ?>">
             <?php foreach (['M', 'T', 'O', 'T', 'F', 'L', 'S'] as $d): ?><span class="dow"><?= $d ?></span><?php endforeach; ?>
             <?php for ($i = 0; $i < $lead; $i++): ?><span class="day off"></span><?php endfor; ?>
             <?php for ($d = 1; $d <= $dim; $d++): $key = $cm . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT); ?>
-              <a class="day<?= $key === date('Y-m-d') ? ' today' : '' ?><?= isset($marks[$key]) ? ' mark ' . $marks[$key] : '' ?>" href="./?view=calendar"><?= $d ?></a>
+              <button type="button" class="day<?= $key === date('Y-m-d') ? ' today' : '' ?><?= isset($marks[$key]) ? ' mark ' . $marks[$key] : '' ?><?= $key < date('Y-m-d') ? ' was' : '' ?>" data-day="<?= $key ?>" aria-label="<?= e(dk_date($key)) ?><?= isset($dayEv[$key]) ? ', ' . count($dayEv[$key]) . ' aftale' . (count($dayEv[$key]) === 1 ? '' : 'r') : '' ?>"><?= $d ?></button>
             <?php endfor; ?>
             <?php for ($i = ($lead + $dim) % 7; $i && $i < 7; $i++): ?><span class="day off"></span><?php endfor; ?>
+          </div>
+          <div class="cal-tip" data-cal-tip hidden></div>
+          <div class="cal-pop" data-cal-pop hidden>
+            <div class="cal-pop-h"><strong data-cal-pop-title></strong><button type="button" class="cal-pop-x" data-cal-close aria-label="Luk"><?= icon('cross') ?></button></div>
+            <form method="post" class="cal-pop-list" data-cal-list>
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="remove_event">
+              <input type="hidden" name="cm" value="<?= e($cm) ?>">
+            </form>
+            <form method="post" class="cal-pop-add">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="add_event">
+              <input type="hidden" name="cm" value="<?= e($cm) ?>">
+              <input type="hidden" name="date" data-cal-date>
+              <input type="hidden" name="time" data-cal-time>
+              <input name="title" placeholder="Ny aftale…" autocomplete="off" required aria-label="Titel">
+              <div class="dp-hours" data-cal-hours>
+                <button type="button" data-th="" class="on">Hele dagen</button>
+                <?php foreach ([7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] as $hh): ?><button type="button" data-th="<?= sprintf('%02d', $hh) ?>"><?= sprintf('%02d', $hh) ?></button><?php endforeach; ?>
+              </div>
+              <div class="dp-mins" data-cal-mins hidden>
+                <?php foreach ([0, 15, 30, 45] as $mm): ?><button type="button" data-tm="<?= sprintf('%02d', $mm) ?>" class="<?= $mm === 0 ? 'on' : '' ?>">:<?= sprintf('%02d', $mm) ?></button><?php endforeach; ?>
+              </div>
+              <button class="btn">Tilføj til kalenderen</button>
+            </form>
           </div>
           <?php $nextEv = null; foreach (($cal['events'] ?? []) as $ev) { if (($ev['end'] ?? $ev['start']) >= time()) { $nextEv = $ev; break; } } ?>
           <a class="kpi next-ev" href="./?view=calendar">
@@ -1384,7 +1430,9 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="add_reminder">
             <input name="text" placeholder="Husk at…" autocomplete="off" required aria-label="Påmindelse">
-            <input type="datetime-local" name="due" value="<?= date('Y-m-d\TH:00', strtotime('+1 hour')) ?>" aria-label="Tidspunkt">
+            <input type="hidden" name="due" value="<?= date('Y-m-d\TH:00', strtotime('+1 hour')) ?>" data-due>
+            <button type="button" class="rem-when" data-when-btn aria-haspopup="dialog" aria-expanded="false"><?= icon('calendar') ?><span data-when-label>Om 1 time</span></button>
+            <div class="dp" data-dp hidden></div>
             <button aria-label="Tilføj"><?= icon('plus') ?></button>
           </form>
           <?php if ($open): ?>
@@ -1602,6 +1650,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           </div>
         <?php endforeach; ?>
         <div class="actions"><button class="btn">Gem kalendere</button></div>
+        <h3>Få dashboardets aftaler over på iPhone</h3>
+        <p class="muted small">Aftaler du tilføjer på startsiden eller via Jarvis ligger i en "Jarvis"-kalender. Abonnér på den én gang, så dukker de op i din iPhone-kalender (opdateres hvert ~15. minut).</p>
+        <?php $feedUrl = 'webcal://' . ($_SERVER['HTTP_HOST'] ?? 'langkildelarsen.dk') . '/api/calendar.php?k=' . ev_feed_key(); ?>
+        <label>Dit kalender-link<input value="<?= e($feedUrl) ?>" readonly onfocus="this.select()"></label>
+        <ol class="steps muted small">
+          <li>Åbn linket herunder på din iPhone, eller gå til <strong>Indstillinger → Kalender → Konti → Tilføj konto → Andet → Tilføj abonnementskalender</strong> og indsæt linket.</li>
+          <li>Tryk <strong>Abonnér</strong>.</li>
+        </ol>
+        <div class="actions"><a class="btn ghost" href="<?= e($feedUrl) ?>">Abonnér på iPhone</a></div>
       </form>
 
       <?php if ($isOwner): $ck = load_json('claude'); ?>

@@ -428,6 +428,7 @@
             const a = document.querySelector('.dash ' + sel), b = doc.querySelector('.dash ' + sel);
             if (a && b) a.replaceWith(b);
           });
+          document.dispatchEvent(new CustomEvent('cards:updated'));
         }).catch(() => {});
       }
     };
@@ -1154,4 +1155,170 @@
   };
   document.addEventListener('page:ready', load);
   load();
+})();
+
+(() => {
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const parse = v => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) : null; };
+  const days = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+  const months = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const label = d => {
+    const now = new Date();
+    const t = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const tm = new Date(now); tm.setDate(now.getDate() + 1);
+    if (sameDay(d, now)) return 'I dag ' + t;
+    if (sameDay(d, tm)) return 'I morgen ' + t;
+    const diff = (d - now) / 86400000;
+    if (diff > 0 && diff < 6) return days[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + t;
+    return d.getDate() + '. ' + months[d.getMonth()].slice(0, 3) + ' ' + t;
+  };
+  const presets = () => {
+    const now = new Date();
+    const at = (addDays, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + addDays); d.setHours(h, m, 0, 0); return d; };
+    const inH = new Date(now.getTime() + 3600000); inH.setMinutes(Math.ceil(inH.getMinutes() / 15) * 15, 0, 0);
+    const list = [['Om 1 time', inH]];
+    if (now.getHours() < 18) list.push(['I aften', at(0, 19)]);
+    list.push(['I morgen', at(1, 9)]);
+    const toSat = (6 - now.getDay() + 7) % 7 || 7;
+    list.push(['Weekend', at(toSat, 10)]);
+    const toMon = (8 - now.getDay()) % 7 || 7;
+    list.push(['Næste uge', at(toMon, 9)]);
+    return list;
+  };
+
+  const init = () => {
+    document.querySelectorAll('.rem-add').forEach(form => {
+      const btn = form.querySelector('[data-when-btn]');
+      const dp = form.querySelector('[data-dp]');
+      const input = form.querySelector('[data-due]');
+      if (!btn || !dp || btn.dataset.ready) return;
+      btn.dataset.ready = '1';
+      let val = parse(input.value) || new Date(Date.now() + 3600000);
+      let view = new Date(val.getFullYear(), val.getMonth(), 1);
+      const lab = form.querySelector('[data-when-label]');
+      const set = (d, presetName) => {
+        val = new Date(d);
+        input.value = iso(val);
+        lab.textContent = presetName || label(val);
+        render();
+      };
+      const render = () => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const first = new Date(view);
+        const lead = (first.getDay() + 6) % 7;
+        const dim = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+        let cells = '';
+        for (let i = 0; i < lead; i++) cells += '<span></span>';
+        for (let d = 1; d <= dim; d++) {
+          const dt = new Date(view.getFullYear(), view.getMonth(), d);
+          const cls = [sameDay(dt, val) ? 'on' : '', sameDay(dt, today) ? 'today' : '', dt < today ? 'past' : ''].join(' ');
+          cells += '<button type="button" data-d="' + d + '" class="' + cls + '"' + (dt < today ? ' disabled' : '') + '>' + d + '</button>';
+        }
+        const hours = [7, 8, 9, 10, 12, 14, 16, 17, 18, 19, 20, 21, 22];
+        if (!hours.includes(val.getHours())) { hours.push(val.getHours()); hours.sort((a, b) => a - b); }
+        dp.innerHTML =
+          '<div class="dp-presets">' + presets().map(([n, d], i) => '<button type="button" data-p="' + i + '"><strong>' + n + '</strong><small>' + label(d) + '</small></button>').join('') + '</div>' +
+          '<div class="dp-cal"><div class="dp-head"><button type="button" data-nav="-1" aria-label="Forrige måned">‹</button><span>' + months[view.getMonth()] + ' ' + view.getFullYear() + '</span><button type="button" data-nav="1" aria-label="Næste måned">›</button></div>' +
+          '<div class="dp-dow"><span>M</span><span>T</span><span>O</span><span>T</span><span>F</span><span>L</span><span>S</span></div><div class="dp-grid">' + cells + '</div></div>' +
+          '<div class="dp-time"><div class="dp-hours">' + hours.map(h => '<button type="button" data-h="' + h + '" class="' + (h === val.getHours() ? 'on' : '') + '">' + pad(h) + '</button>').join('') + '</div>' +
+          '<div class="dp-mins">' + [0, 15, 30, 45].map(m => '<button type="button" data-m="' + m + '" class="' + (m === val.getMinutes() ? 'on' : '') + '">:' + pad(m) + '</button>').join('') + '</div></div>' +
+          '<div class="dp-foot"><span>' + label(val) + '</span><button type="button" class="dp-ok" data-ok>Færdig</button></div>';
+      };
+      const open = () => { view = new Date(val.getFullYear(), val.getMonth(), 1); render(); dp.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+      const close = () => { dp.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+      btn.addEventListener('click', e => { e.preventDefault(); dp.hidden ? open() : close(); });
+      dp.addEventListener('click', e => {
+        e.stopPropagation();
+        const b = e.target.closest('button');
+        if (!b) return;
+        if (b.dataset.p !== undefined) { const [n, d] = presets()[+b.dataset.p]; set(d, n === 'Om 1 time' ? n : null); close(); return; }
+        if (b.dataset.nav) { view.setMonth(view.getMonth() + +b.dataset.nav); render(); return; }
+        if (b.dataset.d) { const d = new Date(val); d.setFullYear(view.getFullYear(), view.getMonth(), +b.dataset.d); set(d); return; }
+        if (b.dataset.h) { const d = new Date(val); d.setHours(+b.dataset.h); set(d); return; }
+        if (b.dataset.m) { const d = new Date(val); d.setMinutes(+b.dataset.m); set(d); return; }
+        if (b.dataset.ok !== undefined) close();
+      });
+      document.addEventListener('click', e => { if (!dp.hidden && !form.contains(e.target)) close(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && !dp.hidden) close(); });
+      form.addEventListener('submit', () => close());
+    });
+  };
+  document.addEventListener('page:ready', init);
+  document.addEventListener('cards:updated', init);
+  init();
+})();
+
+(() => {
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const months = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
+  const wd = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+  const nice = k => { const [y, m, d] = k.split('-').map(Number); const dt = new Date(y, m - 1, d); return wd[dt.getDay()] + ' ' + d + '. ' + months[m - 1]; };
+
+  const init = () => {
+    const card = document.querySelector('.c-cal');
+    const grid = card && card.querySelector('[data-cal-days]');
+    if (!grid || grid.dataset.ready) return;
+    grid.dataset.ready = '1';
+    let data = {};
+    try { data = JSON.parse(grid.dataset.calDays || '{}') || {}; } catch (e) {}
+    const tip = card.querySelector('[data-cal-tip]');
+    const pop = card.querySelector('[data-cal-pop]');
+    const list = pop.querySelector('[data-cal-list]');
+    const addForm = pop.querySelector('.cal-pop-add');
+    const dateIn = pop.querySelector('[data-cal-date]');
+    const timeIn = pop.querySelector('[data-cal-time]');
+    const mins = pop.querySelector('[data-cal-mins]');
+    let hour = '', minute = '00';
+    const rows = (k, withX) => (data[k] || []).map(e => '<div class="cal-ev' + (e.l ? ' local' : '') + '"><span class="cal-ev-h">' + esc(e.h) + '</span><span class="cal-ev-t">' + esc(e.t) + (e.c && !e.l ? '<small>' + esc(e.c) + '</small>' : '') + '</span>' + (withX && e.l ? '<button name="id" value="' + esc(e.id) + '" class="cal-ev-x" aria-label="Slet">×</button>' : '') + '</div>').join('');
+    const place = (el, btn) => {
+      const cr = card.getBoundingClientRect(), br = btn.getBoundingClientRect();
+      el.style.left = Math.max(12, Math.min(cr.width - el.offsetWidth - 12, br.left - cr.left + br.width / 2 - el.offsetWidth / 2)) + 'px';
+      el.style.top = (br.bottom - cr.top + 8) + 'px';
+    };
+    const syncTime = () => { timeIn.value = hour ? hour + ':' + minute : ''; mins.hidden = !hour; };
+
+    grid.addEventListener('mouseover', e => {
+      const b = e.target.closest('[data-day]');
+      if (!b || !pop.hidden || !data[b.dataset.day] || matchMedia('(hover: none)').matches) { if (!b) tip.hidden = true; return; }
+      tip.innerHTML = '<strong>' + esc(nice(b.dataset.day)) + '</strong>' + rows(b.dataset.day, false);
+      tip.hidden = false;
+      place(tip, b);
+    });
+    grid.addEventListener('mouseleave', () => { tip.hidden = true; });
+    grid.addEventListener('click', e => {
+      const b = e.target.closest('[data-day]');
+      if (!b) return;
+      tip.hidden = true;
+      const k = b.dataset.day;
+      grid.querySelectorAll('.day.sel').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+      pop.querySelector('[data-cal-pop-title]').textContent = nice(k);
+      list.querySelectorAll('.cal-ev, .cal-none').forEach(x => x.remove());
+      list.insertAdjacentHTML('beforeend', rows(k, true) || '<p class="cal-none">Ingen aftaler denne dag.</p>');
+      dateIn.value = k;
+      hour = ''; minute = '00';
+      pop.querySelectorAll('[data-th]').forEach(x => x.classList.toggle('on', x.dataset.th === ''));
+      pop.querySelectorAll('[data-tm]').forEach(x => x.classList.toggle('on', x.dataset.tm === '00'));
+      syncTime();
+      pop.hidden = false;
+      place(pop, b);
+      addForm.querySelector('input[name=title]').focus();
+    });
+    pop.addEventListener('click', e => {
+      const th = e.target.closest('[data-th]');
+      if (th) { hour = th.dataset.th; pop.querySelectorAll('[data-th]').forEach(x => x.classList.toggle('on', x === th)); syncTime(); return; }
+      const tm = e.target.closest('[data-tm]');
+      if (tm) { minute = tm.dataset.tm; pop.querySelectorAll('[data-tm]').forEach(x => x.classList.toggle('on', x === tm)); syncTime(); return; }
+      if (e.target.closest('[data-cal-close]')) { pop.hidden = true; grid.querySelectorAll('.day.sel').forEach(x => x.classList.remove('sel')); }
+    });
+    document.addEventListener('click', e => {
+      if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-day]')) { pop.hidden = true; grid.querySelectorAll('.day.sel').forEach(x => x.classList.remove('sel')); }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { pop.hidden = true; tip.hidden = true; } });
+  };
+  document.addEventListener('page:ready', init);
+  document.addEventListener('cards:updated', init);
+  init();
 })();

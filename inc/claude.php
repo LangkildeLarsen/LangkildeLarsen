@@ -128,6 +128,7 @@ function claude_tools(bool $owner): array
             'day' => ['type' => 'integer'],
         ], 'required' => ['kind', 'name']]],
         ['name' => 'get_calendar', 'description' => 'Hent kommende aftaler fra brugerens kalender.', 'input_schema' => ['type' => 'object', 'properties' => ['days' => ['type' => 'integer']]]],
+        ['name' => 'add_event', 'description' => 'Læg en aftale i brugerens kalender (dashboardets Jarvis-kalender, som også synkroniseres til iPhone).', 'input_schema' => ['type' => 'object', 'properties' => ['title' => ['type' => 'string'], 'date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'], 'time' => ['type' => 'string', 'description' => 'HH:MM, udelad for hele dagen'], 'end' => ['type' => 'string', 'description' => 'HH:MM sluttid, valgfri']], 'required' => ['title', 'date']]],
         ['name' => 'add_reminder', 'description' => 'Opret en påmindelse. Brugeren får en push-notifikation på tidspunktet. Regn selv tidspunktet ud fra dags dato og klokken (dansk tid).', 'input_schema' => ['type' => 'object', 'properties' => ['text' => ['type' => 'string'], 'due' => ['type' => 'string', 'description' => 'Tidspunkt som YYYY-MM-DD HH:MM']], 'required' => ['text', 'due']]],
         ['name' => 'list_reminders', 'description' => 'Se brugerens aktive påmindelser.', 'input_schema' => ['type' => 'object', 'properties' => new stdClass()]],
         ['name' => 'complete_reminder', 'description' => 'Markér en påmindelse som klaret.', 'input_schema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']]],
@@ -257,6 +258,13 @@ function claude_run_tool(string $name, array $in, array $me, bool &$changed): ar
         case 'get_calendar':
             $res = cal_events(max(1, min(60, (int)($in['days'] ?? 14))));
             return array_map(fn($e) => ['title' => $e['title'], 'when' => day_label($e['start']) . ' ' . event_time($e), 'location' => $e['location']], array_slice($res['events'], 0, 25));
+        case 'add_event':
+            $ev = ev_add((string)($in['title'] ?? ''), (string)($in['date'] ?? ''), $in['time'] ?? null, $in['end'] ?? null, '', $me);
+            if (!$ev) {
+                return ['error' => 'Ugyldig titel eller dato'];
+            }
+            $changed = true;
+            return ['ok' => true, 'id' => $ev['id']];
         case 'add_reminder':
             $due = rem_parse_due((string)($in['due'] ?? ''));
             if (!$due) {

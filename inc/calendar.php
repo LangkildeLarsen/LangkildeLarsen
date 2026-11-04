@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/events.php';
+
 function cal_fetch(string $url): ?string
 {
     $url = preg_replace('~^webcals?://~i', 'https://', trim($url));
@@ -36,15 +38,15 @@ function cal_sources(): array
     return $out;
 }
 
-function cal_events(int $days = 30, bool $force = false): array
+function cal_events(int $days = 30, bool $force = false, ?int $fromTs = null): array
 {
     $sources = cal_sources();
-    if (!$sources) {
-        return ['events' => [], 'errors' => []];
-    }
-    $cache = load_json(ukey('cal-cache'));
+    $cache = $sources ? load_json(ukey('cal-cache')) : [];
     $tz = new DateTimeZone(date_default_timezone_get());
     $from = new DateTime('now', $tz);
+    if ($fromTs !== null) {
+        $from->setTimestamp($fromTs);
+    }
     $to = (new DateTime('today', $tz))->modify("+$days days");
     $events = [];
     $errors = [];
@@ -73,6 +75,9 @@ function cal_events(int $days = 30, bool $force = false): array
 
     if ($dirty) {
         save_json(ukey('cal-cache'), $cache);
+    }
+    foreach (ev_as_events($from->getTimestamp(), $to->getTimestamp()) as $ev) {
+        $events[] = $ev;
     }
     usort($events, fn($a, $b) => [$a['start'], !$a['allday']] <=> [$b['start'], !$b['allday']]);
     return ['events' => $events, 'errors' => $errors];
