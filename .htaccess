@@ -1,5 +1,14 @@
 Options -Indexes
 DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://langkildelarsen.dk%{REQUEST_URI} [L,R=301]
+  RewriteCond %{HTTP_HOST} ^www\.langkildelarsen\.dk$ [NC]
+  RewriteRule ^ https://langkildelarsen.dk%{REQUEST_URI} [L,R=301]
+</IfModule>
 AddType application/manifest+json .webmanifest
 SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 RedirectMatch 404 ^/(inc|data|\.git|\.github)(/|$)
