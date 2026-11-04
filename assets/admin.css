@@ -1825,3 +1825,43 @@ kbd { padding: 3px 8px; border-radius: 7px; background: var(--card-3); color: va
 .mp-url .btn { justify-self: stretch; }
 
 .mp-head { padding-left: 2px; }
+
+.ic { width: 23px; height: 23px; }
+
+.rail .ic { width: 26px; height: 26px; }
+
+.round .ic, .bell .ic, .search-btn .ic { width: 22px; height: 22px; }
+
+.btn .ic { width: 19px; height: 19px; }
+
+.btn.small .ic { width: 17px; height: 17px; }
+
+.dk-b .ic { width: 21px; height: 21px; }
+
+.dk-title .ic { width: 18px; height: 18px; }
+
+.mp-b .ic { width: 22px; height: 22px; }
+
+.mp-b.big .ic { width: 30px; height: 30px; }
+
+.mp-b.small .ic { width: 21px; height: 21px; }
+
+.mp-x .ic { width: 19px; height: 19px; }
+
+.kpi-ic .ic { width: 26px; height: 26px; }
+
+.tile-ic .ic { width: 24px; height: 24px; }
+
+.tile > .ic { width: 20px; height: 20px; }
+
+.insight .ic { width: 22px; height: 22px; }
+
+.see .ic, .back .ic { width: 18px; height: 18px; }
+
+.sx-field .ic { width: 23px; height: 23px; }
+
+.ask button .ic { width: 22px; height: 22px; }
+
+@media (max-width: 900px) {
+  .rail .ic { width: 25px; height: 25px; }
+}
