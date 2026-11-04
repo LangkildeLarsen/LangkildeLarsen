@@ -1068,19 +1068,17 @@
     if (audio) audio.pause();
     audio = new Audio(boot.dataset.sound);
     audio.volume = 0.9;
-    audio.play().then(sequence).catch(() => {
-      boot.classList.add('on');
-      hudOn();
-      tap.hidden = false;
+    sequence();
+    audio.play().catch(() => {
+      const unlock = () => {
+        ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.removeEventListener(ev, unlock, true));
+        if (audio && audio.paused) audio.play().catch(() => {});
+      };
+      ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, unlock, true));
     });
   };
 
   boot.addEventListener('click', () => {
-    if (!tap.hidden) {
-      if (audio) audio.play().catch(() => {});
-      sequence();
-      return;
-    }
     if (running) finish();
   });
 
