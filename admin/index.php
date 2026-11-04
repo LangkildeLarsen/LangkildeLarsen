@@ -475,6 +475,34 @@ if ($action) {
         exit;
     }
 
+    if ($action === 'save_startup') {
+        $ui['splash'] = !empty($_POST['splash']);
+        save_json(ukey('ui'), $ui);
+        $path = sound_path();
+        if (!empty($_POST['remove_sound'])) {
+            @unlink($path);
+            flash('Startlyden er fjernet.');
+        } elseif (!empty($_FILES['sound']['tmp_name']) && is_uploaded_file($_FILES['sound']['tmp_name'])) {
+            $f = $_FILES['sound'];
+            $head = (string)file_get_contents($f['tmp_name'], false, null, 0, 4);
+            $isMp3 = str_starts_with($head, 'ID3') || (strlen($head) > 1 && ord($head[0]) === 0xFF && (ord($head[1]) & 0xE0) === 0xE0);
+            if ($f['size'] > 4 * 1024 * 1024) {
+                flash('Filen er for stor. Maks 4 MB.');
+            } elseif (!$isMp3) {
+                flash('Det skal være en mp3-fil.');
+            } else {
+                if (!is_dir(dirname($path))) {
+                    mkdir(dirname($path), 0755, true);
+                }
+                move_uploaded_file($f['tmp_name'], $path);
+                flash('Startlyden er gemt.');
+            }
+        } else {
+            flash('Indstillingerne er gemt.');
+        }
+        redirect('index.php?view=settings#opstart');
+    }
+
     if ($action === 'send_message') {
         $to = mb_strtolower(trim((string)($_POST['to'] ?? '')));
         $text = trim((string)($_POST['text'] ?? ''));
@@ -512,6 +540,11 @@ if ($action) {
 
     if ($action === 'clear_chat') {
         save_json(ukey('chat'), []);
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'json') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true]);
+            exit;
+        }
         flash('Samtalen er ryddet.');
         redirect('index.php?view=chat');
     }
@@ -857,6 +890,25 @@ if (($_GET['ajax'] ?? '') === 'thread') {
     exit;
 }
 
+function jarvis_orb(string $class = ''): string
+{
+    static $ticks = null;
+    if ($ticks === null) {
+        $ticks = '';
+        for ($i = 0; $i < 72; $i++) {
+            $a = deg2rad($i * 5);
+            $l = $i % 6 === 0 ? 4 : 2;
+            $ticks .= sprintf('<line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f"/>', 50 + 44 * cos($a), 50 + 44 * sin($a), 50 + (44 - $l) * cos($a), 50 + (44 - $l) * sin($a));
+        }
+    }
+    return '<div class="jv-orb ' . $class . '" aria-hidden="true"><svg viewBox="0 0 100 100"><circle class="jv-r jv-r1" cx="50" cy="50" r="48"/><g class="jv-ticks">' . $ticks . '</g><circle class="jv-r jv-r2" cx="50" cy="50" r="40"/><circle class="jv-r jv-r3" cx="50" cy="50" r="34"/><circle class="jv-r jv-r4" cx="50" cy="50" r="29" pathLength="100"/><circle class="jv-r jv-r5" cx="50" cy="50" r="23"/></svg><span class="jv-pulse"></span><span class="jv-pulse jv-p2"></span><div class="jv-core"><div class="jv-wave"><i></i><i></i><i></i><i></i><i></i></div></div></div>';
+}
+
+function sound_path(?array $user = null): string
+{
+    return DATA_DIR . '/' . ukey('startsound', $user) . '.mp3';
+}
+
 function app_version(): string
 {
     $root = dirname(__DIR__);
@@ -875,6 +927,20 @@ if (($_GET['ajax'] ?? '') === 'push_key') {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     echo json_encode(['key' => push_public_key(), 'count' => count(push_subs($me))]);
+    exit;
+}
+
+if (($_GET['ajax'] ?? '') === 'sound') {
+    $path = sound_path();
+    if (!is_file($path)) {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: audio/mpeg');
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=86400');
+    header('Accept-Ranges: none');
+    readfile($path);
     exit;
 }
 
@@ -1483,6 +1549,23 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         </ol>
       </div>
 
+      <form method="post" enctype="multipart/form-data" class="panel form" id="opstart" data-reload>
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_startup">
+        <h2 class="section-title">Opstart</h2>
+        <p class="muted small">Startanimationen vises, når du åbner Jarvis. Uploader du en mp3, afspilles den samtidig. Lyden gemmes kun på serveren.</p>
+        <label class="check"><input type="checkbox" name="splash" value="1"<?= ($ui['splash'] ?? true) ? ' checked' : '' ?>> Vis startanimation</label>
+        <?php if (is_file(sound_path())): ?>
+          <audio controls preload="none" src="index.php?ajax=sound&amp;v=<?= filemtime(sound_path()) ?>" class="sound-preview"></audio>
+        <?php endif; ?>
+        <label>Startlyd (mp3)<input type="file" name="sound" accept="audio/mpeg,.mp3"></label>
+        <div class="actions">
+          <button class="btn">Gem</button>
+          <button type="button" class="btn ghost" data-splash-run>Vis animationen nu</button>
+          <?php if (is_file(sound_path())): ?><button class="btn ghost danger" name="remove_sound" value="1">Fjern lyd</button><?php endif; ?>
+        </div>
+      </form>
+
       <section class="panel push-panel" id="notifikationer" data-push>
         <h2 class="section-title">Notifikationer</h2>
         <p class="muted small">Få besked på telefonen og i Chrome, når der kommer en ny besked – også når Jarvis er lukket. Slå det til på hver enhed for sig.</p>
@@ -1698,23 +1781,13 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <span class="jv-name">Jarvis</span>
           <span class="jv-state"><i></i><span data-jv-label>Klar</span></span>
         </div>
-        <div class="jv-orb" aria-hidden="true">
-          <svg viewBox="0 0 100 100">
-            <circle class="jv-r jv-r1" cx="50" cy="50" r="48"/>
-            <g class="jv-ticks"><line x1="94.00" y1="50.00" x2="90.00" y2="50.00"/><line x1="93.83" y1="53.83" x2="91.84" y2="53.66"/><line x1="93.33" y1="57.64" x2="91.36" y2="57.29"/><line x1="92.50" y1="61.39" x2="90.57" y2="60.87"/><line x1="91.35" y1="65.05" x2="89.47" y2="64.36"/><line x1="89.88" y1="68.60" x2="88.06" y2="67.75"/><line x1="88.11" y1="72.00" x2="84.64" y2="70.00"/><line x1="86.04" y1="75.24" x2="84.40" y2="74.09"/><line x1="83.71" y1="78.28" x2="82.17" y2="77.00"/><line x1="81.11" y1="81.11" x2="79.70" y2="79.70"/><line x1="78.28" y1="83.71" x2="77.00" y2="82.17"/><line x1="75.24" y1="86.04" x2="74.09" y2="84.40"/><line x1="72.00" y1="88.11" x2="70.00" y2="84.64"/><line x1="68.60" y1="89.88" x2="67.75" y2="88.06"/><line x1="65.05" y1="91.35" x2="64.36" y2="89.47"/><line x1="61.39" y1="92.50" x2="60.87" y2="90.57"/><line x1="57.64" y1="93.33" x2="57.29" y2="91.36"/><line x1="53.83" y1="93.83" x2="53.66" y2="91.84"/><line x1="50.00" y1="94.00" x2="50.00" y2="90.00"/><line x1="46.17" y1="93.83" x2="46.34" y2="91.84"/><line x1="42.36" y1="93.33" x2="42.71" y2="91.36"/><line x1="38.61" y1="92.50" x2="39.13" y2="90.57"/><line x1="34.95" y1="91.35" x2="35.64" y2="89.47"/><line x1="31.40" y1="89.88" x2="32.25" y2="88.06"/><line x1="28.00" y1="88.11" x2="30.00" y2="84.64"/><line x1="24.76" y1="86.04" x2="25.91" y2="84.40"/><line x1="21.72" y1="83.71" x2="23.00" y2="82.17"/><line x1="18.89" y1="81.11" x2="20.30" y2="79.70"/><line x1="16.29" y1="78.28" x2="17.83" y2="77.00"/><line x1="13.96" y1="75.24" x2="15.60" y2="74.09"/><line x1="11.89" y1="72.00" x2="15.36" y2="70.00"/><line x1="10.12" y1="68.60" x2="11.94" y2="67.75"/><line x1="8.65" y1="65.05" x2="10.53" y2="64.36"/><line x1="7.50" y1="61.39" x2="9.43" y2="60.87"/><line x1="6.67" y1="57.64" x2="8.64" y2="57.29"/><line x1="6.17" y1="53.83" x2="8.16" y2="53.66"/><line x1="6.00" y1="50.00" x2="10.00" y2="50.00"/><line x1="6.17" y1="46.17" x2="8.16" y2="46.34"/><line x1="6.67" y1="42.36" x2="8.64" y2="42.71"/><line x1="7.50" y1="38.61" x2="9.43" y2="39.13"/><line x1="8.65" y1="34.95" x2="10.53" y2="35.64"/><line x1="10.12" y1="31.40" x2="11.94" y2="32.25"/><line x1="11.89" y1="28.00" x2="15.36" y2="30.00"/><line x1="13.96" y1="24.76" x2="15.60" y2="25.91"/><line x1="16.29" y1="21.72" x2="17.83" y2="23.00"/><line x1="18.89" y1="18.89" x2="20.30" y2="20.30"/><line x1="21.72" y1="16.29" x2="23.00" y2="17.83"/><line x1="24.76" y1="13.96" x2="25.91" y2="15.60"/><line x1="28.00" y1="11.89" x2="30.00" y2="15.36"/><line x1="31.40" y1="10.12" x2="32.25" y2="11.94"/><line x1="34.95" y1="8.65" x2="35.64" y2="10.53"/><line x1="38.61" y1="7.50" x2="39.13" y2="9.43"/><line x1="42.36" y1="6.67" x2="42.71" y2="8.64"/><line x1="46.17" y1="6.17" x2="46.34" y2="8.16"/><line x1="50.00" y1="6.00" x2="50.00" y2="10.00"/><line x1="53.83" y1="6.17" x2="53.66" y2="8.16"/><line x1="57.64" y1="6.67" x2="57.29" y2="8.64"/><line x1="61.39" y1="7.50" x2="60.87" y2="9.43"/><line x1="65.05" y1="8.65" x2="64.36" y2="10.53"/><line x1="68.60" y1="10.12" x2="67.75" y2="11.94"/><line x1="72.00" y1="11.89" x2="70.00" y2="15.36"/><line x1="75.24" y1="13.96" x2="74.09" y2="15.60"/><line x1="78.28" y1="16.29" x2="77.00" y2="17.83"/><line x1="81.11" y1="18.89" x2="79.70" y2="20.30"/><line x1="83.71" y1="21.72" x2="82.17" y2="23.00"/><line x1="86.04" y1="24.76" x2="84.40" y2="25.91"/><line x1="88.11" y1="28.00" x2="84.64" y2="30.00"/><line x1="89.88" y1="31.40" x2="88.06" y2="32.25"/><line x1="91.35" y1="34.95" x2="89.47" y2="35.64"/><line x1="92.50" y1="38.61" x2="90.57" y2="39.13"/><line x1="93.33" y1="42.36" x2="91.36" y2="42.71"/><line x1="93.83" y1="46.17" x2="91.84" y2="46.34"/></g>
-            <circle class="jv-r jv-r2" cx="50" cy="50" r="40"/>
-            <circle class="jv-r jv-r3" cx="50" cy="50" r="34"/>
-            <circle class="jv-r jv-r4" cx="50" cy="50" r="29" pathLength="100"/>
-            <circle class="jv-r jv-r5" cx="50" cy="50" r="23"/>
-          </svg>
-          <span class="jv-pulse"></span><span class="jv-pulse jv-p2"></span>
-          <div class="jv-core"><div class="jv-wave"><i></i><i></i><i></i><i></i><i></i></div></div>
-        </div>
+        <?= jarvis_orb() ?>
         <p class="jv-log" data-jv-log><span>Klar.</span> Skriv eller tal til mig.</p>
       </aside>
       <section class="card chat" data-chat>
         <div class="card-head">
           <h2 class="chat-h" aria-label="Jarvis"></h2>
+          <span class="chat-note" data-chat-note role="status" hidden></span>
           <button type="button" class="round" data-voice-toggle aria-label="Læs svar højt" aria-pressed="false"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
           <button type="button" class="round" data-voice-settings aria-label="Stemme"><?= icon('gear') ?></button>
           <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="clear_chat"><button class="round" aria-label="Ryd samtale" title="Ryd samtale"><?= icon('cross') ?></button></form>
@@ -1759,6 +1832,17 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   </main>
 </div>
 <?php $music = ($ui['music'] ?? null) ?: ['v' => 'byOVTxnILMU', 'list' => 'RDbyOVTxnILMU', 'url' => 'https://www.youtube.com/watch?v=byOVTxnILMU&list=RDbyOVTxnILMU']; ?>
+<?php if (($ui['splash'] ?? true)): ?>
+<div class="boot" id="boot" hidden data-sound="<?= is_file(sound_path()) ? 'index.php?ajax=sound&amp;v=' . filemtime(sound_path()) : '' ?>" data-name="<?= e(first_name($me)) ?>">
+  <div class="boot-in">
+    <?= jarvis_orb('boot-orb') ?>
+    <p class="boot-name">JARVIS</p>
+    <div class="boot-bar"><i></i></div>
+    <p class="boot-text" data-boot-text>Starter systemer…</p>
+    <button type="button" class="boot-tap" data-boot-tap hidden>Tryk for at starte</button>
+  </div>
+</div>
+<?php endif; ?>
 <div class="sx" id="sx" hidden>
   <div class="sx-box" role="dialog" aria-modal="true" aria-label="Søg">
     <label class="sx-field"><?= icon('search') ?><input id="sx-q" type="search" placeholder="Søg i lifehacks, budget og sider…" autocomplete="off" spellcheck="false"><kbd>esc</kbd></label>

@@ -305,6 +305,27 @@
       if (!b.dataset.q.endsWith(': ')) form.requestSubmit();
     }));
 
+    const clearForm = chat.querySelector('.card-head form');
+    const note = chat.querySelector('[data-chat-note]');
+    let noteT = null;
+    if (clearForm) clearForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = await fetch('index.php', { method: 'POST', body: new FormData(clearForm), credentials: 'same-origin', headers: { 'X-Requested-With': 'json' } }).then(x => x.json()).catch(() => null);
+      if (!r || !r.ok) return;
+      if (synth) synth.cancel();
+      jvSet('idle');
+      list.innerHTML = '';
+      if (note) {
+        clearTimeout(noteT);
+        note.textContent = 'Samtalen er ryddet';
+        note.hidden = false;
+        note.classList.remove('out');
+        noteT = setTimeout(() => { note.classList.add('out'); noteT = setTimeout(() => { note.hidden = true; }, 400); }, 2000);
+      }
+      input.focus();
+    });
+
     let busy = false;
     form.addEventListener('submit', async e => {
       e.preventDefault();
@@ -935,4 +956,84 @@
   document.addEventListener('visibilitychange', clearBadge);
   paint();
   clearBadge();
+})();
+
+(() => {
+  const boot = document.getElementById('boot');
+  if (!boot) return;
+  const inner = boot.querySelector('.boot-in');
+  const text = boot.querySelector('[data-boot-text]');
+  const bar = boot.querySelector('.boot-bar i');
+  const tap = boot.querySelector('[data-boot-tap]');
+  const name = boot.dataset.name || '';
+  const steps = ['Starter systemer…', 'Indlæser lifehacks…', 'Synkroniserer budget…', 'Henter kalender…', 'Forbinder til Jarvis…', 'Alle systemer klar'];
+  let audio = null;
+  let timers = [];
+  let running = false;
+
+  const say = (t, final) => {
+    text.textContent = t;
+    text.classList.toggle('final', !!final);
+    text.classList.remove('swap');
+    void text.offsetWidth;
+    text.classList.add('swap');
+  };
+
+  const finish = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    boot.classList.add('out');
+    try { sessionStorage.setItem('jv-booted', '1'); } catch (e) {}
+    setTimeout(() => { boot.hidden = true; boot.classList.remove('out', 'on'); running = false; }, 950);
+  };
+
+  const sequence = () => {
+    running = true;
+    tap.hidden = true;
+    inner.dataset.s = 'thinking';
+    boot.classList.add('on');
+    const per = 950;
+    steps.forEach((t, i) => timers.push(setTimeout(() => { say(t); bar.style.width = Math.round((i + 1) / steps.length * 100) + '%'; }, 500 + i * per)));
+    const end = 500 + steps.length * per;
+    timers.push(setTimeout(() => { inner.dataset.s = 'speaking'; say('Velkommen hjem' + (name ? ', ' + name : '') + '.', true); }, end));
+    timers.push(setTimeout(finish, end + 2600));
+  };
+
+  const run = () => {
+    if (running) return;
+    timers.forEach(clearTimeout);
+    timers = [];
+    bar.style.width = '0';
+    inner.dataset.s = 'idle';
+    say(steps[0]);
+    boot.hidden = false;
+    boot.classList.remove('out', 'on');
+    void boot.offsetWidth;
+    if (!boot.dataset.sound) { sequence(); return; }
+    if (audio) { audio.pause(); }
+    audio = new Audio(boot.dataset.sound);
+    audio.volume = 0.9;
+    audio.play().then(sequence).catch(() => {
+      boot.classList.add('on');
+      text.textContent = '';
+      tap.hidden = false;
+    });
+  };
+
+  boot.addEventListener('click', () => {
+    if (!tap.hidden) {
+      if (audio) audio.play().catch(() => {});
+      sequence();
+      return;
+    }
+    if (running) finish();
+  });
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-splash-run]')) { try { sessionStorage.removeItem('jv-booted'); } catch (x) {} run(); }
+  });
+
+  let seen = false;
+  try { seen = sessionStorage.getItem('jv-booted') === '1'; } catch (e) {}
+  if (!seen) run();
 })();
