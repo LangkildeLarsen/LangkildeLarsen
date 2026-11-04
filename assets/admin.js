@@ -203,8 +203,6 @@
   const close = () => {
     clearTimeout(flyTimer);
     store.set('mp-open', false);
-    if (player && ready && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
-    mp.classList.remove('playing');
     document.documentElement.classList.add('mp-closed');
     const d = !reduce && dockRect();
     if (d) {
@@ -270,6 +268,7 @@
         },
         onStateChange: e => {
           mp.classList.toggle('playing', e.data === YT.PlayerState.PLAYING);
+          document.documentElement.classList.toggle('mp-playing', e.data === YT.PlayerState.PLAYING);
           if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.CUED) updateTitle();
         },
       },
@@ -298,7 +297,7 @@
     }
   };
 
-  mp.addEventListener('click', e => {
+  document.addEventListener('click', e => {
     const b = e.target.closest('[data-mp]');
     if (b) act(b.dataset.mp);
   });

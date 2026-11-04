@@ -806,7 +806,12 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <header class="topbar">
       <?php [$greet, $emoji] = greeting(); ?>
       <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
-      <button class="mp-dock" type="button" data-player-open aria-label="Åbn musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span></button>
+      <div class="mp-dock" role="group" aria-label="Musik">
+        <button type="button" class="dk-b" data-mp="prev" aria-label="Forrige"><?= icon('prev') ?></button>
+        <button type="button" class="dk-b big" data-mp="toggle" aria-label="Afspil/pause"><span class="i-play"><?= icon('play') ?></span><span class="i-pause"><?= icon('pause') ?></span></button>
+        <button type="button" class="dk-b" data-mp="next" aria-label="Næste"><?= icon('next') ?></button>
+        <button type="button" class="dk-title" data-player-open aria-label="Udvid musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span><?= icon('down') ?></button>
+      </div>
       <form class="search" action="./">
         <input type="hidden" name="view" value="hacks">
         <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>"><?php endif; ?>

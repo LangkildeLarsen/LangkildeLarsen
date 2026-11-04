@@ -1561,3 +1561,95 @@ html:has(.mp.playing):not(.mp-closed) .app { background-color: rgba(5, 5, 5, .72
 @media (max-width: 900px) {
   html { background: var(--app); }
 }
+
+.mp-closed .mp-dock { display: inline-flex; }
+
+.mp-dock {
+  gap: 4px;
+  padding: 0 6px;
+  max-width: 360px;
+  cursor: default;
+}
+
+.mp-dock:hover { background: var(--card-2); }
+
+.dk-b {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .2s ease, transform .2s var(--ease);
+}
+
+.dk-b:hover { background: var(--card-3); }
+
+.dk-b:active { transform: scale(.9); }
+
+.dk-b .ic { width: 18px; height: 18px; }
+
+.dk-b.big { width: 44px; height: 44px; background: #fff; color: #000; }
+
+.dk-b.big:hover { background: #fff; transform: scale(1.05); }
+
+.dk-b .i-pause, .mp-playing .dk-b .i-play { display: none; }
+
+.mp-playing .dk-b .i-pause, .dk-b .i-play { display: grid; }
+
+.dk-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.dk-title:hover { background: var(--card-3); }
+
+.dk-title .ic { width: 16px; height: 16px; color: var(--muted); flex: none; }
+
+.dk-title .mp-dock-t { max-width: 170px; }
+
+.eq i { transform-origin: bottom; }
+
+.mp-playing .eq i { animation: eq .9s ease-in-out infinite alternate; }
+
+.mp-playing .eq i:nth-child(2) { animation-duration: .7s; }
+
+.mp-playing .eq i:nth-child(3) { animation-duration: 1.1s; }
+
+@keyframes eq {
+  from { transform: scaleY(.35); }
+  to { transform: scaleY(1); }
+}
+
+.i-play .ic path { fill: currentColor; }
+
+.i-pause .ic { stroke-width: 3; }
+
+.mp-b.big .i-pause .ic { stroke-width: 3.2; }
+
+.mp-closed .mp-bg { opacity: 0; }
+
+html.mp-closed.mp-playing .mp-bg { opacity: .55 !important; }
+
+html.mp-playing .app { background-color: rgba(5, 5, 5, .72); }
+
+html:has(.mp.playing) .mp-bg,
+html.mp-closed.mp-playing .mp-bg { opacity: .32 !important; }
+
+html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app { background-color: rgba(5, 5, 5, .82); }
