@@ -200,7 +200,7 @@
         list.innerHTML = msgs.map(m => {
           let h = '';
           if (m.day !== day) { day = m.day; h += '<p class="dm-day">' + escH(m.label) + '</p>'; }
-          h += '<div class="bubble' + (m.mine ? ' mine' : '') + (m.type === 'request' ? ' request' : '') + '">' + (m.type === 'request' ? '<span class="req-tag">Ønske via Claude</span>' : '') + '<p>' + fmtText(m.text) + '</p><time>' + escH(m.time) + '</time></div>';
+          h += '<div class="bubble' + (m.mine ? ' mine' : '') + (m.type === 'request' ? ' request' : '') + '">' + (m.type === 'request' ? '<span class="req-tag">Ønske via Jarvis</span>' : '') + '<p>' + fmtText(m.text) + '</p><time>' + escH(m.time) + '</time></div>';
           return h;
         }).join('');
         if (atBottom) scrollDown();

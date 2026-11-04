@@ -2133,3 +2133,6 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 .push-status { margin: 4px 0 14px; color: var(--ink); }
 .push-panel .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .push-panel [hidden] { display: none !important; }
+
+.chat .card-head { justify-content: flex-end; }
+.chat .chat-h { display: none; }

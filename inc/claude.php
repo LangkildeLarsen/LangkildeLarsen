@@ -30,7 +30,7 @@ function claude_request(array $payload): array
     $err = curl_error($ch);
     curl_close($ch);
     if ($body === false) {
-        return ['error' => 'Kunne ikke nå Claude: ' . $err];
+        return ['error' => 'Kunne ikke nå Jarvis: ' . $err];
     }
     $json = json_decode($body, true);
     if ($code >= 400 || !is_array($json)) {
@@ -38,7 +38,7 @@ function claude_request(array $payload): array
         if ($code === 401) {
             $msg = 'API-nøglen blev afvist. Tjek den under Indstillinger.';
         } elseif ($code === 429) {
-            $msg = 'Claude er overbelastet lige nu. Prøv igen om lidt.';
+            $msg = 'Jarvis er overbelastet lige nu. Prøv igen om lidt.';
         }
         return ['error' => $msg];
     }
@@ -256,7 +256,7 @@ function claude_system(array $me): string
     $others = array_map(fn($u) => $u['name'] . ' <' . $u['email'] . '>', array_values(array_filter(users_all(), fn($u) => $u['email'] !== $me['email'])));
     $b = budget_summary(load_json(ukey('budget'), ['income' => [], 'expenses' => []]));
     $lines = [
-        'Du er Claude, en hjælpsom assistent indbygget i ' . first_name($me) . 's private dashboard på langkildelarsen.dk.',
+        'Du hedder Jarvis og er en hjælpsom assistent (bygget på Claude fra Anthropic) indbygget i ' . first_name($me) . 's private dashboard på langkildelarsen.dk.',
         'Svar altid på dansk, kort og venligt. Brug almindelig tekst, gerne korte lister. Ingen overskrifter.',
         'I dag er ' . dk_weekday(time()) . ' ' . dk_date(date('c')) . ', klokken ' . date('H:i') . '.',
         'Brugeren hedder ' . $me['name'] . ' (' . $me['email'] . ').',

@@ -828,7 +828,7 @@ $titles = [
     'calendar' => 'Kalender',
     'projects' => 'Projekter',
     'messages' => 'Beskeder',
-    'chat' => 'Claude',
+    'chat' => 'Jarvis',
 ];
 
 $budget = load_json(ukey('budget'), ['income' => [], 'expenses' => []]);
@@ -928,7 +928,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['budget', './?view=budget', 'wallet', 'Budget'],
             ['calendar', './?view=calendar', 'calendar', 'Kalender'],
             ['messages', './?view=messages', 'inbox', 'Beskeder'],
-            ['chat', './?view=chat', 'ai', 'Claude'],
+            ['chat', './?view=chat', 'ai', 'Jarvis'],
             ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
         $unreadCount = dm_unread($me['email']);
@@ -1652,7 +1652,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
               <div class="dm-list" id="dm-list">
                 <?php $lastDay = null; foreach (array_slice(dm_thread($me['email'], $with), -200) as $m): $pm = dm_public($m, $me['email']); ?>
                   <?php if ($pm['day'] !== $lastDay): $lastDay = $pm['day']; ?><p class="dm-day"><?= e($pm['label']) ?></p><?php endif; ?>
-                  <div class="bubble<?= $pm['mine'] ? ' mine' : '' ?><?= $pm['type'] === 'request' ? ' request' : '' ?>"><?php if ($pm['type'] === 'request'): ?><span class="req-tag"><?= icon('sparkle') ?> Ønske via Claude</span><?php endif; ?><p><?= nl2br(e($pm['text'])) ?></p><time><?= e($pm['time']) ?></time></div>
+                  <div class="bubble<?= $pm['mine'] ? ' mine' : '' ?><?= $pm['type'] === 'request' ? ' request' : '' ?>"><?php if ($pm['type'] === 'request'): ?><span class="req-tag"><?= icon('sparkle') ?> Ønske via Jarvis</span><?php endif; ?><p><?= nl2br(e($pm['text'])) ?></p><time><?= e($pm['time']) ?></time></div>
                 <?php endforeach; ?>
               </div>
               <form method="post" class="ask dm-compose" data-dm-form>
@@ -1671,7 +1671,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       <?php $history = load_json(ukey('chat')); $hasKey = claude_key() !== ''; ?>
       <section class="card chat" data-chat>
         <div class="card-head">
-          <h2>Claude</h2>
+          <h2 class="chat-h" aria-label="Jarvis"></h2>
           <button type="button" class="round" data-voice-toggle aria-label="Læs svar højt" aria-pressed="false"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
           <button type="button" class="round" data-voice-settings aria-label="Stemme"><?= icon('gear') ?></button>
           <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="clear_chat"><button class="round" aria-label="Ryd samtale" title="Ryd samtale"><?= icon('cross') ?></button></form>
@@ -1698,13 +1698,13 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php endforeach; ?>
         </div>
         <?php if (!$hasKey): ?>
-          <p class="insight"><?= icon('info') ?><span><?= $isOwner ? 'Claude er ikke sat op endnu. Indsæt din API-nøgle under Indstillinger → Claude.' : 'Claude er ikke sat op endnu. Bed ' . e(first_name(array_values(array_filter(users_all(), fn($u) => $u['role'] === 'owner'))[0] ?? ['name' => 'ejeren', 'email' => ''])) . ' om at sætte det op.' ?></span></p>
+          <p class="insight"><?= icon('info') ?><span><?= $isOwner ? 'Jarvis er ikke sat op endnu. Indsæt din API-nøgle under Indstillinger → Claude.' : 'Jarvis er ikke sat op endnu. Bed ' . e(first_name(array_values(array_filter(users_all(), fn($u) => $u['role'] === 'owner'))[0] ?? ['name' => 'ejeren', 'email' => ''])) . ' om at sætte det op.' ?></span></p>
         <?php endif; ?>
         <form class="ask chat-compose" data-chat-form>
           <?= csrf_field() ?>
           <input type="hidden" name="action" value="chat">
-          <button type="button" class="mic" data-mic aria-label="Tal til Claude"><?= icon('mic') ?></button>
-          <input name="text" placeholder="Skriv eller tal til Claude…" autocomplete="off" <?= $hasKey ? '' : 'disabled' ?>>
+          <button type="button" class="mic" data-mic aria-label="Tal til Jarvis"><?= icon('mic') ?></button>
+          <input name="text" placeholder="Skriv eller tal til Jarvis…" autocomplete="off" <?= $hasKey ? '' : 'disabled' ?>>
           <button aria-label="Send" <?= $hasKey ? '' : 'disabled' ?>><?= icon('send') ?></button>
         </form>
       </section>
