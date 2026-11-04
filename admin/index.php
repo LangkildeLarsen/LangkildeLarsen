@@ -133,8 +133,8 @@ function app_head(): string
 <meta name="apple-mobile-web-app-title" content="Emil">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="../assets/brand/dash-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="../assets/brand/dash-192.png">
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/dash-32.png">';
+<link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/fav-96.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/fav-32.png">';
 }
 
 function default_categories(): array

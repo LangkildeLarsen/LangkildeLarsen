@@ -2125,5 +2125,3 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
 .rail-logo { background: transparent; }
 .rail-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
 .auth-logo { border-radius: 22%; }
-
-.auth-logo, .install-ic { border-radius: 0; background: transparent; }
