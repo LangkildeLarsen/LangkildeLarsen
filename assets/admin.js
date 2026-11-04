@@ -424,7 +424,7 @@
       if (j.changed) {
         fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'swap' } }).then(r => r.text()).then(html => {
           const doc = new DOMParser().parseFromString(html, 'text/html');
-          ['.c-train', '.c-rem', '.c-mini-budget', '.c-next', '.c-cal'].forEach(sel => {
+          ['.c-train', '.c-rem', '.c-watch', '.c-cal'].forEach(sel => {
             const a = document.querySelector('.dash ' + sel), b = doc.querySelector('.dash ' + sel);
             if (a && b) a.replaceWith(b);
           });
@@ -1152,6 +1152,18 @@
       .catch(() => {})
       .finally(() => { delete box.dataset.busy; });
   };
-  document.addEventListener('page:ready', load);
+  const loadMail = () => {
+    const box = document.querySelector('[data-ml]');
+    if (!box || box.dataset.busy) return;
+    if (!box.hasAttribute('data-ml-refresh') && !box.querySelector('[data-ml-load]')) return;
+    box.dataset.busy = '1';
+    fetch('index.php?ajax=mail', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(html => { box.innerHTML = html; box.removeAttribute('data-ml-refresh'); })
+      .catch(() => {})
+      .finally(() => { delete box.dataset.busy; });
+  };
+  document.addEventListener('page:ready', () => { load(); loadMail(); });
   load();
+  loadMail();
 })();

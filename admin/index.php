@@ -8,6 +8,8 @@ require dirname(__DIR__) . '/inc/claude.php';
 require dirname(__DIR__) . '/inc/weather.php';
 require dirname(__DIR__) . '/inc/training.php';
 require dirname(__DIR__) . '/inc/reminders.php';
+require dirname(__DIR__) . '/inc/mail.php';
+require dirname(__DIR__) . '/inc/watch.php';
 
 users_migrate();
 if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
@@ -534,6 +536,47 @@ if ($action) {
         redirect('index.php?view=settings#vejr');
     }
 
+    if ($action === 'save_mail') {
+        $cfg = mail_cfg();
+        if (!empty($_POST['remove'])) {
+            save_json(ukey('mail'), []);
+            save_json(ukey('mail-cache'), []);
+            save_json(ukey('mail-seen'), []);
+            flash('Mailen er koblet fra.');
+            redirect('index.php?view=settings#mail');
+        }
+        $cfg['user'] = trim((string)($_POST['user'] ?? $cfg['user']));
+        if (trim((string)($_POST['pass'] ?? '')) !== '') {
+            $cfg['pass'] = (string)$_POST['pass'];
+        }
+        $cfg['push'] = !empty($_POST['push']);
+        $cfg['link'] = trim((string)($_POST['link'] ?? ''));
+        save_json(ukey('mail'), $cfg);
+        save_json(ukey('mail-cache'), []);
+        if (mail_ready($cfg)) {
+            try {
+                $d = mail_fetch($cfg, 1);
+                flash('Mailen er forbundet. Du har ' . $d['count'] . ' ulæste.');
+            } catch (Throwable $e) {
+                flash('Kunne ikke logge ind på mailen: ' . $e->getMessage());
+            }
+        }
+        redirect('index.php?view=settings#mail');
+    }
+
+    if ($action === 'watch_add') {
+        $q = trim((string)($_POST['q'] ?? ''));
+        if ($q !== '') {
+            watch_add($q);
+        }
+        redirect('index.php');
+    }
+
+    if ($action === 'watch_remove') {
+        watch_remove((string)($_POST['id'] ?? ''));
+        redirect('index.php');
+    }
+
     if ($action === 'add_reminder') {
         $text = trim((string)($_POST['text'] ?? ''));
         $due = rem_parse_due((string)($_POST['due'] ?? '')) ?? strtotime('+1 hour');
@@ -1053,6 +1096,32 @@ function training_card(array $t): string
     return $h . '</form>';
 }
 
+function mail_card(?array $d, array $cfg): string
+{
+    if (!mail_ready($cfg)) {
+        return '<div class="ml-empty"><p class="muted small">Forbind din mail under Indstillinger for at se ulæste mails her.</p><a href="./?view=settings#mail" class="btn ghost">Forbind mail</a></div>';
+    }
+    if (!$d) {
+        return '<div class="wx-empty" data-ml-load><span class="wx-spin"></span><p class="muted small">Henter mail…</p></div>';
+    }
+    $h = '';
+    if (empty($d['ok'])) {
+        $h .= '<p class="ml-err small">' . e($d['error'] ?? 'Kunne ikke hente mail.') . '</p>';
+    }
+    $n = (int)($d['count'] ?? 0);
+    $h .= '<p class="ml-count"><strong>' . $n . '</strong> <span>ulæst' . ($n === 1 ? '' : 'e') . '</span></p>';
+    if (!empty($d['items'])) {
+        $h .= '<ul class="ml-list">';
+        foreach (array_slice($d['items'], 0, 4) as $it) {
+            $h .= '<li><span class="ml-av">' . e(mb_strtoupper(mb_substr($it['from'], 0, 1))) . '</span><span class="ml-tx"><strong>' . e($it['from']) . '</strong><small>' . e($it['subject']) . '</small></span><time>' . e(mail_ago($it['ts'])) . '</time></li>';
+        }
+        $h .= '</ul>';
+    } elseif (!empty($d['ok'])) {
+        $h .= '<p class="muted small">Indbakken er tom for ulæste. Nice.</p>';
+    }
+    return $h;
+}
+
 function app_version(): string
 {
     $root = dirname(__DIR__);
@@ -1085,6 +1154,13 @@ if (($_GET['ajax'] ?? '') === 'sound') {
     header('Cache-Control: private, max-age=86400');
     header('Accept-Ranges: none');
     readfile($path);
+    exit;
+}
+
+if (($_GET['ajax'] ?? '') === 'mail') {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo mail_card(mail_get(null, !empty($_GET['fresh'])), mail_cfg());
     exit;
 }
 
@@ -1282,8 +1358,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         if ($hasCal) {
             $summary[] = $next7 ? "Du har $next7 aftale" . ($next7 === 1 ? '' : 'r') . ' de næste 7 dage.' : 'Kalenderen er tom de næste 7 dage.';
         }
-        if ($sum['income'] > 0) {
-            $summary[] = $sum['left'] >= 0 ? 'Budgettet giver ' . $fmt($sum['left']) . ' kr. til overs om måneden.' : 'Budgettet går ' . $fmt(abs($sum['left'])) . ' kr. i minus om måneden.';
+        $mlC = load_json(ukey('mail-cache'));
+        if (!empty($mlC['count'])) {
+            $summary[] = 'Du har ' . $mlC['count'] . ' ulæst' . ($mlC['count'] === 1 ? '' : 'e') . ' mail' . ($mlC['count'] === 1 ? '' : 's') . '.';
+        }
+        foreach (watch_load() as $w) {
+            $wd = watch_days($w['date']);
+            if ($wd !== null && $wd >= 0 && $wd <= 3) {
+                $summary[] = $w['title'] . ($wd === 0 ? ' udkommer i dag!' : ($wd === 1 ? ' udkommer i morgen.' : " udkommer om $wd dage."));
+            }
         }
       ?>
       <div class="dash">
@@ -1307,7 +1390,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
               <div class="hj-chips">
                 <button type="button" data-hj-q="Hvordan ser min dag ud?">Min dag</button>
                 <button type="button" data-hj-q="Jeg har trænet i dag">Log træning</button>
-                <button type="button" data-hj-q="Hvor meget har jeg tilbage om måneden?">Budget</button>
+                <button type="button" data-hj-q="Har jeg nogen vigtige mails?">Mail</button>
               </div>
             </div>
           </div>
@@ -1393,45 +1476,41 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php endif; ?>
         </section>
 
-        <section class="card c-spend c-mini-budget">
+        <section class="card c-mail">
           <div class="card-head">
-            <h2>Budget</h2>
-            <a href="./?view=budget" class="round" aria-label="Åbn budget"><?= icon('arrow') ?></a>
+            <h2>Mail</h2>
+            <?php $mcfg = mail_cfg(); if ($mcfg['link'] !== ''): ?><a href="<?= e($mcfg['link']) ?>" class="round" target="_blank" rel="noopener" aria-label="Åbn mail"><?= icon('arrow') ?></a><?php endif; ?>
           </div>
-          <?php if ($sum['income'] > 0): $usedShare = min(100, max(0, round($sum['expenses'] / max(1, $sum['income']) * 100))); ?>
-            <p class="mb-left"><?= e($fmt($sum['left'])) ?> <span>kr. tilbage pr. md.</span></p>
-            <div class="mb-bar" aria-hidden="true"><i style="width: <?= $usedShare ?>%"></i></div>
-            <div class="mb-row"><span><?= e($fmt($sum['expenses'])) ?> kr. faste udgifter</span><span><?= $usedShare ?>%</span></div>
-            <?php if ($donut): ?>
-              <ul class="mb-top">
-                <?php foreach (array_slice($donut, 0, 3) as $seg): ?><li><i style="background: <?= $seg['color'] ?>"></i><?= e($seg['name']) ?><span><?= e($fmt($seg['value'])) ?> kr.</span></li><?php endforeach; ?>
-              </ul>
-            <?php endif; ?>
-          <?php else: ?>
-            <div class="empty-card"><p>Intet budget endnu.</p><a href="./?view=budget" class="btn ghost">Opsæt budget</a></div>
-          <?php endif; ?>
+          <?php $mlc = load_json(ukey('mail-cache')); ?>
+          <div class="ml-wrap" data-ml<?= mail_ready($mcfg) && (($mlc['t'] ?? 0) < time() - 120) ? ' data-ml-refresh' : '' ?>><?= mail_card(($mlc['t'] ?? 0) ? $mlc : null, $mcfg) ?></div>
         </section>
 
-        <section class="card c-next">
+        <section class="card c-watch">
           <div class="card-head">
-            <h2>Kommende</h2>
-            <a href="./?view=budget&edit=1" class="round" aria-label="Tilføj betaling"><?= icon('plus') ?></a>
+            <h2>Holder øje med</h2>
           </div>
-          <?php if ($items): ?>
-            <ul class="rows-next">
-              <?php foreach (array_slice($items, 0, 4) as $it): $days = (int)round((strtotime(date('Y-m-d', $it['ts'])) - strtotime('today')) / 86400); ?>
-                <li>
-                  <span class="when"><strong><?= e(preg_replace('/\s\d{4}$/', '', dk_date(date('c', $it['ts'])))) ?></strong><small><?= $days === 0 ? 'i dag' : ($days === 1 ? 'i morgen' : "om $days dage") ?></small></span>
-                  <span class="st <?= $it['kind'] === 'pay' ? 'red' : 'green' ?>"><i></i><?= $it['kind'] === 'pay' ? 'Betaling' : 'Aftale' ?></span>
-                  <span class="nm"><?= e($it['name']) ?></span>
-                  <span class="val"><?= e($it['value']) ?></span>
-                </li>
+          <form method="post" class="rem-add wt-add">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="watch_add">
+            <input name="q" placeholder="Serie, film eller noget andet…" autocomplete="off" required aria-label="Hold øje med">
+            <button aria-label="Tilføj"><?= icon('plus') ?></button>
+          </form>
+          <?php $wl = watch_load(); usort($wl, fn($a, $b) => [($a['date'] && watch_days($a['date']) >= 0) ? 0 : 1, $a['date'] ?? '9999'] <=> [($b['date'] && watch_days($b['date']) >= 0) ? 0 : 1, $b['date'] ?? '9999']); ?>
+          <?php if ($wl): ?>
+            <form method="post" class="wt-list">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="watch_remove">
+              <?php foreach (array_slice($wl, 0, 6) as $w): $wd = watch_days($w['date']); ?>
+                <div class="wt<?= $wd !== null && $wd >= 0 && $wd <= 1 ? ' soon' : '' ?>">
+                  <span class="wt-when"><strong><?= e(watch_when($w['date'])) ?></strong><?php if ($w['date'] && $wd >= 14): ?><small><?= $wd ?> dage</small><?php endif; ?></span>
+                  <span class="wt-tx"><strong><?= e($w['title']) ?></strong><small><?= e($w['label']) ?></small></span>
+                  <button name="id" value="<?= e($w['id']) ?>" class="wt-x" aria-label="Stop med at holde øje med <?= e($w['title']) ?>"><?= icon('cross') ?></button>
+                </div>
               <?php endforeach; ?>
-            </ul>
+            </form>
           <?php else: ?>
-            <p class="muted small">Intet de næste 30 dage. Sæt betalingsdage på dine udgifter i budgettet<?= $hasCal ? '' : ', eller forbind din iPhone-kalender' ?>.</p>
+            <p class="muted small rem-empty">Skriv en serie eller film, så holder Jarvis øje med næste episode eller premiere og giver dig besked.</p>
           <?php endif; ?>
-          <a class="see" href="./?view=calendar">Se kalender <?= icon('arrow') ?></a>
         </section>
       </div>
 
@@ -1701,6 +1780,22 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li><strong>Min dag</strong> / <strong>Mit budget</strong>: <code>token</code> og <code>action</code> = <code>agenda</code> eller <code>budget</code> → Læs tekst op.</li>
         </ol>
       </div>
+
+      <?php $mc = mail_cfg(); ?>
+      <form method="post" class="panel form" id="mail">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_mail">
+        <h2 class="section-title">Mail</h2>
+        <p class="muted small">Viser ulæste mails på oversigten og sender push ved ny mail. Jarvis læser kun afsender og emne, og mails bliver ikke markeret som læst. Kodeordet gemmes kun på din server.</p>
+        <label>Mailadresse<input type="email" name="user" value="<?= e($mc['user'] ?: $me['email']) ?>" autocomplete="off"></label>
+        <label>Kodeord til mailen<input type="password" name="pass" placeholder="<?= $mc['pass'] !== '' ? 'Gemt – lad stå tomt for at beholde' : 'Kodeordet til din one.com-mail' ?>" autocomplete="new-password"></label>
+        <label>Link til at åbne mailen (valgfrit)<input name="link" value="<?= e($mc['link']) ?>" placeholder="Fx din webmail-adresse"></label>
+        <label class="check"><input type="checkbox" name="push" value="1"<?= $mc['push'] ? ' checked' : '' ?>> Push-notifikation ved ny mail</label>
+        <div class="actions">
+          <button class="btn">Gem og test</button>
+          <?php if (mail_ready($mc)): ?><button class="btn ghost danger" name="remove" value="1">Kobl fra</button><?php endif; ?>
+        </div>
+      </form>
 
       <?php $tr = training_load(); ?>
       <form method="post" class="panel form" id="traening">
