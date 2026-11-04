@@ -1092,3 +1092,19 @@
   try { seen = sessionStorage.getItem('jv-booted') === '1'; } catch (e) {}
   if (!seen) run();
 })();
+
+(() => {
+  const load = () => {
+    const box = document.querySelector('[data-wx]');
+    if (!box || box.dataset.busy) return;
+    if (!box.hasAttribute('data-wx-refresh') && !box.querySelector('[data-wx-load]')) return;
+    box.dataset.busy = '1';
+    fetch('index.php?ajax=weather', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(html => { box.innerHTML = html; box.removeAttribute('data-wx-refresh'); })
+      .catch(() => {})
+      .finally(() => { delete box.dataset.busy; });
+  };
+  document.addEventListener('page:ready', load);
+  load();
+})();

@@ -2365,3 +2365,57 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 @media (max-width: 900px) { .topbar h1 { font-size: clamp(22px, 6.4vw, 30px); line-height: 1.15; } }
 
 .topbar .me.bell .ic { display: block; }
+
+.c-weather { grid-column: span 8; display: flex; flex-direction: column; }
+.c-weather .card-head .drop { margin-right: auto; }
+.wx-wrap { flex: 1; display: flex; flex-direction: column; }
+.wx { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-areas: "now days" "meta days" "quip days" "hours hours"; column-gap: 32px; row-gap: 14px; flex: 1; }
+.wx-now { grid-area: now; display: flex; align-items: center; gap: 18px; }
+.wx-ic { display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; background: var(--card-2); box-shadow: var(--inset); flex: none; }
+.wx-ic .ic { width: 42px; height: 42px; }
+.wx-temp { margin: 0; font-size: 72px; line-height: .95; letter-spacing: -.04em; }
+.wx-temp sup { font-size: .45em; vertical-align: .9em; margin-left: 2px; color: var(--muted); }
+.wx-label { margin: 6px 0 0; color: var(--soft); font-size: 16px; }
+.wx-meta { grid-area: meta; display: flex; flex-wrap: wrap; gap: 8px; }
+.wx-meta span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; background: var(--card-2); box-shadow: var(--inset); font-size: 13px; color: var(--soft); }
+.wx-meta .ic { width: 16px; height: 16px; color: var(--muted); }
+.wx-quip { grid-area: quip; margin: 0; font-size: 14px; color: var(--muted); }
+.wx-days { grid-area: days; display: grid; align-content: center; gap: 6px; }
+.wx-d { display: grid; grid-template-columns: 54px 28px 34px 1fr 34px; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.wx-d:last-child { border-bottom: 0; }
+.wx-dn { color: var(--soft); }
+.wx-di .ic { width: 20px; height: 20px; }
+.wx-lo { color: var(--muted); text-align: right; }
+.wx-hi { text-align: right; }
+.wx-range { position: relative; height: 6px; border-radius: 99px; background: var(--card-3); }
+.wx-range i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: linear-gradient(90deg, #7cc4ff, #fff); }
+.wx-hours { grid-area: hours; display: grid; grid-template-columns: repeat(10, minmax(52px, 1fr)); gap: 6px; overflow-x: auto; scrollbar-width: none; padding-top: 4px; }
+.wx-hours::-webkit-scrollbar { display: none; }
+.wx-h { display: grid; justify-items: center; gap: 6px; padding: 12px 4px; border-radius: 20px; background: var(--card-2); box-shadow: var(--inset); font-size: 13px; }
+.wx-h:first-child { background: #fff; color: #000; }
+.wx-h:first-child small, .wx-h:first-child em { color: rgb(0 0 0 / 55%); }
+.wx-h small { color: var(--muted); font-size: 12px; }
+.wx-h .ic { width: 20px; height: 20px; }
+.wx-h em { min-height: 1em; font-style: normal; font-size: 11px; color: #7cc4ff; }
+.wx-empty { flex: 1; display: grid; place-items: center; align-content: center; gap: 10px; min-height: 220px; }
+.wx-spin { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--card-3); border-top-color: #fff; animation: jv-spin .9s linear infinite; }
+
+.c-mini-budget { gap: 0; }
+.mb-left { margin: 4px 0 14px; font-size: 40px; line-height: 1; letter-spacing: -.03em; }
+.mb-left span { font-size: 14px; letter-spacing: 0; color: var(--muted); }
+.mb-bar { height: 8px; border-radius: 99px; background: var(--card-3); overflow: hidden; }
+.mb-bar i { display: block; height: 100%; border-radius: 99px; background: #fff; }
+.mb-row { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.mb-top { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 4px; }
+.mb-top li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--soft); }
+.mb-top li:last-child { border-bottom: 0; }
+.mb-top i { width: 10px; height: 10px; border-radius: 50%; }
+.mb-top span { color: var(--ink); }
+
+@media (max-width: 1280px) { .c-weather { grid-column: span 12; } }
+@media (max-width: 900px) {
+  .wx { grid-template-columns: 1fr; grid-template-areas: "now" "meta" "quip" "hours" "days"; }
+  .wx-temp { font-size: 60px; }
+  .wx-ic { width: 70px; height: 70px; }
+  .wx-hours { grid-template-columns: repeat(10, 58px); margin: 0 -4px; }
+}

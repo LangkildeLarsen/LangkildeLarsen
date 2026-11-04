@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/inc/calendar.php';
 require dirname(__DIR__) . '/inc/media.php';
 require dirname(__DIR__) . '/inc/messages.php';
 require dirname(__DIR__) . '/inc/claude.php';
+require dirname(__DIR__) . '/inc/weather.php';
 
 users_migrate();
 if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
@@ -518,6 +519,19 @@ if ($action) {
         redirect('index.php?view=settings#opstart');
     }
 
+    if ($action === 'save_weather') {
+        $q = trim((string)($_POST['city'] ?? ''));
+        $place = $q !== '' ? weather_geocode($q) : null;
+        if ($place) {
+            $ui['weather'] = $place;
+            save_json(ukey('ui'), $ui);
+            flash('Vejret viser nu ' . $place['name'] . '.');
+        } else {
+            flash('Kunne ikke finde byen "' . $q . '". Prøv en anden stavemåde.');
+        }
+        redirect('index.php?view=settings#vejr');
+    }
+
     if ($action === 'send_message') {
         $to = mb_strtolower(trim((string)($_POST['to'] ?? '')));
         $text = trim((string)($_POST['text'] ?? ''));
@@ -924,6 +938,40 @@ function sound_path(?array $user = null): string
     return DATA_DIR . '/' . ukey('startsound', $user) . '.mp3';
 }
 
+function weather_card(?array $w): string
+{
+    if (!$w) {
+        return '<div class="wx-empty" data-wx-load><span class="wx-spin"></span><p class="muted small">Henter vejret…</p></div>';
+    }
+    [$label, $ic] = weather_info($w['code'], $w['day']);
+    $dn = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
+    $lo = min(array_column($w['days'], 'min') ?: [0]);
+    $hi = max(array_column($w['days'], 'max') ?: [1]);
+    $span = max(1, $hi - $lo);
+    $h = '<div class="wx">';
+    $h .= '<div class="wx-now"><span class="wx-ic">' . icon($ic) . '</span><div><p class="wx-temp">' . $w['temp'] . '<sup>°</sup></p><p class="wx-label">' . e($label) . '</p></div></div>';
+    $h .= '<div class="wx-meta"><span>' . icon('user') . 'Føles som ' . $w['feels'] . '°</span><span>' . icon('wind') . number_format($w['wind'], 1, ',', '') . ' m/s</span><span>' . icon('drop') . $w['hum'] . '%</span>';
+    if (!empty($w['days'][0]['rise'])) {
+        $h .= '<span>' . icon('sun') . e($w['days'][0]['rise']) . ' – ' . e($w['days'][0]['set']) . '</span>';
+    }
+    $h .= '</div>';
+    $h .= '<p class="wx-quip">' . e(weather_quip($w)) . '</p>';
+    $h .= '<div class="wx-hours">';
+    foreach (array_slice($w['hours'], 0, 10) as $i => $x) {
+        [, $hi2] = weather_info($x['code'], $x['day']);
+        $h .= '<div class="wx-h"><small>' . ($i === 0 ? 'Nu' : e($x['t'])) . '</small>' . icon($hi2) . '<strong>' . $x['temp'] . '°</strong>' . ($x['rain'] >= 30 ? '<em>' . $x['rain'] . '%</em>' : '<em></em>') . '</div>';
+    }
+    $h .= '</div><div class="wx-days">';
+    foreach (array_slice($w['days'], 0, 6) as $i => $d) {
+        [$dl, $di] = weather_info($d['code']);
+        $left = round(($d['min'] - $lo) / $span * 100);
+        $width = max(6, round(($d['max'] - $d['min']) / $span * 100));
+        $h .= '<div class="wx-d"><span class="wx-dn">' . ($i === 0 ? 'I dag' : ucfirst($dn[(int)date('N', strtotime($d['d'])) - 1])) . '</span><span class="wx-di" title="' . e($dl) . '">' . icon($di) . '</span><span class="wx-lo">' . $d['min'] . '°</span><span class="wx-range"><i style="left: ' . $left . '%; width: ' . $width . '%"></i></span><span class="wx-hi">' . $d['max'] . '°</span></div>';
+    }
+    $h .= '</div></div>';
+    return $h;
+}
+
 function app_version(): string
 {
     $root = dirname(__DIR__);
@@ -956,6 +1004,14 @@ if (($_GET['ajax'] ?? '') === 'sound') {
     header('Cache-Control: private, max-age=86400');
     header('Accept-Ranges: none');
     readfile($path);
+    exit;
+}
+
+if (($_GET['ajax'] ?? '') === 'weather') {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    $w = weather_get();
+    echo $w ? weather_card($w) : '<div class="wx-empty"><p class="muted small">Vejret kunne ikke hentes lige nu.</p></div>';
     exit;
 }
 
@@ -1153,48 +1209,14 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         }
       ?>
       <div class="dash">
-        <section class="card c-budget">
-          <input type="radio" name="per" id="per-m" class="per" checked>
-          <input type="radio" name="per" id="per-q" class="per">
-          <input type="radio" name="per" id="per-y" class="per">
+        <section class="card c-weather">
           <div class="card-head">
-            <h2>Budget</h2>
-            <div class="seg" role="group" aria-label="Periode">
-              <?php foreach ($periods as $k => [$label]): ?><label for="per-<?= $k ?>"><?= e($label) ?></label><?php endforeach; ?>
-            </div>
-            <a href="./?view=budget" class="round" aria-label="Åbn budget"><?= icon('arrow') ?></a>
+            <h2>Vejret</h2>
+            <span class="drop"><?= e(weather_place()['name']) ?></span>
+            <a href="./?view=settings#vejr" class="round" aria-label="Skift by"><?= icon('gear') ?></a>
           </div>
-          <?php if ($sum['income'] > 0): ?>
-            <?php foreach ($periods as $k => [$label, $f]): ?>
-              <?php $top = $niceMax(($catBars ? max($catBars) : 0) * $f); ?>
-              <div class="pv pv-<?= $k ?>">
-                <div class="figure">
-                  <p class="money"><?= e($fmt($sum['left'] * $f)) ?> <span class="cur">kr.</span></p>
-                  <span class="badge <?= $sum['left'] < 0 ? 'bad' : 'good' ?>"><?= $sum['left'] < 0 ? '▼' : '▲' ?> <?= abs($leftPct) ?>%</span>
-                  <span class="vs">tilbage af <?= e($fmt($sum['income'] * $f)) ?> kr. i indkomst</span>
-                </div>
-                <div class="chart">
-                  <div class="axis"><?php foreach ([1, .75, .5, .25, 0] as $t): ?><span><?= e($fmt($top * $t)) ?></span><?php endforeach; ?></div>
-                  <div class="barcols">
-                    <?php foreach ($catBars as $c => $v): ?>
-                      <?php $h = $top > 0 ? $v * $f / $top * 100 : 0; ?>
-                      <div class="col<?= $c === $topCat ? ' hot' : '' ?>">
-                        <div class="track"><div class="fill" style="height: <?= max(4, round($h, 1)) ?>%">
-                          <?php if ($c === $topCat): ?>
-                            <span class="flag"><?= round($v / max(1, $sum['expenses']) * 100) ?>%</span>
-                            <span class="amt"><?= e($fmt($v * $f)) ?></span>
-                          <?php endif; ?>
-                        </div></div>
-                        <small title="<?= e($c) ?>"><?= e(mb_strimwidth($c, 0, 11, '…')) ?></small>
-                      </div>
-                    <?php endforeach; ?>
-                  </div>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <div class="empty-card"><p>Læg dine faste indtægter og udgifter ind for at se dit budget her.</p><a href="./?view=budget" class="btn">Opsæt budget</a></div>
-          <?php endif; ?>
+          <?php $wxc = load_json('weather-cache'); $wxp = weather_place(); $wxe = $wxc[$wxp['lat'] . ',' . $wxp['lon']] ?? null; ?>
+          <div class="wx-wrap" data-wx<?= (!$wxe || $wxe['t'] < time() - 1200) ? ' data-wx-refresh' : '' ?>><?= weather_card($wxe['d'] ?? null) ?></div>
         </section>
 
         <section class="card c-cal">
@@ -1211,10 +1233,10 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             <?php endfor; ?>
             <?php for ($i = ($lead + $dim) % 7; $i && $i < 7; $i++): ?><span class="day off"></span><?php endfor; ?>
           </div>
-          <a class="kpi" href="./?view=budget">
-            <span class="kpi-ic"><?= icon('chart') ?></span>
-            <span class="kpi-v"><?= e($fmt($sum['expenses'])) ?> <small>kr.</small></span>
-            <span class="kpi-l">faste udgifter pr. md.</span>
+          <a class="kpi" href="./?view=calendar">
+            <span class="kpi-ic"><?= icon('calendar') ?></span>
+            <span class="kpi-v"><?= $next7 ?> <small>aftale<?= $next7 === 1 ? '' : 'r' ?></small></span>
+            <span class="kpi-l">de næste 7 dage</span>
           </a>
         </section>
 
@@ -1237,28 +1259,22 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           </form>
         </section>
 
-        <section class="card c-spend">
+        <section class="card c-spend c-mini-budget">
           <div class="card-head">
-            <h2>Forbrug</h2>
-            <span class="drop">Pr. måned</span>
+            <h2>Budget</h2>
+            <a href="./?view=budget" class="round" aria-label="Åbn budget"><?= icon('arrow') ?></a>
           </div>
-          <?php if ($donut): ?>
-            <div class="donut-wrap">
-              <div class="donut">
-                <svg viewBox="0 0 120 120" aria-hidden="true">
-                  <?php foreach ($donut as $seg): $len = max(0, $seg['pct'] + (count($donut) > 1 ? .15 : 0)); ?>
-                    <circle cx="60" cy="60" r="48" pathLength="100" stroke="<?= $seg['color'] ?>" stroke-dasharray="<?= round($len, 2) ?> <?= round(100 - $len, 2) ?>" stroke-dashoffset="<?= round(25 - $seg['start'], 2) ?>"><title><?= e($seg['name'] . ': ' . kr($seg['value'])) ?></title></circle>
-                  <?php endforeach; ?>
-                </svg>
-                <div class="donut-c"><strong><?= e($fmt($sum['expenses'])) ?> kr.</strong><span>I alt</span></div>
-              </div>
-              <ul class="legend">
-                <?php foreach ($donut as $seg): ?><li><i style="background: <?= $seg['color'] ?>"></i><?= e($seg['name']) ?><span><?= round($seg['pct']) ?>%</span></li><?php endforeach; ?>
+          <?php if ($sum['income'] > 0): $usedShare = min(100, max(0, round($sum['expenses'] / max(1, $sum['income']) * 100))); ?>
+            <p class="mb-left"><?= e($fmt($sum['left'])) ?> <span>kr. tilbage pr. md.</span></p>
+            <div class="mb-bar" aria-hidden="true"><i style="width: <?= $usedShare ?>%"></i></div>
+            <div class="mb-row"><span><?= e($fmt($sum['expenses'])) ?> kr. faste udgifter</span><span><?= $usedShare ?>%</span></div>
+            <?php if ($donut): ?>
+              <ul class="mb-top">
+                <?php foreach (array_slice($donut, 0, 3) as $seg): ?><li><i style="background: <?= $seg['color'] ?>"></i><?= e($seg['name']) ?><span><?= e($fmt($seg['value'])) ?> kr.</span></li><?php endforeach; ?>
               </ul>
-            </div>
-            <p class="insight"><?= icon('info') ?><span>De fleste penge går til <?= e(implode(' og ', array_slice(array_column($donut, 'name'), 0, 2))) ?>.</span></p>
+            <?php endif; ?>
           <?php else: ?>
-            <div class="empty-card"><p>Ingen udgifter endnu.</p><a href="./?view=budget" class="btn ghost">Tilføj udgifter</a></div>
+            <div class="empty-card"><p>Intet budget endnu.</p><a href="./?view=budget" class="btn ghost">Opsæt budget</a></div>
           <?php endif; ?>
         </section>
 
@@ -1266,11 +1282,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <div class="card-head">
             <h2>Kommende</h2>
             <a href="./?view=budget&edit=1" class="round" aria-label="Tilføj betaling"><?= icon('plus') ?></a>
-          </div>
-          <div class="score">
-            <span>Budget brugt</span>
-            <span class="ticks" style="--on: <?= round($usedPct * 40 / 100) ?>"><?php for ($t = 0; $t < 40; $t++): ?><i class="<?= $t < round($usedPct * 40 / 100) ? 'on' : '' ?>"></i><?php endfor; ?></span>
-            <strong><?= $usedPct ?></strong>
           </div>
           <?php if ($items): ?>
             <ul class="rows-next">
@@ -1563,6 +1574,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li>Tilføj <strong>Læs tekst op</strong>. Lav én magen til med navnet <strong>Mit budget</strong> og <code>action</code> = <code>budget</code>.</li>
         </ol>
       </div>
+
+      <form method="post" class="panel form" id="vejr">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_weather">
+        <h2 class="section-title">Vejr</h2>
+        <p class="muted small">Vises på oversigten. Vejrdata kommer fra Open-Meteo og opdateres hvert 20. minut.</p>
+        <label>By<input name="city" value="<?= e(weather_place()['name']) ?>" placeholder="Fx Esbjerg" autocomplete="off"></label>
+        <div class="actions"><button class="btn">Gem</button></div>
+      </form>
 
       <form method="post" enctype="multipart/form-data" class="panel form" id="opstart" data-reload>
         <?= csrf_field() ?>
