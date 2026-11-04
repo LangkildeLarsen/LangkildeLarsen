@@ -131,10 +131,10 @@ function app_head(): string
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Jarvis">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="../assets/brand/dash-180.png">
-<link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/fav-96.png">
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/fav-32.png">';
+<link rel="manifest" href="manifest.webmanifest?v=ball2">
+<link rel="apple-touch-icon" href="../assets/brand/dash-180.png?v=ball2">
+<link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/fav-96.png?v=ball2">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/fav-32.png?v=ball2">';
 }
 
 function default_categories(): array
@@ -254,7 +254,7 @@ if (!is_logged_in()) {
 <body class="auth">
 <form method="post" class="auth-box" action="index.php">
   <?= csrf_field() ?>
-  <img src="../assets/brand/dash-192.png" alt="" class="auth-logo">
+  <img src="../assets/brand/dash-192.png?v=ball2" alt="" class="auth-logo">
   <h1><?= $mode === 'invite' ? 'Velkommen, ' . e(first_name($invite)) : ($mode === 'setup' ? 'Opret adgang' : 'Log ind') ?></h1>
   <?php if ($mode === 'invite'): ?>
     <p class="muted">Vælg en adgangskode til dit dashboard. Du logger ind med <?= e($invite['email']) ?>.</p>
@@ -1910,7 +1910,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   <button type="button" class="btn small" data-update>Opdater</button>
 </div>
 <aside class="install" id="install" hidden>
-  <img src="../assets/brand/dash-180.png" alt="" class="install-ic">
+  <img src="../assets/brand/dash-180.png?v=ball2" alt="" class="install-ic">
   <div class="install-txt">
     <strong>Læg Jarvis på hjemmeskærmen</strong>
     <span class="ios-only">Tryk på <b class="share-ic" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M12 3L8 7M12 3l4 4M8 11H6.5C5.12 11 4 12.12 4 13.5v4C4 18.88 5.12 20 6.5 20h11c1.38 0 2.5-1.12 2.5-2.5v-4c0-1.38-1.12-2.5-2.5-2.5H16"/></svg></b> og vælg <b>Føj til hjemmeskærm</b>.</span>
