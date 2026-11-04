@@ -6,6 +6,8 @@ require dirname(__DIR__) . '/inc/media.php';
 require dirname(__DIR__) . '/inc/messages.php';
 require dirname(__DIR__) . '/inc/claude.php';
 require dirname(__DIR__) . '/inc/weather.php';
+require dirname(__DIR__) . '/inc/training.php';
+require dirname(__DIR__) . '/inc/reminders.php';
 
 users_migrate();
 if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
@@ -532,6 +534,65 @@ if ($action) {
         redirect('index.php?view=settings#vejr');
     }
 
+    if ($action === 'add_reminder') {
+        $text = trim((string)($_POST['text'] ?? ''));
+        $due = rem_parse_due((string)($_POST['due'] ?? '')) ?? strtotime('+1 hour');
+        if ($text !== '') {
+            rem_add($text, $due);
+        }
+        redirect('index.php');
+    }
+
+    if ($action === 'toggle_reminder') {
+        [$op, $rid] = array_pad(explode(':', (string)($_POST['op'] ?? ''), 2), 2, '');
+        if ($op === 'done') {
+            rem_toggle($rid);
+        } elseif (in_array($op, ['1h', 'tomorrow', '1w'], true)) {
+            rem_snooze($rid, $op);
+        }
+        redirect('index.php');
+    }
+
+    if ($action === 'log_workout') {
+        training_add($_POST);
+        redirect('index.php');
+    }
+
+    if ($action === 'undo_workout') {
+        $t = training_load();
+        for ($i = count($t['log']) - 1; $i >= 0; $i--) {
+            if ($t['log'][$i]['date'] === date('Y-m-d')) {
+                array_splice($t['log'], $i, 1);
+                break;
+            }
+        }
+        training_save($t);
+        redirect('index.php');
+    }
+
+    if ($action === 'toggle_habit') {
+        $t = training_load();
+        $hb = (string)($_POST['habit'] ?? '');
+        if (in_array($hb, $t['habits'], true)) {
+            $d = date('Y-m-d');
+            $cur = $t['checks'][$d] ?? [];
+            $t['checks'][$d] = in_array($hb, $cur, true) ? array_values(array_diff($cur, [$hb])) : array_merge($cur, [$hb]);
+            training_save($t);
+        }
+        redirect('index.php');
+    }
+
+    if ($action === 'save_training') {
+        $t = training_load();
+        $t['week_goal'] = max(1, min(14, (int)($_POST['week_goal'] ?? 3)));
+        $t['km_goal'] = max(0, min(1000, (int)($_POST['km_goal'] ?? 30)));
+        $t['min_goal'] = max(0, min(10000, (int)($_POST['min_goal'] ?? 600)));
+        $t['habits'] = array_values(array_slice(array_filter(array_map(fn($x) => mb_substr(trim($x), 0, 30), preg_split('/\R/', (string)($_POST['habits'] ?? '')))), 0, 6));
+        training_save($t);
+        flash('Træningsmålene er gemt.');
+        redirect('index.php?view=settings#traening');
+    }
+
     if ($action === 'send_message') {
         $to = mb_strtolower(trim((string)($_POST['to'] ?? '')));
         $text = trim((string)($_POST['text'] ?? ''));
@@ -835,6 +896,9 @@ if ($action) {
 }
 
 $view = $_GET['view'] ?? 'dashboard';
+if (in_array($view, ['hacks', 'hack', 'edit'], true)) {
+    $view = 'dashboard';
+}
 if (!$isOwner && in_array($view, ['profile', 'projects'], true)) {
     $view = 'dashboard';
 }
@@ -904,6 +968,11 @@ $titles = [
     'chat' => 'Jarvis',
 ];
 
+try {
+    rem_dispatch();
+} catch (Throwable $e) {
+}
+
 $budget = load_json(ukey('budget'), ['income' => [], 'expenses' => []]);
 
 if (($_GET['ajax'] ?? '') === 'thread') {
@@ -944,32 +1013,44 @@ function weather_card(?array $w): string
         return '<div class="wx-empty" data-wx-load><span class="wx-spin"></span><p class="muted small">Henter vejret…</p></div>';
     }
     [$label, $ic] = weather_info($w['code'], $w['day']);
-    $dn = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
-    $lo = min(array_column($w['days'], 'min') ?: [0]);
-    $hi = max(array_column($w['days'], 'max') ?: [1]);
-    $span = max(1, $hi - $lo);
-    $h = '<div class="wx">';
-    $h .= '<div class="wx-now"><span class="wx-ic">' . icon($ic) . '</span><div><p class="wx-temp">' . $w['temp'] . '<sup>°</sup></p><p class="wx-label">' . e($label) . '</p></div></div>';
-    $h .= '<div class="wx-meta"><span>' . icon('user') . 'Føles som ' . $w['feels'] . '°</span><span>' . icon('wind') . number_format($w['wind'], 1, ',', '') . ' m/s</span><span>' . icon('drop') . $w['hum'] . '%</span>';
-    if (!empty($w['days'][0]['rise'])) {
-        $h .= '<span>' . icon('sun') . e($w['days'][0]['rise']) . ' – ' . e($w['days'][0]['set']) . '</span>';
+    $dn = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+    $h = '<div class="wxs-now"><span class="wxs-bub">' . icon($ic) . '</span><div><p class="wxs-t">' . $w['temp'] . '<sup>°</sup></p><p class="wxs-l">' . e($label) . ' · føles som ' . $w['feels'] . '°</p></div></div>';
+    $h .= '<div class="wxs-days">';
+    foreach (array_slice($w['days'], 0, 4) as $i => $d) {
+        [$dl, $di] = weather_info($d['code']);
+        $h .= '<div class="wxs-d"><span>' . ($i === 0 ? 'I dag' : $dn[(int)date('N', strtotime($d['d'])) - 1]) . '</span><span title="' . e($dl) . '">' . icon($di) . '</span><span class="lo">' . $d['min'] . '°</span><span class="hi">' . $d['max'] . '°</span></div>';
+    }
+    return $h . '</div>';
+}
+
+function training_card(array $t): string
+{
+    $s = training_stats($t);
+    $today = date('Y-m-d');
+    $logs = array_values(array_filter($t['log'], fn($r) => $r['date'] >= date('Y-m-d', training_week_start(time()))));
+    usort($logs, fn($a, $b) => strcmp($a['date'], $b['date']));
+    $dn = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+    $slots = max($s['goal'], count($logs));
+    $h = '<div class="trc-slots" style="--n: ' . min($slots, 7) . '">';
+    $next = true;
+    for ($i = 0; $i < $slots; $i++) {
+        if (isset($logs[$i])) {
+            $d = $logs[$i]['date'];
+            $h .= '<span class="trc-slot on' . ($i >= $s['goal'] ? ' extra' : '') . '"><i>' . icon('check') . '</i><small>' . ($d === $today ? 'I dag' : $dn[(int)date('N', strtotime($d)) - 1]) . '</small></span>';
+        } else {
+            $h .= '<span class="trc-slot' . ($next ? ' next' : '') . '"><i>' . ($i + 1) . '</i><small>' . ($next ? 'Næste' : '&nbsp;') . '</small></span>';
+            $next = false;
+        }
     }
     $h .= '</div>';
-    $h .= '<p class="wx-quip">' . e(weather_quip($w)) . '</p>';
-    $h .= '<div class="wx-hours">';
-    foreach (array_slice($w['hours'], 0, 10) as $i => $x) {
-        [, $hi2] = weather_info($x['code'], $x['day']);
-        $h .= '<div class="wx-h"><small>' . ($i === 0 ? 'Nu' : e($x['t'])) . '</small>' . icon($hi2) . '<strong>' . $x['temp'] . '°</strong>' . ($x['rain'] >= 30 ? '<em>' . $x['rain'] . '%</em>' : '<em></em>') . '</div>';
+    $trainedToday = (bool)array_filter($t['log'], fn($r) => $r['date'] === $today);
+    $h .= '<form method="post" class="trc-act">' . csrf_field();
+    if ($trainedToday) {
+        $h .= '<input type="hidden" name="action" value="undo_workout"><p class="trc-done">' . icon('check') . 'Trænet i dag</p><button class="trc-undo">Fortryd</button>';
+    } else {
+        $h .= '<input type="hidden" name="action" value="log_workout"><input type="hidden" name="type" value="Træning"><button class="btn trc-btn">Jeg har trænet i dag</button>';
     }
-    $h .= '</div><div class="wx-days">';
-    foreach (array_slice($w['days'], 0, 6) as $i => $d) {
-        [$dl, $di] = weather_info($d['code']);
-        $left = round(($d['min'] - $lo) / $span * 100);
-        $width = max(6, round(($d['max'] - $d['min']) / $span * 100));
-        $h .= '<div class="wx-d"><span class="wx-dn">' . ($i === 0 ? 'I dag' : ucfirst($dn[(int)date('N', strtotime($d['d'])) - 1])) . '</span><span class="wx-di" title="' . e($dl) . '">' . icon($di) . '</span><span class="wx-lo">' . $d['min'] . '°</span><span class="wx-range"><i style="left: ' . $left . '%; width: ' . $width . '%"></i></span><span class="wx-hi">' . $d['max'] . '°</span></div>';
-    }
-    $h .= '</div></div>';
-    return $h;
+    return $h . '</form>';
 }
 
 function app_version(): string
@@ -1024,18 +1105,17 @@ if (($_GET['ajax'] ?? '') === 'unread') {
 
 if (($_GET['ajax'] ?? '') === 'search') {
     $items = [];
-    $pages = [['Oversigt', './'], ['Lifehacks', './?view=hacks'], ['Ny lifehack', './?view=edit'], ['Budget', './?view=budget'], ['Rediger budget', './?view=budget&edit=1'], ['Kalender', './?view=calendar'], ['Indstillinger', './?view=settings']];
+    $pages = [['Oversigt', './'], ['Budget', './?view=budget'], ['Rediger budget', './?view=budget&edit=1'], ['Kalender', './?view=calendar'], ['Indstillinger', './?view=settings']];
     if ($isOwner) {
         array_push($pages, ['Profil & CV', './?view=profile'], ['Projekter', './?view=projects']);
     }
     foreach ($pages as [$t, $u]) {
         $items[] = ['type' => 'Side', 'title' => $t, 'sub' => '', 'url' => $u, 'text' => $t];
     }
-    foreach ($hacks as $h) {
-        $items[] = ['type' => 'Lifehack', 'title' => $h['title'], 'sub' => $h['category'], 'url' => './?view=hack&id=' . $h['id'], 'text' => $h['title'] . ' ' . $h['content'] . ' ' . implode(' ', $h['tags']) . ' ' . $h['category']];
-    }
-    foreach ($categories as $c) {
-        $items[] = ['type' => 'Kategori', 'title' => $c, 'sub' => ($counts[$c] ?? 0) . ' lifehacks', 'url' => './?view=hacks&cat=' . rawurlencode($c), 'text' => $c];
+    foreach (rem_load() as $r) {
+        if (!$r['done']) {
+            $items[] = ['type' => 'Påmindelse', 'title' => $r['text'], 'sub' => rem_when($r['due']), 'url' => './', 'text' => $r['text']];
+        }
     }
     foreach (array_merge($budget['income'] ?? [], $budget['expenses'] ?? []) as $x) {
         $items[] = ['type' => 'Budget', 'title' => $x['name'], 'sub' => kr((float)$x['amount']) . ' · ' . mb_strtolower(BUDGET_FREQ[$x['freq'] ?? 'month'][0]), 'url' => './?view=budget', 'text' => $x['name'] . ' ' . ($x['category'] ?? '')];
@@ -1072,7 +1152,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       <?php
         $railItems = [
             ['dashboard', './', 'home', 'Oversigt'],
-            ['hacks', './?view=hacks', 'bulb', 'Lifehacks'],
             ['budget', './?view=budget', 'wallet', 'Budget'],
             ['messages', './?view=messages', 'inbox', 'Beskeder'],
             ['chat', './?view=chat', 'ai', 'Jarvis'],
@@ -1193,30 +1272,62 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         }
 
         $summary = [];
-        if ($sum['income'] > 0) {
-            $summary[] = $sum['left'] >= 0
-                ? 'Du har ' . $fmt($sum['left']) . ' kr. tilbage om måneden, når de faste udgifter er betalt.'
-                : 'Dine faste udgifter er ' . $fmt(abs($sum['left'])) . ' kr. højere end din indkomst om måneden.';
-            if ($topCat) {
-                $summary[] = $topCat . ' er den største post med ' . $fmt($sum['by_cat'][$topCat]) . ' kr. – ' . round($sum['by_cat'][$topCat] / max(1, $sum['expenses']) * 100) . ' % af udgifterne.';
-            }
-            $summary[] = $sum['saving'] > 0 ? 'Du sparer ' . round($sum['saving_rate']) . ' % op hver måned.' : 'Der er ikke sat penge af til opsparing endnu.';
-        } else {
-            $summary[] = 'Læg dit budget ind, så giver jeg dig et overblik over din økonomi her.';
+        $trD = training_load();
+        $trS = training_stats($trD);
+        $summary[] = training_nag($trD, $trS);
+        $remToday = count(array_filter(rem_load(), fn($r) => !$r['done'] && $r['due'] <= strtotime('tomorrow')));
+        if ($remToday) {
+            $summary[] = "Du har $remToday påmindelse" . ($remToday === 1 ? '' : 'r') . ' i dag.';
         }
         if ($hasCal) {
             $summary[] = $next7 ? "Du har $next7 aftale" . ($next7 === 1 ? '' : 'r') . ' de næste 7 dage.' : 'Kalenderen er tom de næste 7 dage.';
         }
+        if ($sum['income'] > 0) {
+            $summary[] = $sum['left'] >= 0 ? 'Budgettet giver ' . $fmt($sum['left']) . ' kr. til overs om måneden.' : 'Budgettet går ' . $fmt(abs($sum['left'])) . ' kr. i minus om måneden.';
+        }
       ?>
       <div class="dash">
-        <section class="card c-weather">
+        <section class="card c-jarvis jv" data-jv data-s="idle" data-home-jarvis>
+          <div class="hj">
+            <?= jarvis_orb('hj-orb') ?>
+            <div class="hj-body">
+              <div class="card-head">
+                <h2>Jarvis</h2>
+                <span class="jv-state"><i></i><span data-jv-label>Klar</span></span>
+                <a href="./?view=chat" class="round" aria-label="Åbn chatten"><?= icon('arrow') ?></a>
+              </div>
+              <p class="hj-say" data-hj-say><?= e(implode(' ', $summary)) ?></p>
+              <p class="jv-log" data-jv-log hidden></p>
+              <form class="ask hj-ask" data-hj-form>
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="chat">
+                <input name="text" placeholder="Spørg Jarvis om noget…" autocomplete="off" <?= claude_key() !== '' ? '' : 'disabled' ?>>
+                <button aria-label="Send" <?= claude_key() !== '' ? '' : 'disabled' ?>><?= icon('send') ?></button>
+              </form>
+              <div class="hj-chips">
+                <button type="button" data-hj-q="Hvordan ser min dag ud?">Min dag</button>
+                <button type="button" data-hj-q="Jeg har trænet i dag">Log træning</button>
+                <button type="button" data-hj-q="Hvor meget har jeg tilbage om måneden?">Budget</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card c-weather c-wxs">
           <div class="card-head">
             <h2>Vejret</h2>
-            <span class="drop"><?= e(weather_place()['name']) ?></span>
-            <a href="./?view=settings#vejr" class="round" aria-label="Skift by"><?= icon('gear') ?></a>
+            <a href="./?view=settings#vejr" class="pill-link"><?= e(weather_place()['name']) ?></a>
           </div>
           <?php $wxc = load_json('weather-cache'); $wxp = weather_place(); $wxe = $wxc[$wxp['lat'] . ',' . $wxp['lon']] ?? null; ?>
           <div class="wx-wrap" data-wx<?= (!$wxe || $wxe['t'] < time() - 1200) ? ' data-wx-refresh' : '' ?>><?= weather_card($wxe['d'] ?? null) ?></div>
+        </section>
+
+        <section class="card c-train">
+          <div class="card-head">
+            <h2>Træning</h2>
+            <span class="drop"><?= $trS['sessions'] ?> af <?= $trS['goal'] ?> denne uge</span>
+          </div>
+          <?= training_card($trD) ?>
         </section>
 
         <section class="card c-cal">
@@ -1233,30 +1344,53 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             <?php endfor; ?>
             <?php for ($i = ($lead + $dim) % 7; $i && $i < 7; $i++): ?><span class="day off"></span><?php endfor; ?>
           </div>
-          <a class="kpi" href="./?view=calendar">
+          <?php $nextEv = null; foreach (($cal['events'] ?? []) as $ev) { if (($ev['end'] ?? $ev['start']) >= time()) { $nextEv = $ev; break; } } ?>
+          <a class="kpi next-ev" href="./?view=calendar">
             <span class="kpi-ic"><?= icon('calendar') ?></span>
-            <span class="kpi-v"><?= $next7 ?> <small>aftale<?= $next7 === 1 ? '' : 'r' ?></small></span>
-            <span class="kpi-l">de næste 7 dage</span>
+            <?php if ($nextEv): ?>
+              <span class="kpi-v"><?= e($nextEv['title']) ?></span>
+              <span class="kpi-l"><?= e(day_label($nextEv['start']) . ' · ' . event_time($nextEv)) ?><?= !empty($nextEv['location']) ? ' · ' . e($nextEv['location']) : '' ?></span>
+            <?php else: ?>
+              <span class="kpi-v">Ingen aftaler</span>
+              <span class="kpi-l"><?= $hasCal ? 'de næste 30 dage' : 'Forbind din kalender under Indstillinger' ?></span>
+            <?php endif; ?>
           </a>
         </section>
 
-        <section class="card c-ai">
+        <section class="card c-rem">
           <div class="card-head">
-            <h2>Overblik</h2>
-            <a href="./?view=hacks" class="round" aria-label="Alle lifehacks"><?= icon('arrow') ?></a>
+            <h2>Påmindelser</h2>
+            <?php $rems = rem_load(); $open = array_values(array_filter($rems, fn($r) => !$r['done'])); ?>
+            <span class="drop"><?= count($open) ?> aktive</span>
           </div>
-          <h3>Dit overblik i dag</h3>
-          <p class="ai-text"><?= e(implode(' ', $summary)) ?></p>
-          <div class="minis">
-            <a class="mini" href="./?view=hacks"><span>Lifehacks</span><strong><?= $total ?> <em class="pill-s orange">Gemt</em></strong></a>
-            <a class="mini" href="./?view=calendar"><span>Aftaler</span><strong><?= $next7 ?> <em class="pill-s green">7 dage</em></strong></a>
-          </div>
-          <form method="post" class="ask">
+          <form method="post" class="rem-add">
             <?= csrf_field() ?>
-            <input type="hidden" name="action" value="quick_hack">
-            <input name="text" placeholder="Gem en ny lifehack…" aria-label="Ny lifehack" autocomplete="off">
-            <button aria-label="Gem"><?= icon('send') ?></button>
+            <input type="hidden" name="action" value="add_reminder">
+            <input name="text" placeholder="Husk at…" autocomplete="off" required aria-label="Påmindelse">
+            <input type="datetime-local" name="due" value="<?= date('Y-m-d\TH:00', strtotime('+1 hour')) ?>" aria-label="Tidspunkt">
+            <button aria-label="Tilføj"><?= icon('plus') ?></button>
           </form>
+          <?php if ($open): ?>
+            <form method="post" class="rem-list">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="toggle_reminder">
+              <?php foreach (array_slice($open, 0, 5) as $r): ?>
+                <div class="rem-row<?= $r['due'] <= time() ? ' due' : '' ?>">
+                  <button name="op" value="done:<?= e($r['id']) ?>" class="rem" title="Markér som klaret">
+                    <i></i><span class="rem-t"><?= e($r['text']) ?></span><small><?= e(rem_when($r['due'])) ?></small>
+                  </button>
+                  <span class="rem-snz">
+                    <button name="op" value="1h:<?= e($r['id']) ?>" title="Ryk 1 time">+1 t</button>
+                    <button name="op" value="tomorrow:<?= e($r['id']) ?>" title="Ryk til i morgen">I morgen</button>
+                    <button name="op" value="1w:<?= e($r['id']) ?>" title="Ryk 1 uge">+1 uge</button>
+                  </span>
+                </div>
+              <?php endforeach; ?>
+            </form>
+            <?php if (count($open) > 5): ?><p class="muted small">+ <?= count($open) - 5 ?> mere</p><?php endif; ?>
+          <?php else: ?>
+            <p class="muted small rem-empty">Ingen påmindelser. Skriv en ovenfor eller sig "Jarvis, mind mig om …".</p>
+          <?php endif; ?>
         </section>
 
         <section class="card c-spend c-mini-budget">
@@ -1437,13 +1571,6 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       <div class="cols">
         <form method="post" class="panel form">
           <?= csrf_field() ?>
-          <input type="hidden" name="action" value="save_categories">
-          <h2 class="section-title">Kategorier</h2>
-          <label>Én pr. linje – rækkefølgen styrer menuen<textarea name="categories" rows="8"><?= e(implode("\n", $categories)) ?></textarea></label>
-          <div class="actions"><button class="btn">Gem kategorier</button></div>
-        </form>
-        <form method="post" class="panel form">
-          <?= csrf_field() ?>
           <input type="hidden" name="action" value="change_password">
           <h2 class="section-title">Skift adgangskode</h2>
           <label>Nuværende<input type="password" name="current" required autocomplete="current-password"></label>
@@ -1508,7 +1635,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <?php $allUsers = users_all(); $newLink = $_SESSION['invite_link'] ?? null; unset($_SESSION['invite_link']); ?>
         <section class="panel form users" id="brugere">
           <h2 class="section-title">Brugere</h2>
-          <p class="muted small">Andre brugere får deres eget dashboard med eget budget, egne lifehacks og egen kalender. De kan ikke se dine ting og kan ikke rette forsiden.</p>
+          <p class="muted small">Andre brugere får deres eget dashboard med eget budget, egne påmindelser, egen træning og egen kalender. De kan ikke se dine ting og kan ikke rette forsiden.</p>
           <ul class="user-list">
             <?php foreach ($allUsers as $u): ?>
               <li>
@@ -1558,22 +1685,32 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php endif; ?>
         </div>
 
-        <h3>"Hey Siri, ny lifehack"</h3>
+        <h3>"Hey Siri, Jarvis" – den der kan det hele</h3>
         <ol class="steps muted small">
-          <li>Åbn <strong>Genveje</strong> på iPhone → <strong>+</strong> → giv den navnet <strong>Ny lifehack</strong>.</li>
+          <li>Åbn <strong>Genveje</strong> på iPhone → <strong>+</strong> → giv den navnet <strong>Jarvis</strong>.</li>
           <li>Tilføj handlingen <strong>Diktér tekst</strong> (sprog: Dansk).</li>
-          <li>Tilføj <strong>Hent indhold af URL</strong> med adressen <code><?= e($base) ?></code>. Tryk på pilen: Metode <strong>POST</strong>, Anmodningstekst <strong>Formular</strong>, og tilføj tre felter: <code>token</code> = din nøgle, <code>action</code> = <code>lifehack</code>, <code>text</code> = <strong>Dikteret tekst</strong>.</li>
-          <li>Tilføj <strong>Vis resultat</strong>, så Siri bekræfter, hvad der blev gemt.</li>
+          <li>Tilføj <strong>Hent indhold af URL</strong> med adressen <code><?= e($base) ?></code>. Tryk på pilen: Metode <strong>POST</strong>, Anmodningstekst <strong>Formular</strong>, og tilføj tre felter: <code>token</code> = din nøgle, <code>action</code> = <code>jarvis</code>, <code>text</code> = <strong>Dikteret tekst</strong>.</li>
+          <li>Tilføj <strong>Læs tekst op</strong>, så Siri læser Jarvis' svar højt.</li>
         </ol>
-        <p class="muted small">Start med et kategorinavn for at sortere den, fx "Tech, tryk to gange på mellemrum for at…". Ellers lander den uden kategori med tagget #siri.</p>
+        <p class="muted small">Sig fx "Hey Siri, Jarvis" → "mind mig om at ringe til tandlægen fredag kl. 9", "jeg har trænet i dag", "hvad skal jeg i morgen?" eller "hvor meget har jeg tilbage om måneden?".</p>
 
-        <h3>"Hey Siri, min dag" og "Hey Siri, mit budget"</h3>
+        <h3>Hurtige genveje uden at tale</h3>
         <ol class="steps muted small">
-          <li>Lav en ny genvej med navnet <strong>Min dag</strong>.</li>
-          <li>Tilføj <strong>Hent indhold af URL</strong> som ovenfor, men kun med felterne <code>token</code> og <code>action</code> = <code>agenda</code>.</li>
-          <li>Tilføj <strong>Læs tekst op</strong>. Lav én magen til med navnet <strong>Mit budget</strong> og <code>action</code> = <code>budget</code>.</li>
+          <li><strong>Jeg har trænet</strong>: Hent indhold af URL med <code>token</code> og <code>action</code> = <code>træning</code> → Læs tekst op. Logger dagens træning med det samme.</li>
+          <li><strong>Husk</strong>: Diktér tekst → Hent indhold af URL med <code>token</code>, <code>action</code> = <code>påmindelse</code> og <code>text</code> = Dikteret tekst → Læs tekst op.</li>
+          <li><strong>Min dag</strong> / <strong>Mit budget</strong>: <code>token</code> og <code>action</code> = <code>agenda</code> eller <code>budget</code> → Læs tekst op.</li>
         </ol>
       </div>
+
+      <?php $tr = training_load(); ?>
+      <form method="post" class="panel form" id="traening">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_training">
+        <h2 class="section-title">Træning</h2>
+        <p class="muted small">Hvor mange gange om ugen du vil træne. Du kan også logge via Jarvis, fx "jeg har trænet i dag".</p>
+        <label>Træninger pr. uge<input type="number" name="week_goal" min="1" max="7" value="<?= (int)$tr['week_goal'] ?>"></label>
+        <div class="actions"><button class="btn">Gem</button></div>
+      </form>
 
       <form method="post" class="panel form" id="vejr">
         <?= csrf_field() ?>
@@ -1836,11 +1973,11 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <div class="chat-list" id="chat-list">
           <?php if (!$history): ?>
             <div class="chat-hello">
-              <p>Hej <?= e(first_name($me)) ?>. Spørg mig om dit budget, dine lifehacks eller din kalender – eller bed mig gemme noget nyt.</p>
+              <p>Hej <?= e(first_name($me)) ?>. Spørg mig om din dag, din træning, dit budget – eller bed mig minde dig om noget.</p>
               <div class="chips-q">
                 <button type="button" data-q="Hvor meget har jeg tilbage om måneden?">Hvor meget har jeg tilbage?</button>
                 <button type="button" data-q="Hvad skal jeg de næste dage?">Hvad skal jeg de næste dage?</button>
-                <button type="button" data-q="Gem en lifehack: ">Gem en lifehack</button>
+                <button type="button" data-q="Mind mig om ">Ny påmindelse</button>
               </div>
             </div>
           <?php endif; ?>
@@ -1904,7 +2041,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <?php endif; ?>
 <div class="sx" id="sx" hidden>
   <div class="sx-box" role="dialog" aria-modal="true" aria-label="Søg">
-    <label class="sx-field"><?= icon('search') ?><input id="sx-q" type="search" placeholder="Søg i lifehacks, budget og sider…" autocomplete="off" spellcheck="false"><kbd>esc</kbd></label>
+    <label class="sx-field"><?= icon('search') ?><input id="sx-q" type="search" placeholder="Søg i påmindelser, budget og sider…" autocomplete="off" spellcheck="false"><kbd>esc</kbd></label>
     <ul class="sx-list" id="sx-list" role="listbox"></ul>
   </div>
 </div>

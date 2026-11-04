@@ -392,7 +392,54 @@
     });
   };
 
-  const initPage = () => { initDm(); initChat(); };
+  const initHome = () => {
+    const card = document.querySelector('[data-home-jarvis]');
+    if (!card) return;
+    const form = card.querySelector('[data-hj-form]');
+    const input = form.querySelector('input[name=text]');
+    const say = card.querySelector('[data-hj-say]');
+    let busy = false;
+    const ask = async text => {
+      if (!text || busy) return;
+      busy = true;
+      input.value = '';
+      input.placeholder = text;
+      say.classList.remove('reply', 'err');
+      say.textContent = 'Tænker…';
+      jvSet('thinking');
+      const fd = new FormData(form);
+      fd.set('text', text);
+      let j;
+      try {
+        const r = await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'json' } });
+        j = await r.json();
+      } catch (x) {
+        j = { error: 'Kunne ikke få forbindelse. Prøv igen.' };
+      }
+      busy = false;
+      input.placeholder = 'Spørg Jarvis om noget…';
+      say.innerHTML = fmtText(j.error || j.reply || '');
+      say.classList.add(j.error ? 'err' : 'reply');
+      if (j.error) jvSet('idle'); else speak(j.reply || '');
+      if (j.changed) {
+        fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'swap' } }).then(r => r.text()).then(html => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          ['.c-train', '.c-rem', '.c-mini-budget', '.c-next', '.c-cal'].forEach(sel => {
+            const a = document.querySelector('.dash ' + sel), b = doc.querySelector('.dash ' + sel);
+            if (a && b) a.replaceWith(b);
+          });
+        }).catch(() => {});
+      }
+    };
+    form.addEventListener('submit', e => { e.preventDefault(); e.stopPropagation(); ask(input.value.trim()); });
+    card.querySelectorAll('[data-hj-q]').forEach(b => b.addEventListener('click', () => {
+      const q = b.dataset.hjQ;
+      if (/træne/.test(q)) { input.value = 'Jeg har trænet i dag: '; input.focus(); return; }
+      ask(q);
+    }));
+  };
+
+  const initPage = () => { initDm(); initChat(); initHome(); };
   document.addEventListener('page:ready', initPage);
   initPage();
 
@@ -431,7 +478,7 @@
       const terms = norm(q.value).trim().split(/\s+/).filter(Boolean);
       if (!data) { list.innerHTML = '<li class="sx-empty">Henter…</li>'; return; }
       if (!terms.length) {
-        results = data.filter(d => d.type === 'Side').concat(data.filter(d => d.type === 'Lifehack').slice(0, 5));
+        results = data.filter(d => d.type === 'Side').concat(data.filter(d => d.type === 'Påmindelse').slice(0, 5));
       } else {
         results = data.map(d => {
           let score = 0;
@@ -973,10 +1020,10 @@
   const fun = [
     'Varmer reaktoren op…', 'Kalibrerer sarkasme-modul…', 'Brygger kaffe til ' + name + '…', 'Tæller pixels… 1, 2, mange…',
     'Fjerner bugs med pincet…', 'Overtaler Wi-Fi\'en til at samarbejde…', 'Vækker hamstrene i serveren…', 'Polerer ikoner…',
-    'Indlæser dårlige jokes… 42%', 'Sletter Internet Explorer… igen…', 'Downloader mere RAM…', 'Retter sidste bug (for real denne gang)…',
+    'Indlæser dårlige jokes… 42%', 'Tæller dine squats…', 'Sletter Internet Explorer… igen…', 'Downloader mere RAM…', 'Retter sidste bug (for real denne gang)…',
     'Spørger Siri om vej… nej, vent…', 'Stiller skærmen på dark mode…', 'Forhandler med firewall\'en…', 'Kompilerer gode vibes…'
   ];
-  const sys = ['init kernel.sys', 'mount /dev/brain', 'load ui.dark', 'check coffee.level', 'sync lifehacks.db', 'handshake uplink', 'patch humor.dll', 'spin reactor.core', 'verify user.' + name.toLowerCase(), 'calibrate hud', 'decrypt vault', 'ping langkildelarsen.dk'];
+  const sys = ['init kernel.sys', 'mount /dev/brain', 'load ui.dark', 'check coffee.level', 'sync reminders.db', 'handshake uplink', 'patch humor.dll', 'spin reactor.core', 'verify user.' + name.toLowerCase(), 'calibrate hud', 'decrypt vault', 'ping langkildelarsen.dk'];
   const rnd = (a, b) => Math.round(a + Math.random() * (b - a));
   const pad = n => String(n).padStart(2, '0');
   const pick = (arr, n) => arr.slice().sort(() => Math.random() - .5).slice(0, n);

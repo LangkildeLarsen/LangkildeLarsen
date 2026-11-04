@@ -2,6 +2,10 @@
 require dirname(__DIR__) . '/inc/bootstrap.php';
 require dirname(__DIR__) . '/inc/budget.php';
 require dirname(__DIR__) . '/inc/calendar.php';
+require dirname(__DIR__) . '/inc/messages.php';
+require dirname(__DIR__) . '/inc/training.php';
+require dirname(__DIR__) . '/inc/reminders.php';
+require dirname(__DIR__) . '/inc/claude.php';
 
 header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: no-store');
@@ -63,43 +67,38 @@ if (!$input) {
 
 $action = mb_strtolower(trim((string)($input['action'] ?? '')));
 
-if ($action === 'lifehack') {
+if ($action === 'jarvis' || $action === 'spørg') {
     $text = trim(preg_replace('/\s+/u', ' ', (string)($input['text'] ?? '')));
     if ($text === '') {
         reply('Jeg hørte ikke noget. Prøv igen.', 422);
     }
-    $categories = load_json(ukey('categories'), ['Tech', 'Hjem', 'Mad', 'Økonomi', 'Produktivitet', 'Rejser']);
-    $category = trim((string)($input['category'] ?? ''));
-    if ($category === '' && preg_match('/^([\p{L}]+)[\s:,.\-]+(.+)$/u', $text, $m)) {
-        foreach ($categories as $c) {
-            if (mb_strtolower($c) === mb_strtolower($m[1])) {
-                $category = $c;
-                $text = $m[2];
-                break;
-            }
-        }
+    if (claude_key() === '') {
+        reply('Jarvis er ikke sat op endnu.');
     }
-    $text = mb_strtoupper(mb_substr($text, 0, 1)) . mb_substr($text, 1);
-    $title = trim((string)($input['title'] ?? ''));
-    if ($title === '') {
-        $first = preg_split('/(?<=[.!?])\s+/u', $text)[0];
-        $title = mb_strlen($first) > 60 ? rtrim(mb_substr($first, 0, 57)) . '…' : rtrim($first, '.');
+    @set_time_limit(90);
+    $res = claude_chat($apiUser, mb_substr($text, 0, 2000));
+    reply(trim(str_replace('**', '', (string)($res['error'] ?? $res['reply'] ?? 'Det er gjort.'))));
+}
+
+if ($action === 'træning' || $action === 'traening' || $action === 'trænet') {
+    training_add(['type' => (string)($input['type'] ?? 'Træning'), 'min' => $input['min'] ?? 0, 'km' => $input['km'] ?? 0], $apiUser);
+    $st = training_stats(training_load($apiUser));
+    $left = $st['goal'] - $st['sessions'];
+    reply('Godt gået! Det er ' . $st['sessions'] . ' af ' . $st['goal'] . ' denne uge.' . ($left > 0 ? '' : ' Ugens mål er nået.'));
+}
+
+if ($action === 'påmindelse' || $action === 'paamindelse' || $action === 'husk') {
+    $text = trim(preg_replace('/\s+/u', ' ', (string)($input['text'] ?? '')));
+    if ($text === '') {
+        reply('Hvad skal jeg minde dig om?', 422);
     }
-    $hacks = load_json(ukey('lifehacks'));
-    $id = bin2hex(random_bytes(6));
-    $hacks[$id] = [
-        'id' => $id,
-        'title' => $title,
-        'category' => $category,
-        'content' => $text,
-        'link' => '',
-        'tags' => ['siri'],
-        'pinned' => false,
-        'created' => date('c'),
-        'updated' => date('c'),
-    ];
-    save_json(ukey('lifehacks'), $hacks);
-    reply('Gemt' . ($category ? " under $category" : '') . ': ' . $title);
+    if (claude_key() !== '') {
+        @set_time_limit(90);
+        $res = claude_chat($apiUser, 'Opret en påmindelse ud fra dette (find selv tidspunktet, standard om 1 time hvis intet tidspunkt er nævnt). Svar med én kort sætning: ' . $text);
+        reply(trim(str_replace('**', '', (string)($res['error'] ?? $res['reply'] ?? 'Påmindelsen er gemt.'))));
+    }
+    $r = rem_add($text, strtotime('+1 hour'), $apiUser);
+    reply('Gemt. Jeg minder dig om det ' . mb_strtolower(rem_when($r['due'])) . '.');
 }
 
 if ($action === 'agenda' || $action === 'kalender') {
@@ -137,4 +136,4 @@ if ($action === 'budget') {
         : 'Dit budget går ' . number_format(abs($sum['left']), 0, ',', '.') . ' kroner i minus om måneden.');
 }
 
-reply('Ukendt handling. Brug lifehack, agenda eller budget.', 400);
+reply('Ukendt handling. Brug jarvis, påmindelse, træning, agenda eller budget.', 400);
