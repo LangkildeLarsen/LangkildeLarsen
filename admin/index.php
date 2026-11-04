@@ -3,6 +3,8 @@ require dirname(__DIR__) . '/inc/bootstrap.php';
 require dirname(__DIR__) . '/inc/budget.php';
 require dirname(__DIR__) . '/inc/calendar.php';
 require dirname(__DIR__) . '/inc/media.php';
+require dirname(__DIR__) . '/inc/messages.php';
+require dirname(__DIR__) . '/inc/claude.php';
 
 users_migrate();
 if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
@@ -458,6 +460,62 @@ if ($action) {
         exit;
     }
 
+    if ($action === 'send_message') {
+        $to = mb_strtolower(trim((string)($_POST['to'] ?? '')));
+        $text = trim((string)($_POST['text'] ?? ''));
+        if ($text !== '' && isset(users_all()[$to]) && $to !== $me['email']) {
+            dm_send($me['email'], $to, $text);
+        }
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'json') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+        redirect('index.php?view=messages&with=' . rawurlencode($to));
+    }
+
+    if ($action === 'chat') {
+        header('Content-Type: application/json; charset=utf-8');
+        $text = trim((string)($_POST['text'] ?? ''));
+        if ($text === '') {
+            echo json_encode(['error' => 'Skriv en besked.']);
+            exit;
+        }
+        $usage = load_json(ukey('chat-usage'));
+        $today = date('Y-m-d');
+        $limit = $isOwner ? 300 : 60;
+        if (($usage[$today] ?? 0) >= $limit) {
+            echo json_encode(['error' => 'Dagens grænse på ' . $limit . ' beskeder er nået. Prøv igen i morgen.']);
+            exit;
+        }
+        $usage = [$today => ($usage[$today] ?? 0) + 1];
+        save_json(ukey('chat-usage'), $usage);
+        @set_time_limit(120);
+        echo json_encode(claude_chat($me, mb_substr($text, 0, 4000)), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'clear_chat') {
+        save_json(ukey('chat'), []);
+        flash('Samtalen er ryddet.');
+        redirect('index.php?view=chat');
+    }
+
+    if ($action === 'save_claude_key') {
+        if (!$isOwner) {
+            redirect('index.php');
+        }
+        $key = trim((string)($_POST['key'] ?? ''));
+        if (!empty($_POST['remove'])) {
+            save_json('claude', []);
+            flash('API-nøglen er fjernet.');
+        } elseif ($key !== '') {
+            save_json('claude', ['key' => $key, 'saved' => date('c')]);
+            flash('API-nøglen er gemt.');
+        }
+        redirect('index.php?view=settings#claude');
+    }
+
     if ($action === 'save_budget') {
         save_json(ukey('budget'), budget_from_post($_POST));
         flash('Budget gemt.');
@@ -754,9 +812,45 @@ $titles = [
     'budget' => 'Budget',
     'calendar' => 'Kalender',
     'projects' => 'Projekter',
+    'messages' => 'Beskeder',
+    'chat' => 'Claude',
 ];
 
 $budget = load_json(ukey('budget'), ['income' => [], 'expenses' => []]);
+
+if (($_GET['ajax'] ?? '') === 'thread') {
+    $with = mb_strtolower((string)($_GET['with'] ?? ''));
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    if (!isset(users_all()[$with])) {
+        echo '[]';
+        exit;
+    }
+    dm_mark_read($me['email'], $with);
+    echo json_encode(array_map(fn($m) => dm_public($m, $me['email']), array_slice(dm_thread($me['email'], $with), -200)), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function app_version(): string
+{
+    $root = dirname(__DIR__);
+    $files = array_merge([__FILE__, $root . '/assets/admin.js', $root . '/assets/admin.css'], glob($root . '/inc/*.php') ?: []);
+    return substr(md5(implode('|', array_map(fn($f) => is_file($f) ? filemtime($f) . filesize($f) : '', $files))), 0, 10);
+}
+
+if (($_GET['ajax'] ?? '') === 'version') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['v' => app_version()]);
+    exit;
+}
+
+if (($_GET['ajax'] ?? '') === 'unread') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['count' => dm_unread($me['email'])]);
+    exit;
+}
 
 if (($_GET['ajax'] ?? '') === 'search') {
     $items = [];
@@ -787,7 +881,7 @@ $hasCal = (bool)cal_sources();
 
 $pageTitle = $titles[$view] ?? 'Oversigt';
 ?><!doctype html>
-<html lang="da">
+<html lang="da" data-version="<?= e(app_version()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -811,12 +905,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['hacks', './?view=hacks', 'bulb', 'Lifehacks'],
             ['budget', './?view=budget', 'wallet', 'Budget'],
             ['calendar', './?view=calendar', 'calendar', 'Kalender'],
+            ['messages', './?view=messages', 'inbox', 'Beskeder'],
+            ['chat', './?view=chat', 'chat', 'Claude'],
             ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
+        $unreadCount = dm_unread($me['email']);
         $activeView = in_array($view, ['hack', 'edit'], true) ? 'hacks' : (in_array($view, ['profile', 'projects'], true) ? 'settings' : $view);
       ?>
       <?php foreach ($railItems as [$v, $href, $ic, $label]): ?>
-        <a href="<?= $href ?>" class="<?= $activeView === $v ? 'active' : '' ?>" aria-label="<?= e($label) ?>"><?= icon($ic) ?><span class="tip"><?= e($label) ?></span></a>
+        <a href="<?= $href ?>" class="<?= $activeView === $v ? 'active' : '' ?>" aria-label="<?= e($label) ?>"><?= icon($ic) ?><?php if ($v === 'messages'): ?><i class="rail-dot" data-unread-dot<?= $unreadCount ? '' : ' hidden' ?>></i><?php endif; ?><span class="tip"><?= e($label) ?></span></a>
       <?php endforeach; ?>
     </nav>
     <form method="post" class="rail-out" data-reload>
@@ -841,6 +938,40 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <button type="button" class="dk-title" data-player-open aria-label="Udvid musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span><?= icon('down') ?></button>
       </div>
       <button type="button" class="bell search-btn" data-search-open aria-label="Søg (Cmd+K)"><?= icon('search') ?></button>
+      <?php
+        $notes = [];
+        foreach (array_reverse(dm_all()) as $m) {
+            if ($m['to'] === $me['email'] && empty($m['read'])) {
+                $from = users_all()[$m['from']] ?? ['name' => $m['from'], 'email' => $m['from']];
+                $notes[] = ['ic' => $m['type'] === 'request' ? 'sparkle' : 'chat', 'title' => ($m['type'] === 'request' ? 'Ønske fra ' : 'Besked fra ') . first_name($from), 'text' => $m['text'], 'when' => day_label(strtotime($m['created'])) . ' ' . date('H:i', strtotime($m['created'])), 'url' => './?view=messages&with=' . rawurlencode($m['from']), 'unread' => true];
+            }
+            if (count($notes) >= 6) break;
+        }
+        $todayEnd = strtotime('tomorrow');
+        foreach (cal_events(2)['events'] as $ev) {
+            if ($ev['start'] < $todayEnd + 86400) {
+                $notes[] = ['ic' => 'calendar', 'title' => $ev['title'], 'text' => event_time($ev), 'when' => day_label($ev['start']), 'url' => './?view=calendar', 'unread' => false];
+            }
+        }
+        foreach (upcoming_payments($budget, 2) as $pp) {
+            $notes[] = ['ic' => 'wallet', 'title' => $pp['name'] . ' trækkes', 'text' => kr($pp['amount']), 'when' => day_label($pp['ts']), 'url' => './?view=budget', 'unread' => false];
+        }
+      ?>
+      <div class="notif">
+        <button type="button" class="bell" data-bell aria-label="Notifikationer" aria-expanded="false"><?= icon('bell') ?><i data-unread-dot<?= $unreadCount ? '' : ' hidden' ?>></i></button>
+        <div class="notif-pop" hidden>
+          <p class="notif-h">Notifikationer</p>
+          <?php if ($notes): ?>
+            <ul>
+              <?php foreach (array_slice($notes, 0, 8) as $n): ?>
+                <li><a href="<?= e($n['url']) ?>" class="<?= $n['unread'] ? 'new' : '' ?>"><span class="notif-ic"><?= icon($n['ic']) ?></span><span class="notif-t"><strong><?= e($n['title']) ?></strong><small><?= e(mb_strimwidth($n['text'], 0, 90, '…')) ?></small></span><time><?= e($n['when']) ?></time></a></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php else: ?>
+            <p class="notif-empty">Ingen nye notifikationer.</p>
+          <?php endif; ?>
+        </div>
+      </div>
       <a class="me" href="./?view=<?= $isOwner ? 'profile' : 'settings' ?>" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
         <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
       </a>
@@ -1220,6 +1351,23 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <div class="actions"><button class="btn">Gem kalendere</button></div>
       </form>
 
+      <?php if ($isOwner): $ck = load_json('claude'); ?>
+        <form method="post" class="panel form" id="claude">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="save_claude_key">
+          <h2 class="section-title">Claude</h2>
+          <p class="muted small">Indsæt din API-nøgle fra console.anthropic.com. Den gemmes kun på din server og bruges af både dig og andre brugere. Forbruget betales via din Anthropic-konto.</p>
+          <?php if (!empty($ck['key'])): ?>
+            <p class="small"><span class="st green"><i></i>Nøgle gemt</span> <span class="muted">slutter på …<?= e(substr($ck['key'], -4)) ?></span></p>
+          <?php endif; ?>
+          <label>API-nøgle<input type="password" name="key" placeholder="sk-ant-…" autocomplete="off"></label>
+          <div class="actions">
+            <button class="btn">Gem nøgle</button>
+            <?php if (!empty($ck['key'])): ?><button class="btn ghost danger" name="remove" value="1">Fjern</button><?php endif; ?>
+          </div>
+        </form>
+      <?php endif; ?>
+
       <?php if ($isOwner): ?>
         <?php $allUsers = users_all(); $newLink = $_SESSION['invite_link'] ?? null; unset($_SESSION['invite_link']); ?>
         <section class="panel form users" id="brugere">
@@ -1446,6 +1594,89 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <div class="actions sticky"><button class="btn">Gem projekter</button></div>
       </form>
 
+    <?php elseif ($view === 'messages'): ?>
+      <?php
+        $others = array_values(array_filter(users_all(), fn($u) => $u['email'] !== $me['email']));
+        $with = mb_strtolower((string)($_GET['with'] ?? ($others[0]['email'] ?? '')));
+        $withUser = users_all()[$with] ?? null;
+        if ($withUser && $with !== $me['email']) dm_mark_read($me['email'], $with);
+      ?>
+      <?php if (!$others): ?>
+        <div class="empty"><p>Der er ingen andre brugere endnu.</p><?php if ($isOwner): ?><a href="./?view=settings#brugere" class="btn">Tilføj en bruger</a><?php endif; ?></div>
+      <?php else: ?>
+        <div class="dm">
+          <aside class="card dm-people">
+            <?php foreach ($others as $o): $last = array_slice(dm_thread($me['email'], $o['email']), -1)[0] ?? null; $un = dm_unread($me['email'], $o['email']); ?>
+              <a href="./?view=messages&with=<?= rawurlencode($o['email']) ?>" class="dm-person<?= $o['email'] === $with ? ' on' : '' ?>">
+                <span class="initials"><?= e(initials($o)) ?></span>
+                <span class="dm-who"><strong><?= e($o['name']) ?></strong><small><?= $last ? e(($last['from'] === $me['email'] ? 'Dig: ' : '') . mb_strimwidth($last['text'], 0, 40, '…')) : 'Ingen beskeder endnu' ?></small></span>
+                <?php if ($un): ?><span class="dm-count"><?= $un ?></span><?php endif; ?>
+              </a>
+            <?php endforeach; ?>
+          </aside>
+          <?php if ($withUser): ?>
+            <section class="card dm-thread" data-thread="<?= e($with) ?>">
+              <div class="card-head"><span class="initials"><?= e(initials($withUser)) ?></span><h2><?= e($withUser['name']) ?></h2></div>
+              <div class="dm-list" id="dm-list">
+                <?php $lastDay = null; foreach (array_slice(dm_thread($me['email'], $with), -200) as $m): $pm = dm_public($m, $me['email']); ?>
+                  <?php if ($pm['day'] !== $lastDay): $lastDay = $pm['day']; ?><p class="dm-day"><?= e($pm['label']) ?></p><?php endif; ?>
+                  <div class="bubble<?= $pm['mine'] ? ' mine' : '' ?><?= $pm['type'] === 'request' ? ' request' : '' ?>"><?php if ($pm['type'] === 'request'): ?><span class="req-tag"><?= icon('sparkle') ?> Ønske via Claude</span><?php endif; ?><p><?= nl2br(e($pm['text'])) ?></p><time><?= e($pm['time']) ?></time></div>
+                <?php endforeach; ?>
+              </div>
+              <form method="post" class="ask dm-compose" data-dm-form>
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="send_message">
+                <input type="hidden" name="to" value="<?= e($with) ?>">
+                <input name="text" placeholder="Skriv til <?= e(first_name($withUser)) ?>…" autocomplete="off" required>
+                <button aria-label="Send"><?= icon('send') ?></button>
+              </form>
+            </section>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+    <?php elseif ($view === 'chat'): ?>
+      <?php $history = load_json(ukey('chat')); $hasKey = claude_key() !== ''; ?>
+      <section class="card chat" data-chat>
+        <div class="card-head">
+          <h2>Claude</h2>
+          <button type="button" class="round" data-voice-toggle aria-label="Læs svar højt" aria-pressed="false"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
+          <button type="button" class="round" data-voice-settings aria-label="Stemme"><?= icon('gear') ?></button>
+          <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="clear_chat"><button class="round" aria-label="Ryd samtale" title="Ryd samtale"><?= icon('cross') ?></button></form>
+        </div>
+        <div class="voice-pop" hidden>
+          <label>Stemme<select data-voice-select><option value="">Standard</option></select></label>
+          <label>Tempo <input type="range" min="0.7" max="1.3" step="0.05" value="1" data-voice-rate></label>
+          <label>Tonehøjde <input type="range" min="0.6" max="1.4" step="0.05" value="1" data-voice-pitch></label>
+          <button type="button" class="btn small ghost" data-voice-test>Afprøv stemmen</button>
+        </div>
+        <div class="chat-list" id="chat-list">
+          <?php if (!$history): ?>
+            <div class="chat-hello">
+              <p>Hej <?= e(first_name($me)) ?>. Spørg mig om dit budget, dine lifehacks eller din kalender – eller bed mig gemme noget nyt.</p>
+              <div class="chips-q">
+                <button type="button" data-q="Hvor meget har jeg tilbage om måneden?">Hvor meget har jeg tilbage?</button>
+                <button type="button" data-q="Hvad skal jeg de næste dage?">Hvad skal jeg de næste dage?</button>
+                <button type="button" data-q="Gem en lifehack: ">Gem en lifehack</button>
+              </div>
+            </div>
+          <?php endif; ?>
+          <?php foreach (array_slice($history, -40) as $h): ?>
+            <div class="bubble<?= $h['role'] === 'user' ? ' mine' : ' ai' ?>"><p><?= nl2br(e($h['text'])) ?></p></div>
+          <?php endforeach; ?>
+        </div>
+        <?php if (!$hasKey): ?>
+          <p class="insight"><?= icon('info') ?><span><?= $isOwner ? 'Claude er ikke sat op endnu. Indsæt din API-nøgle under Indstillinger → Claude.' : 'Claude er ikke sat op endnu. Bed ' . e(first_name(array_values(array_filter(users_all(), fn($u) => $u['role'] === 'owner'))[0] ?? ['name' => 'ejeren', 'email' => ''])) . ' om at sætte det op.' ?></span></p>
+        <?php endif; ?>
+        <form class="ask chat-compose" data-chat-form>
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="chat">
+          <button type="button" class="mic" data-mic aria-label="Tal til Claude"><?= icon('mic') ?></button>
+          <input name="text" placeholder="Skriv eller tal til Claude…" autocomplete="off" <?= $hasKey ? '' : 'disabled' ?>>
+          <button aria-label="Send" <?= $hasKey ? '' : 'disabled' ?>><?= icon('send') ?></button>
+        </form>
+      </section>
+
     <?php else: ?>
       <div class="empty"><p>Siden findes ikke.</p><a href="./" class="btn">Til oversigten</a></div>
     <?php endif; ?>
@@ -1489,6 +1720,11 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <input type="range" id="mp-volume" class="mp-volume" min="0" max="100" value="60" aria-label="Lydstyrke">
   </div>
 </section>
+<div class="update-toast" id="update-toast" hidden role="status">
+  <span class="u-dot" aria-hidden="true"></span>
+  <span>Der er en ny version af dashboardet</span>
+  <button type="button" class="btn small" data-update>Opdater</button>
+</div>
 <aside class="install" id="install" hidden>
   <img src="../assets/brand/dash-180.png" alt="" class="install-ic">
   <div class="install-txt">

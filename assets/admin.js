@@ -86,7 +86,9 @@
     if (target) target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
     else if (push) scrollTo({ top: 0, behavior: 'auto' });
     fresh.querySelectorAll('.card, .hack-card').forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
+    document.dispatchEvent(new CustomEvent('page:ready'));
   };
+  window.__swap = swap;
 
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');
@@ -127,6 +129,237 @@
   };
   document.addEventListener('pointerover', warm, { passive: true });
   document.addEventListener('touchstart', warm, { passive: true });
+
+  const myVersion = document.documentElement.dataset.version || '';
+  const toast = document.getElementById('update-toast');
+  const checkVersion = async () => {
+    if (!myVersion || !toast || !toast.hidden) return;
+    try {
+      const r = await fetch('index.php?ajax=version', { credentials: 'same-origin', cache: 'no-store' });
+      const j = await r.json();
+      if (j.v && j.v !== myVersion) {
+        toast.hidden = false;
+        requestAnimationFrame(() => toast.classList.add('show'));
+      }
+    } catch (e) {}
+  };
+  setInterval(() => { if (!document.hidden) checkVersion(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-update]')) {
+      try { window.__saveMusic && window.__saveMusic(); } catch (x) {}
+      location.reload();
+    }
+  });
+
+  const escH = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmtText = t => escH(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+
+  const setUnread = n => {
+    document.querySelectorAll('[data-unread-dot]').forEach(d => { d.hidden = !n; });
+  };
+  const pollUnread = async () => {
+    try {
+      const r = await fetch('index.php?ajax=unread', { credentials: 'same-origin' });
+      const j = await r.json();
+      setUnread(j.count);
+    } catch (e) {}
+  };
+  setInterval(() => { if (!document.hidden) pollUnread(); }, 30000);
+
+  document.addEventListener('click', e => {
+    const bell = e.target.closest('[data-bell]');
+    const pop = document.querySelector('.notif-pop');
+    if (bell && pop) {
+      pop.hidden = !pop.hidden;
+      bell.setAttribute('aria-expanded', String(!pop.hidden));
+      return;
+    }
+    if (pop && !pop.hidden && !e.target.closest('.notif-pop')) pop.hidden = true;
+  });
+
+  let dmTimer = null;
+  let dmLast = '';
+  const initDm = () => {
+    clearInterval(dmTimer);
+    const thread = document.querySelector('[data-thread]');
+    if (!thread) return;
+    const list = document.getElementById('dm-list');
+    const form = thread.querySelector('[data-dm-form]');
+    const scrollDown = () => { list.scrollTop = list.scrollHeight; };
+    scrollDown();
+    const load = async () => {
+      try {
+        const r = await fetch('index.php?ajax=thread&with=' + encodeURIComponent(thread.dataset.thread), { credentials: 'same-origin' });
+        const msgs = await r.json();
+        const sig = msgs.length + ':' + (msgs.length ? msgs[msgs.length - 1].id : '');
+        if (sig === dmLast) return;
+        const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+        dmLast = sig;
+        let day = null;
+        list.innerHTML = msgs.map(m => {
+          let h = '';
+          if (m.day !== day) { day = m.day; h += '<p class="dm-day">' + escH(m.label) + '</p>'; }
+          h += '<div class="bubble' + (m.mine ? ' mine' : '') + (m.type === 'request' ? ' request' : '') + '">' + (m.type === 'request' ? '<span class="req-tag">Ønske via Claude</span>' : '') + '<p>' + fmtText(m.text) + '</p><time>' + escH(m.time) + '</time></div>';
+          return h;
+        }).join('');
+        if (atBottom) scrollDown();
+        pollUnread();
+      } catch (e) {}
+    };
+    dmLast = '';
+    load();
+    dmTimer = setInterval(() => { if (!document.hidden && document.body.contains(thread)) load(); else if (!document.body.contains(thread)) clearInterval(dmTimer); }, 5000);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const input = form.querySelector('input[name=text]');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      list.insertAdjacentHTML('beforeend', '<div class="bubble mine sending"><p>' + fmtText(text) + '</p></div>');
+      scrollDown();
+      const fd = new FormData(form);
+      fd.set('text', text);
+      try { await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'json' } }); } catch (x) {}
+      dmLast = '';
+      load();
+    });
+  };
+
+  const voice = {
+    on: store.get('voice-on', false),
+    name: store.get('voice-name', ''),
+    rate: store.get('voice-rate', 1),
+    pitch: store.get('voice-pitch', 1),
+  };
+  const synth = window.speechSynthesis;
+  const pickVoice = () => {
+    if (!synth) return null;
+    const vs = synth.getVoices();
+    return vs.find(v => v.name === voice.name) || vs.find(v => /^da/i.test(v.lang)) || null;
+  };
+  const speak = text => {
+    if (!synth || !voice.on) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/\*\*/g, ''));
+    const v = pickVoice();
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : 'da-DK';
+    u.rate = voice.rate;
+    u.pitch = voice.pitch;
+    synth.speak(u);
+  };
+
+  const initChat = () => {
+    const chat = document.querySelector('[data-chat]');
+    if (!chat) return;
+    const list = document.getElementById('chat-list');
+    const form = chat.querySelector('[data-chat-form]');
+    const input = form.querySelector('input[name=text]');
+    const mic = form.querySelector('[data-mic]');
+    const toggle = chat.querySelector('[data-voice-toggle]');
+    const pop = chat.querySelector('.voice-pop');
+    const sel = chat.querySelector('[data-voice-select]');
+    const rate = chat.querySelector('[data-voice-rate]');
+    const pitch = chat.querySelector('[data-voice-pitch]');
+    const scrollDown = () => { list.scrollTop = list.scrollHeight; };
+    scrollDown();
+
+    const paintToggle = () => {
+      toggle.classList.toggle('on', voice.on);
+      toggle.setAttribute('aria-pressed', String(voice.on));
+      chat.classList.toggle('voice-on', voice.on);
+    };
+    paintToggle();
+    toggle.addEventListener('click', () => { voice.on = !voice.on; store.set('voice-on', voice.on); if (!voice.on && synth) synth.cancel(); paintToggle(); });
+
+    const fillVoices = () => {
+      if (!synth) return;
+      const vs = synth.getVoices().filter(v => /^(da|en|sv|nb|no)/i.test(v.lang)).sort((a, b) => (/^da/i.test(b.lang) - /^da/i.test(a.lang)) || a.name.localeCompare(b.name));
+      sel.innerHTML = '<option value="">Standard (dansk)</option>' + vs.map(v => '<option value="' + escH(v.name) + '"' + (v.name === voice.name ? ' selected' : '') + '>' + escH(v.name) + ' · ' + escH(v.lang) + '</option>').join('');
+    };
+    fillVoices();
+    if (synth) synth.onvoiceschanged = fillVoices;
+    rate.value = voice.rate;
+    pitch.value = voice.pitch;
+    chat.querySelector('[data-voice-settings]').addEventListener('click', () => { pop.hidden = !pop.hidden; });
+    sel.addEventListener('change', () => { voice.name = sel.value; store.set('voice-name', voice.name); });
+    rate.addEventListener('input', () => { voice.rate = Number(rate.value); store.set('voice-rate', voice.rate); });
+    pitch.addEventListener('input', () => { voice.pitch = Number(pitch.value); store.set('voice-pitch', voice.pitch); });
+    chat.querySelector('[data-voice-test]').addEventListener('click', () => { const was = voice.on; voice.on = true; speak('Hej ' + (document.querySelector('.me')?.getAttribute('aria-label') || '').split(' ')[0] + ', sådan lyder jeg.'); voice.on = was; });
+
+    chat.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => {
+      input.value = b.dataset.q;
+      input.focus();
+      if (!b.dataset.q.endsWith(': ')) form.requestSubmit();
+    }));
+
+    let busy = false;
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = input.value.trim();
+      if (!text || busy) return;
+      busy = true;
+      input.value = '';
+      chat.querySelector('.chat-hello')?.remove();
+      list.insertAdjacentHTML('beforeend', '<div class="bubble mine"><p>' + fmtText(text) + '</p></div><div class="bubble ai typing"><p><i></i><i></i><i></i></p></div>');
+      scrollDown();
+      const fd = new FormData(form);
+      fd.set('text', text);
+      let j;
+      try {
+        const r = await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'json' } });
+        j = await r.json();
+      } catch (x) {
+        j = { error: 'Kunne ikke få forbindelse. Prøv igen.' };
+      }
+      list.querySelector('.typing')?.remove();
+      const msg = j.error || j.reply || '';
+      list.insertAdjacentHTML('beforeend', '<div class="bubble ai' + (j.error ? ' err' : '') + '"><p>' + fmtText(msg) + '</p></div>');
+      scrollDown();
+      busy = false;
+      if (!j.error) speak(msg);
+      input.focus();
+    });
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { mic.hidden = true; return; }
+    let rec = null;
+    mic.addEventListener('click', () => {
+      if (rec) { rec.stop(); return; }
+      rec = new SR();
+      rec.lang = 'da-DK';
+      rec.interimResults = true;
+      rec.continuous = false;
+      let finalText = '';
+      mic.classList.add('live');
+      if (synth) synth.cancel();
+      rec.onresult = ev => {
+        let interim = '';
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript;
+          else interim += ev.results[i][0].transcript;
+        }
+        input.value = (finalText + interim).trim();
+      };
+      rec.onerror = () => {};
+      rec.onend = () => {
+        mic.classList.remove('live');
+        rec = null;
+        if (input.value.trim()) {
+          if (!voice.on) { voice.on = true; store.set('voice-on', true); paintToggle(); }
+          form.requestSubmit();
+        }
+      };
+      rec.start();
+    });
+  };
+
+  const initPage = () => { initDm(); initChat(); };
+  document.addEventListener('page:ready', initPage);
+  initPage();
 
   const sx = document.getElementById('sx');
   if (sx) {
@@ -385,7 +618,14 @@
           player.setVolume(Number(vol.value));
           if (store.get('mp-muted', false)) player.mute();
           mp.classList.add('has-video');
-          if (wantPlay) player.playVideo();
+          const saved = store.get('mp-state', null);
+          if (saved && saved.key === VIDEO + '|' + LIST && saved.t > 2) {
+            if (LIST) player.cuePlaylist({ list: LIST, listType: 'playlist', index: saved.index || 0, startSeconds: saved.t });
+            else player.cueVideoById({ videoId: VIDEO, startSeconds: saved.t });
+            if (saved.playing || wantPlay) setTimeout(() => player.playVideo(), 400);
+          } else if (wantPlay) {
+            player.playVideo();
+          }
           resolve();
         },
         onStateChange: e => {
@@ -467,8 +707,24 @@
     if (player && ready) player.seekTo(player.getDuration() * seek.value / 1000, true);
   });
 
+  const saveMusic = () => {
+    if (!player || !ready || !player.getCurrentTime) return;
+    try {
+      store.set('mp-state', {
+        key: VIDEO + '|' + LIST,
+        index: LIST && player.getPlaylistIndex ? Math.max(0, player.getPlaylistIndex()) : 0,
+        t: Math.floor(player.getCurrentTime() || 0),
+        playing: player.getPlayerState() === YT.PlayerState.PLAYING,
+      });
+    } catch (e) {}
+  };
+  window.__saveMusic = saveMusic;
+  setInterval(saveMusic, 3000);
+  addEventListener('pagehide', saveMusic);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveMusic(); });
+
   setInterval(() => {
-    if (!player || !ready || seeking || mp.hidden) return;
+    if (!player || !ready || seeking) return;
     const d = player.getDuration() || 0, c = player.getCurrentTime() || 0;
     seek.value = d ? Math.round(c / d * 1000) : 0;
     seek.style.setProperty('--v', (d ? c / d * 100 : 0) + '%');
