@@ -1149,3 +1149,13 @@ body, button, input, textarea, select { font-family: "Inter", system-ui, -apple-
 .rail-logo img { width: 70%; height: 70%; object-fit: contain; }
 
 .auth-logo { width: 64px; height: 64px; margin-bottom: 4px; }
+
+.col.hot .fill { background: var(--blue); box-shadow: none; }
+
+.flag { background: rgba(255, 255, 255, .18); border-bottom: 0; border-radius: 14px; margin: 6px; left: 0; right: 0; padding: 7px 0; }
+
+.day.today { background: var(--blue); box-shadow: none; }
+
+@media (max-width: 900px) {
+  .flag { margin: 4px; border-radius: 9px; padding: 5px 0; }
+}
