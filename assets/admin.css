@@ -1901,3 +1901,5 @@ html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
 }
 
 .rail { border-radius: 9999px; }
+
+.mp-bg, html:has(.mp.playing) .mp-bg, html.mp-closed.mp-playing .mp-bg { opacity: 0 !important; }
