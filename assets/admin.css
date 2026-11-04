@@ -1867,3 +1867,8 @@ kbd { padding: 3px 8px; border-radius: 7px; background: var(--card-3); color: va
 }
 
 html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app { background-color: rgb(5 5 5 / 64%); }
+
+html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app {
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+}
