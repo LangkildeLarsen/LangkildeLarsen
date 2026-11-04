@@ -2648,3 +2648,10 @@ input:focus, textarea:focus, select:focus { box-shadow: inset 0 0 0 1.5px rgba(2
 .mp input[type="range"]:focus, .dk-vol input[type="range"]:focus, .sx-field input:focus { box-shadow: none; }
 
 .dash .c-watch { grid-column: span 12; }
+
+@media (min-width: 1401px) {
+  .dash .c-watch { grid-column: span 4; }
+  .dash .c-cal, .dash .c-rem { grid-row: span 2; }
+}
+@media (max-width: 1400px) and (min-width: 901px) { .dash .c-watch { grid-column: span 6; } }
+.c-watch .wt { grid-template-columns: 78px minmax(0, 1fr) 32px; }
