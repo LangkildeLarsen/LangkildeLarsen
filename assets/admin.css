@@ -1447,3 +1447,54 @@ html.loading .content { opacity: .55; transition: opacity .2s ease .1s; }
   .rail nav { width: auto; justify-content: center; gap: 6px; }
   .rail nav a { width: 50px; height: 50px; }
 }
+
+.mp-dock {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  max-width: 260px;
+  padding: 0 20px 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--card-2);
+  box-shadow: var(--inset);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .2s ease, transform .3s var(--ease);
+}
+
+.mp-closed .mp-dock { display: inline-flex; animation: dock-in .45s var(--ease) both; }
+
+.mp-dock:hover { background: var(--card-3); }
+
+.mp-dock.land { animation: dock-land .5s var(--ease); }
+
+@keyframes dock-in {
+  from { opacity: 0; transform: scale(.8); }
+}
+
+@keyframes dock-land {
+  0%, 60% { transform: scale(1); }
+  80% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.mp-dock-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+.eq { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; flex: none; }
+
+.eq i { width: 3px; height: 40%; border-radius: 2px; background: var(--blue); }
+
+.eq i:nth-child(2) { height: 100%; }
+
+.eq i:nth-child(3) { height: 65%; }
+
+.music-btn { display: none; }
+
+@media (max-width: 900px), (pointer: coarse) {
+  .mp-closed .mp-dock, .mp-dock { display: none !important; }
+  .music-btn { display: grid; }
+}

@@ -162,22 +162,69 @@
     mp.classList.add('moved');
   };
 
-  const open = () => {
+  const dockRect = () => {
+    const d = document.querySelector('.mp-dock');
+    if (!d) return null;
+    const r = d.getBoundingClientRect();
+    return r.width ? r : null;
+  };
+
+  const flyTransform = d => {
+    const a = mp.getBoundingClientRect();
+    const dx = d.left + d.width / 2 - (a.left + a.width / 2);
+    const dy = d.top + d.height / 2 - (a.top + a.height / 2);
+    return `translate(${dx}px, ${dy}px) scale(${Math.max(.12, d.width / a.width)})`;
+  };
+
+  let flyTimer;
+  const open = (instant) => {
+    clearTimeout(flyTimer);
+    document.documentElement.classList.remove('mp-closed');
     mp.hidden = false;
-    requestAnimationFrame(() => mp.classList.add('show'));
     applyPos();
     store.set('mp-open', true);
-    document.querySelectorAll('[data-player-open]').forEach(b => b.classList.add('on'));
+    const d = !instant && !reduce && dockRect();
+    if (d) {
+      mp.style.transition = 'none';
+      mp.style.transform = flyTransform(d);
+      mp.style.opacity = '0';
+      mp.classList.add('show');
+      mp.getBoundingClientRect();
+      mp.style.transition = 'transform .55s cubic-bezier(.2, .9, .2, 1), opacity .35s ease';
+      mp.style.transform = '';
+      mp.style.opacity = '';
+      flyTimer = setTimeout(() => { mp.style.transition = ''; }, 600);
+    } else {
+      requestAnimationFrame(() => mp.classList.add('show'));
+    }
     create();
   };
 
   const close = () => {
-    mp.classList.remove('show');
+    clearTimeout(flyTimer);
     store.set('mp-open', false);
-    if (player && ready) player.stopVideo();
+    if (player && ready && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
     mp.classList.remove('playing');
-    setTimeout(() => { mp.hidden = true; }, 300);
-    document.querySelectorAll('[data-player-open]').forEach(b => b.classList.remove('on'));
+    document.documentElement.classList.add('mp-closed');
+    const d = !reduce && dockRect();
+    if (d) {
+      mp.style.transition = 'transform .5s cubic-bezier(.5, 0, .2, 1), opacity .45s ease .05s';
+      mp.style.transform = flyTransform(d);
+      mp.style.opacity = '0';
+      document.querySelector('.mp-dock').classList.add('land');
+      flyTimer = setTimeout(() => {
+        mp.hidden = true;
+        mp.classList.remove('show');
+        mp.style.transition = '';
+        mp.style.transform = '';
+        mp.style.opacity = '';
+        const dk = document.querySelector('.mp-dock');
+        dk && dk.classList.remove('land');
+      }, 520);
+    } else {
+      mp.classList.remove('show');
+      flyTimer = setTimeout(() => { mp.hidden = true; }, 300);
+    }
   };
 
   const loadApi = () => apiPromise || (apiPromise = new Promise(resolve => {
@@ -192,7 +239,11 @@
   const updateTitle = () => {
     try {
       const d = player.getVideoData();
-      if (d && d.title) title.textContent = d.title + (d.author ? ' · ' + d.author : '');
+      if (d && d.title) {
+        title.textContent = d.title + (d.author ? ' · ' + d.author : '');
+        store.set('mp-track', d.title);
+        document.querySelectorAll('.mp-dock-t').forEach(t => { t.textContent = d.title; });
+      }
     } catch (e) {}
   };
 
@@ -353,5 +404,14 @@
     }
   });
 
-  if (store.get('mp-open', true)) open();
+  const paintDock = () => {
+    const t = store.get('mp-track', '');
+    if (t) document.querySelectorAll('.mp-dock-t').forEach(el => { el.textContent = t; });
+  };
+  paintDock();
+  new MutationObserver(paintDock).observe(document.body, { childList: true, subtree: false });
+  document.addEventListener('click', () => setTimeout(paintDock, 400));
+
+  if (store.get('mp-open', true)) open(true);
+  else document.documentElement.classList.add('mp-closed');
 })();
