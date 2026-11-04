@@ -805,7 +805,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
   <main class="content">
     <header class="topbar">
       <?php [$greet, $emoji] = greeting(); ?>
-      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?> <span class="wave" aria-hidden="true"><?= $emoji ?></span><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
+      <h1><?php if ($view === 'dashboard'): ?><?= e($greet . ', ' . first_name($me)) ?><?php else: ?><?= e($pageTitle) ?><?php endif; ?></h1>
       <button class="mp-dock" type="button" data-player-open aria-label="Åbn musikafspiller"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="mp-dock-t">Musik</span></button>
       <form class="search" action="./">
         <input type="hidden" name="view" value="hacks">

@@ -1498,3 +1498,14 @@ html.loading .content { opacity: .55; transition: opacity .2s ease .1s; }
   .mp-closed .mp-dock, .mp-dock { display: none !important; }
   .music-btn { display: grid; }
 }
+
+@media (max-width: 1100px) {
+  .me { width: 56px; height: 56px; padding: 0; justify-content: center; border-radius: 50%; flex: none; }
+  .me img { width: 44px; height: 44px; }
+}
+
+@media (max-width: 900px) {
+  .me { width: 46px; height: 46px; }
+  .me img { width: 36px; height: 36px; }
+  .me .initials { width: 36px; height: 36px; font-size: 13px; }
+}
