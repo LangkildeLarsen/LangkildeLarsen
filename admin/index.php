@@ -1241,5 +1241,48 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <?php endif; ?>
   </main>
 </div>
+<aside class="install" id="install" hidden>
+  <img src="../assets/icon-180.png" alt="" class="install-ic">
+  <div class="install-txt">
+    <strong>Læg dashboardet på hjemmeskærmen</strong>
+    <span class="ios-only">Tryk på <b class="share-ic" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M12 3L8 7M12 3l4 4M8 11H6.5C5.12 11 4 12.12 4 13.5v4C4 18.88 5.12 20 6.5 20h11c1.38 0 2.5-1.12 2.5-2.5v-4c0-1.38-1.12-2.5-2.5-2.5H16"/></svg></b> og vælg <b>Føj til hjemmeskærm</b>.</span>
+    <span class="other-only">Så åbner det i fuld skærm som en app, og du forbliver logget ind.</span>
+  </div>
+  <button class="btn small install-btn" id="install-btn" hidden>Installér</button>
+  <button class="install-x" id="install-x" aria-label="Luk"><?= icon('plus') ?></button>
+</aside>
+<script>
+(() => {
+  const box = document.getElementById('install');
+  if (!box) return;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const mobile = matchMedia('(max-width: 900px)').matches && matchMedia('(pointer: coarse)').matches;
+  let dismissed = false;
+  try { dismissed = (Number(localStorage.getItem('install-dismissed')) || 0) > Date.now() - 14 * 864e5; } catch (e) {}
+  if (standalone || !mobile || dismissed) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  box.classList.add(ios ? 'is-ios' : 'is-other');
+  box.hidden = false;
+  requestAnimationFrame(() => box.classList.add('show'));
+  let deferred = null;
+  addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferred = e;
+    document.getElementById('install-btn').hidden = false;
+  });
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice;
+    deferred = null;
+    box.remove();
+  });
+  document.getElementById('install-x').addEventListener('click', () => {
+    try { localStorage.setItem('install-dismissed', String(Date.now())); } catch (e) {}
+    box.classList.remove('show');
+    setTimeout(() => box.remove(), 400);
+  });
+})();
+</script>
 </body>
 </html>
