@@ -1872,3 +1872,9 @@ html.mp-playing .app, html:has(.mp.playing):not(.mp-closed) .app {
   -webkit-backdrop-filter: blur(40px);
   backdrop-filter: blur(40px);
 }
+
+html.mp-playing .card, html:has(.mp.playing):not(.mp-closed) .card {
+  background: #0d0d0e8c;
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+}
