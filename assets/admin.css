@@ -2237,3 +2237,6 @@ button.round { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-ap
 .chat-note { margin-right: auto; display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 99px; background: var(--card-2); box-shadow: var(--inset); font-size: 13px; color: var(--soft); animation: boot-swap .3s ease; transition: opacity .4s ease; }
 .chat-note[hidden] { display: none; }
 .chat-note.out { opacity: 0; }
+
+.topbar .me.bell { padding: 0; gap: 0; }
+.topbar .me.bell .ic { width: 22px; height: 22px; margin: 0; color: var(--ink); }

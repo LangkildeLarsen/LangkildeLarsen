@@ -1069,8 +1069,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php endif; ?>
         </div>
       </div>
-      <a class="me" href="./?view=settings" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
-        <?php if ($isOwner): ?><img src="<?= e($profile['photo'] ? '../uploads/' . $profile['photo'] : '../assets/brand/avatar-round.png') ?>" alt=""><?php else: ?><span class="initials"><?= e(initials($me)) ?></span><?php endif; ?>
+      <a class="me bell" href="./?view=settings" aria-label="<?= e($me['name']) ?>" title="<?= e($me['name'] . ' · ' . $me['email']) ?>">
+        <?= icon('user') ?>
       </a>
     </header>
 
