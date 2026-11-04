@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - run: curl -fsS --max-time 30 https://langkildelarsen.dk/api/cron.php || true
+      - run: curl -4 -fsS --max-time 60 https://langkildelarsen.dk/api/cron.php || true
