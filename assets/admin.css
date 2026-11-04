@@ -1403,3 +1403,31 @@ html.loading .content { opacity: .55; transition: opacity .2s ease .1s; }
 .tile-ic { display: grid; place-items: center; width: 46px; height: 46px; flex: none; border-radius: 50%; background: var(--card-3); }
 
 .tile > .ic { color: var(--muted); width: 18px; height: 18px; }
+
+.mp-head .mp-grip { margin-left: auto; }
+
+.mp-label { flex: 0 1 auto; }
+
+.mp-link.on { background: #fff; color: #000; }
+
+.mp-url { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 0 0 12px; }
+
+.mp-url input { height: 42px; padding: 0 14px; border-radius: 999px; font-size: 13px; }
+
+.mp-url .btn { height: 42px; }
+
+.mp-err { grid-column: 1 / -1; margin: 0; color: var(--orange); font-size: 13px; }
+
+.mp-url[hidden], .mp-err[hidden] { display: none; }
+
+.mp-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); }
+
+.mp-ph .ic { width: 40px; height: 40px; }
+
+.mp-cover { z-index: 1; }
+
+.mp-cover[hidden] { display: none; }
+
+.mp-screen #mp-yt, .mp-screen iframe { z-index: 2; }
+
+.mp:not(.has-video) .mp-screen iframe { opacity: 0; }

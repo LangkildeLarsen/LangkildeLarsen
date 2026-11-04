@@ -433,6 +433,31 @@ if ($action) {
         redirect('index.php?view=settings#brugere');
     }
 
+    if ($action === 'save_music') {
+        $raw = trim((string)($_POST['url'] ?? ''));
+        $v = '';
+        $list = '';
+        if (preg_match('~(?:youtu\.be/|[?&]v=|/embed/|/shorts/|/live/)([A-Za-z0-9_-]{11})~', $raw, $m)) {
+            $v = $m[1];
+        } elseif (preg_match('~^[A-Za-z0-9_-]{11}$~', $raw)) {
+            $v = $raw;
+        }
+        if (preg_match('~[?&]list=([A-Za-z0-9_-]+)~', $raw, $m)) {
+            $list = $m[1];
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        if ($v === '' && $list === '') {
+            http_response_code(422);
+            echo json_encode(['error' => 'Det ligner ikke et YouTube-link.']);
+            exit;
+        }
+        $ui = load_json(ukey('ui'));
+        $ui['music'] = ['v' => $v, 'list' => $list, 'url' => $raw];
+        save_json(ukey('ui'), $ui);
+        echo json_encode(['v' => $v, 'list' => $list, 'url' => $raw]);
+        exit;
+    }
+
     if ($action === 'save_budget') {
         save_json(ukey('budget'), budget_from_post($_POST));
         flash('Budget gemt.');
@@ -1406,14 +1431,24 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <?php endif; ?>
   </main>
 </div>
-<section class="mp" id="mp" hidden aria-label="Musikafspiller">
+<?php $music = ($ui['music'] ?? null) ?: ['v' => 'byOVTxnILMU', 'list' => 'RDbyOVTxnILMU', 'url' => 'https://www.youtube.com/watch?v=byOVTxnILMU&list=RDbyOVTxnILMU']; ?>
+<section class="mp" id="mp" hidden aria-label="Musikafspiller" data-v="<?= e($music['v']) ?>" data-list="<?= e($music['list']) ?>">
   <div class="mp-head" data-drag>
-    <span class="mp-grip"><?= icon('drag') ?></span>
+    <button type="button" class="mp-x mp-link" data-mp-link aria-label="Skift YouTube-link" aria-expanded="false"><?= icon('link') ?></button>
     <span class="mp-label">Musik</span>
+    <span class="mp-grip"><?= icon('drag') ?></span>
     <button type="button" class="mp-x" data-player-close aria-label="Luk afspilleren"><?= icon('cross') ?></button>
   </div>
+  <form class="mp-url" id="mp-url" hidden>
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_music">
+    <input name="url" value="<?= e($music['url'] ?? '') ?>" placeholder="Indsæt YouTube-link til video eller playliste" aria-label="YouTube-link" autocomplete="off">
+    <button class="btn small">Brug</button>
+    <p class="mp-err" id="mp-err" hidden></p>
+  </form>
   <div class="mp-screen">
-    <img class="mp-cover" src="https://i.ytimg.com/vi/byOVTxnILMU/hqdefault.jpg" alt="">
+    <img class="mp-cover" src="<?= $music['v'] ? 'https://i.ytimg.com/vi/' . e($music['v']) . '/hqdefault.jpg' : '' ?>" alt=""<?= $music['v'] ? '' : ' hidden' ?>>
+    <span class="mp-ph"><?= icon('music') ?></span>
     <div id="mp-yt"></div>
   </div>
   <p class="mp-title" id="mp-title">YouTube Mix</p>

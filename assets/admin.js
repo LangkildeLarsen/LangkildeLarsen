@@ -130,8 +130,8 @@
 
   const mp = document.getElementById('mp');
   if (!mp) return;
-  const VIDEO = 'byOVTxnILMU';
-  const LIST = 'RDbyOVTxnILMU';
+  let VIDEO = mp.dataset.v || '';
+  let LIST = mp.dataset.list || '';
   const $ = id => document.getElementById(id);
   const seek = $('mp-seek');
   const vol = $('mp-volume');
@@ -200,8 +200,8 @@
     player = new YT.Player('mp-yt', {
       width: '100%',
       height: '100%',
-      videoId: VIDEO,
-      playerVars: { listType: 'playlist', list: LIST, autoplay: 0, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1 },
+      videoId: VIDEO || undefined,
+      playerVars: Object.assign(LIST ? { listType: 'playlist', list: LIST } : {}, { autoplay: 0, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1 }),
       events: {
         onReady: () => {
           ready = true;
@@ -304,6 +304,49 @@
   head.addEventListener('pointercancel', end);
   head.addEventListener('dblclick', () => { store.set('mp-pos', null); applyPos(); });
   addEventListener('resize', () => { if (mp.classList.contains('moved')) applyPos(); });
+
+  const urlForm = $('mp-url');
+  const err = $('mp-err');
+  const linkBtn = mp.querySelector('[data-mp-link]');
+  linkBtn.addEventListener('click', () => {
+    urlForm.hidden = !urlForm.hidden;
+    linkBtn.setAttribute('aria-expanded', String(!urlForm.hidden));
+    linkBtn.classList.toggle('on', !urlForm.hidden);
+    if (!urlForm.hidden) urlForm.querySelector('input[name=url]').select();
+    if (mp.classList.contains('moved')) applyPos();
+  });
+  urlForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    err.hidden = true;
+    let data;
+    try {
+      const r = await fetch('index.php', { method: 'POST', body: new FormData(urlForm), credentials: 'same-origin' });
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Fejl');
+    } catch (x) {
+      err.textContent = x.message && x.message !== 'Failed to fetch' ? x.message : 'Kunne ikke gemme linket.';
+      err.hidden = false;
+      return;
+    }
+    VIDEO = data.v;
+    LIST = data.list;
+    const cover = mp.querySelector('.mp-cover');
+    cover.hidden = !VIDEO;
+    if (VIDEO) cover.src = 'https://i.ytimg.com/vi/' + VIDEO + '/hqdefault.jpg';
+    title.textContent = 'Henter…';
+    urlForm.hidden = true;
+    linkBtn.classList.remove('on');
+    linkBtn.setAttribute('aria-expanded', 'false');
+    if (player && ready) {
+      if (LIST) player.cuePlaylist({ list: LIST, listType: 'playlist', index: 0 });
+      else player.cueVideoById(VIDEO);
+      mp.classList.remove('playing');
+      setTimeout(updateTitle, 1200);
+    } else {
+      create();
+    }
+  });
 
   if (store.get('mp-open', true)) open();
 })();
