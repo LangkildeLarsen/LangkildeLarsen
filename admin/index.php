@@ -521,12 +521,23 @@ if ($action) {
             redirect('index.php');
         }
         $key = trim((string)($_POST['key'] ?? ''));
+        $cfg = load_json('claude');
         if (!empty($_POST['remove'])) {
-            save_json('claude', []);
+            unset($cfg['key'], $cfg['saved']);
+            save_json('claude', $cfg);
             flash('API-nøglen er fjernet.');
-        } elseif ($key !== '') {
-            save_json('claude', ['key' => $key, 'saved' => date('c')]);
-            flash('API-nøglen er gemt.');
+        } else {
+            if ($key !== '') {
+                $cfg['key'] = $key;
+                $cfg['saved'] = date('c');
+            }
+            $model = (string)($_POST['model'] ?? '');
+            if (isset(CLAUDE_MODELS[$model])) {
+                $cfg['model'] = $model;
+            }
+            $cfg['cap'] = max(0, (int)preg_replace('/\D/', '', (string)($_POST['cap'] ?? '0')));
+            save_json('claude', $cfg);
+            flash($key !== '' ? 'API-nøglen er gemt.' : 'Indstillingerne er gemt.');
         }
         redirect('index.php?view=settings#claude');
     }
@@ -1380,9 +1391,23 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <?php if (!empty($ck['key'])): ?>
             <p class="small"><span class="st green"><i></i>Nøgle gemt</span> <span class="muted">slutter på …<?= e(substr($ck['key'], -4)) ?></span></p>
           <?php endif; ?>
-          <label>API-nøgle<input type="password" name="key" placeholder="sk-ant-…" autocomplete="off"></label>
+          <label>API-nøgle<input type="password" name="key" placeholder="<?= !empty($ck['key']) ? 'Lad stå tomt for at beholde nøglen' : 'sk-ant-…' ?>" autocomplete="off"></label>
+          <label>Model<select name="model"><?php foreach (CLAUDE_MODELS as $mid => $mlabel): ?><option value="<?= e($mid) ?>"<?= claude_model() === $mid ? ' selected' : '' ?>><?= e($mlabel) ?></option><?php endforeach; ?></select></label>
+          <label>Maks. tokens pr. måned <small class="muted">0 = ingen grænse</small><input name="cap" inputmode="numeric" value="<?= e((string)claude_cap()) ?>"></label>
+          <?php $cu = claude_month_usage(); $ctot = claude_month_total($cu); $ccap = claude_cap(); ?>
+          <div class="usage-box">
+            <div class="usage-top"><span>Forbrug i <?= e(dk_month(date('Y-m'))) ?></span><strong><?= e(number_format($ctot, 0, ',', '.')) ?><?= $ccap ? ' / ' . e(number_format($ccap, 0, ',', '.')) : '' ?> tokens</strong></div>
+            <?php if ($ccap): ?><div class="usage-bar"><i style="width: <?= min(100, round($ctot / $ccap * 100)) ?>%"></i></div><?php endif; ?>
+            <dl class="usage-grid">
+              <div><dt>Samtaler</dt><dd><?= e(number_format($cu['chats'], 0, ',', '.')) ?></dd></div>
+              <div><dt>Input</dt><dd><?= e(number_format($cu['in'], 0, ',', '.')) ?></dd></div>
+              <div><dt>Output</dt><dd><?= e(number_format($cu['out'], 0, ',', '.')) ?></dd></div>
+              <div><dt>Fra cache</dt><dd><?= e(number_format($cu['cache_read'], 0, ',', '.')) ?></dd></div>
+            </dl>
+            <?php if (count($cu['users']) > 1): ?><p class="muted small"><?= e(implode(' · ', array_map(fn($em, $n) => first_name(users_all()[$em] ?? ['name' => $em, 'email' => $em]) . ' ' . number_format($n, 0, ',', '.'), array_keys($cu['users']), $cu['users']))) ?></p><?php endif; ?>
+          </div>
           <div class="actions">
-            <button class="btn">Gem nøgle</button>
+            <button class="btn">Gem</button>
             <?php if (!empty($ck['key'])): ?><button class="btn ghost danger" name="remove" value="1">Fjern</button><?php endif; ?>
           </div>
         </form>
