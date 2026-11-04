@@ -1,16 +1,17 @@
 (() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+
   const nav = document.querySelector('.rail-nav');
   const pill = nav && nav.querySelector('.rail-pill');
-  if (!nav || !pill) return;
-  const links = [...nav.querySelectorAll('a')];
-  const active = nav.querySelector('a.active');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const navLinks = nav ? [...nav.querySelectorAll('a')] : [];
 
-  const place = (el, animate) => {
-    if (!el) {
-      pill.style.opacity = '0';
-      return;
-    }
+  const placePill = (el, animate) => {
+    if (!pill) return;
+    if (!el) { pill.style.opacity = '0'; return; }
     pill.style.transition = animate && !reduce ? '' : 'none';
     pill.style.width = el.offsetWidth + 'px';
     pill.style.height = el.offsetHeight + 'px';
@@ -19,32 +20,290 @@
     if (!animate) pill.getBoundingClientRect();
   };
 
-  let from = null;
-  try { from = links[Number(sessionStorage.getItem('rail-from'))] || null; } catch (e) {}
-  nav.classList.add('has-pill');
-  if (from && active && from !== active) {
-    place(from, false);
-    requestAnimationFrame(() => requestAnimationFrame(() => place(active, true)));
-  } else {
-    place(active, false);
+  const setActive = el => {
+    navLinks.forEach(a => a.classList.toggle('active', a === el));
+    placePill(el, true);
+  };
+
+  if (nav) {
+    nav.classList.add('has-pill');
+    placePill(nav.querySelector('a.active'), false);
+    let t;
+    addEventListener('resize', () => {
+      clearTimeout(t);
+      t = setTimeout(() => placePill(nav.querySelector('a.active'), false), 80);
+    });
   }
 
-  links.forEach((a, i) => {
-    a.addEventListener('click', e => {
-      if (a.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey) return;
-      try { sessionStorage.setItem('rail-from', String(links.indexOf(active))); } catch (err) {}
-      if (a === active) return;
-      e.preventDefault();
-      active && active.classList.remove('active');
-      a.classList.add('active');
-      place(a, true);
-      setTimeout(() => { location.href = a.href; }, reduce ? 0 : 260);
-    });
+  const isAdminUrl = url => url.origin === location.origin && url.pathname.replace(/index\.php$/, '') === location.pathname.replace(/index\.php$/, '');
+
+  const cache = new Map();
+  const getPage = url => fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'swap' } })
+    .then(async r => ({ ok: r.ok, url: r.url, html: await r.text() }));
+  const prefetch = url => {
+    const hit = cache.get(url);
+    if (hit && Date.now() - hit.t < 15000) return hit.p;
+    const p = getPage(url).catch(() => null);
+    cache.set(url, { t: Date.now(), p });
+    return p;
+  };
+
+  const swap = async (url, init, push = true) => {
+    document.documentElement.classList.add('loading');
+    let res;
+    try {
+      if (init && init.method === 'POST') {
+        cache.clear();
+        const r = await fetch(url, Object.assign({ credentials: 'same-origin', headers: { 'X-Requested-With': 'swap' } }, init));
+        res = { ok: r.ok, url: r.url, html: await r.text() };
+      } else {
+        res = await prefetch(url);
+        cache.delete(url);
+        if (!res) throw new Error('fetch');
+      }
+    } catch (e) {
+      location.href = url;
+      return;
+    }
+    const html = res.html;
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const fresh = doc.querySelector('main.content');
+    const current = document.querySelector('main.content');
+    if (!res.ok || !fresh || !current) {
+      location.href = res.url || url;
+      return;
+    }
+    current.replaceWith(fresh);
+    document.title = doc.title;
+    const freshActive = doc.querySelector('.rail-nav a.active');
+    const label = freshActive && freshActive.getAttribute('aria-label');
+    setActive(navLinks.find(a => a.getAttribute('aria-label') === label) || null);
+    const finalUrl = new URL(res.url);
+    const hash = new URL(url, location.href).hash;
+    if (push) history.pushState({ swap: true }, '', finalUrl.pathname + finalUrl.search + hash);
+    document.documentElement.classList.remove('loading');
+    const target = hash && document.querySelector(hash);
+    if (target) target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+    else if (push) scrollTo({ top: 0, behavior: 'auto' });
+    fresh.querySelectorAll('.card, .hack-card').forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
+  };
+
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (a.target === '_blank' || a.hasAttribute('download') || a.dataset.reload !== undefined) return;
+    const url = new URL(a.href, location.href);
+    if (!isAdminUrl(url)) return;
+    if (url.search === location.search && url.hash) return;
+    e.preventDefault();
+    if (navLinks.includes(a)) setActive(a);
+    swap(url.href);
   });
 
-  let t;
-  addEventListener('resize', () => {
-    clearTimeout(t);
-    t = setTimeout(() => place(nav.querySelector('a.active'), false), 80);
+  document.addEventListener('submit', e => {
+    const form = e.target;
+    if (e.defaultPrevented || form.dataset.reload !== undefined || form.closest('[data-reload]')) return;
+    const action = new URL(form.getAttribute('action') || location.href, location.href);
+    if (!isAdminUrl(action)) return;
+    e.preventDefault();
+    const method = (form.getAttribute('method') || 'get').toLowerCase();
+    let data;
+    try { data = new FormData(form, e.submitter); } catch (err) { data = new FormData(form); if (e.submitter && e.submitter.name) data.append(e.submitter.name, e.submitter.value); }
+    if (method === 'get') {
+      action.search = new URLSearchParams(data).toString();
+      swap(action.href);
+    } else {
+      swap(action.href, { method: 'POST', body: data });
+    }
   });
+
+  addEventListener('popstate', () => swap(location.href, null, false));
+
+  const warm = e => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank') return;
+    const url = new URL(a.href, location.href);
+    if (isAdminUrl(url) && url.search !== location.search) prefetch(url.href);
+  };
+  document.addEventListener('pointerover', warm, { passive: true });
+  document.addEventListener('touchstart', warm, { passive: true });
+
+  const mp = document.getElementById('mp');
+  if (!mp) return;
+  const VIDEO = 'byOVTxnILMU';
+  const LIST = 'RDbyOVTxnILMU';
+  const $ = id => document.getElementById(id);
+  const seek = $('mp-seek');
+  const vol = $('mp-volume');
+  const title = $('mp-title');
+  let player = null;
+  let ready = false;
+  let wantPlay = false;
+  let seeking = false;
+  let apiPromise = null;
+
+  const fmt = s => {
+    s = Math.max(0, Math.floor(s || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  };
+
+  const clamp = (x, y) => {
+    const w = mp.offsetWidth, h = mp.offsetHeight;
+    return [Math.min(Math.max(8, x), innerWidth - w - 8), Math.min(Math.max(8, y), innerHeight - h - 8)];
+  };
+
+  const applyPos = () => {
+    const pos = store.get('mp-pos', null);
+    if (!pos) { mp.style.left = ''; mp.style.top = ''; mp.classList.remove('moved'); return; }
+    const [x, y] = clamp(pos[0], pos[1]);
+    mp.style.left = x + 'px';
+    mp.style.top = y + 'px';
+    mp.classList.add('moved');
+  };
+
+  const open = () => {
+    mp.hidden = false;
+    requestAnimationFrame(() => mp.classList.add('show'));
+    applyPos();
+    store.set('mp-open', true);
+    document.querySelectorAll('[data-player-open]').forEach(b => b.classList.add('on'));
+    create();
+  };
+
+  const close = () => {
+    mp.classList.remove('show');
+    store.set('mp-open', false);
+    if (player && ready) player.stopVideo();
+    mp.classList.remove('playing');
+    setTimeout(() => { mp.hidden = true; }, 300);
+    document.querySelectorAll('[data-player-open]').forEach(b => b.classList.remove('on'));
+  };
+
+  const loadApi = () => apiPromise || (apiPromise = new Promise(resolve => {
+    if (window.YT && window.YT.Player) return resolve();
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev && prev(); resolve(); };
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(s);
+  }));
+
+  const updateTitle = () => {
+    try {
+      const d = player.getVideoData();
+      if (d && d.title) title.textContent = d.title + (d.author ? ' · ' + d.author : '');
+    } catch (e) {}
+  };
+
+  const create = () => loadApi().then(() => new Promise(resolve => {
+    if (player) return resolve();
+    player = new YT.Player('mp-yt', {
+      width: '100%',
+      height: '100%',
+      videoId: VIDEO,
+      playerVars: { listType: 'playlist', list: LIST, autoplay: 0, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1 },
+      events: {
+        onReady: () => {
+          ready = true;
+          player.setVolume(Number(vol.value));
+          if (store.get('mp-muted', false)) player.mute();
+          mp.classList.add('has-video');
+          if (wantPlay) player.playVideo();
+          resolve();
+        },
+        onStateChange: e => {
+          mp.classList.toggle('playing', e.data === YT.PlayerState.PLAYING);
+          if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.CUED) updateTitle();
+        },
+      },
+    });
+  }));
+
+  const act = async what => {
+    if (what === 'mute') {
+      const muted = !mp.classList.contains('muted');
+      mp.classList.toggle('muted', muted);
+      store.set('mp-muted', muted);
+      if (player && ready) muted ? player.mute() : player.unMute();
+      return;
+    }
+    if (!player || !ready) {
+      if (what === 'toggle') wantPlay = true;
+      create();
+      return;
+    }
+    if (what === 'toggle') {
+      player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
+    } else if (what === 'next') {
+      player.nextVideo();
+    } else if (what === 'prev') {
+      player.getCurrentTime() > 4 ? player.seekTo(0, true) : player.previousVideo();
+    }
+  };
+
+  mp.addEventListener('click', e => {
+    const b = e.target.closest('[data-mp]');
+    if (b) act(b.dataset.mp);
+  });
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-player-open]')) mp.hidden ? open() : close();
+    if (e.target.closest('[data-player-close]')) close();
+  });
+
+  vol.value = store.get('mp-volume', 60);
+  mp.classList.toggle('muted', store.get('mp-muted', false));
+  const paintVol = () => vol.style.setProperty('--v', vol.value + '%');
+  paintVol();
+  vol.addEventListener('input', () => {
+    store.set('mp-volume', Number(vol.value));
+    paintVol();
+    if (player && ready) {
+      player.setVolume(Number(vol.value));
+      if (Number(vol.value) > 0 && mp.classList.contains('muted')) { player.unMute(); mp.classList.remove('muted'); store.set('mp-muted', false); }
+    }
+  });
+
+  seek.addEventListener('input', () => { seeking = true; seek.style.setProperty('--v', seek.value / 10 + '%'); });
+  seek.addEventListener('change', () => {
+    seeking = false;
+    if (player && ready) player.seekTo(player.getDuration() * seek.value / 1000, true);
+  });
+
+  setInterval(() => {
+    if (!player || !ready || seeking || mp.hidden) return;
+    const d = player.getDuration() || 0, c = player.getCurrentTime() || 0;
+    seek.value = d ? Math.round(c / d * 1000) : 0;
+    seek.style.setProperty('--v', (d ? c / d * 100 : 0) + '%');
+    $('mp-cur').textContent = fmt(c);
+    $('mp-dur').textContent = fmt(d);
+  }, 500);
+
+  const head = mp.querySelector('[data-drag]');
+  let drag = null;
+  head.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    const r = mp.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    head.setPointerCapture(e.pointerId);
+    mp.classList.add('dragging', 'moved');
+  });
+  head.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const [x, y] = clamp(e.clientX - drag.dx, e.clientY - drag.dy);
+    mp.style.left = x + 'px';
+    mp.style.top = y + 'px';
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    mp.classList.remove('dragging');
+    store.set('mp-pos', [parseFloat(mp.style.left), parseFloat(mp.style.top)]);
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+  head.addEventListener('dblclick', () => { store.set('mp-pos', null); applyPos(); });
+  addEventListener('resize', () => { if (mp.classList.contains('moved')) applyPos(); });
+
+  if (store.get('mp-open', true)) open();
 })();

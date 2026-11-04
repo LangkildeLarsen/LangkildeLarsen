@@ -762,21 +762,15 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
             ['hacks', './?view=hacks', 'bulb', 'Lifehacks'],
             ['budget', './?view=budget', 'wallet', 'Budget'],
             ['calendar', './?view=calendar', 'calendar', 'Kalender'],
-            ['projects', './?view=projects', 'grid', 'Projekter'],
-            ['profile', './?view=profile', 'user', 'Profil & CV'],
             ['settings', './?view=settings', 'gear', 'Indstillinger'],
         ];
-        if (!$isOwner) {
-            $railItems = array_values(array_filter($railItems, fn($r) => !in_array($r[0], ['projects', 'profile'], true)));
-        }
-        $activeView = in_array($view, ['hack', 'edit'], true) ? 'hacks' : $view;
+        $activeView = in_array($view, ['hack', 'edit'], true) ? 'hacks' : (in_array($view, ['profile', 'projects'], true) ? 'settings' : $view);
       ?>
       <?php foreach ($railItems as [$v, $href, $ic, $label]): ?>
         <a href="<?= $href ?>" class="<?= $activeView === $v ? 'active' : '' ?>" aria-label="<?= e($label) ?>"><?= icon($ic) ?><span class="tip"><?= e($label) ?></span></a>
       <?php endforeach; ?>
-      <a href="../" target="_blank" aria-label="Se siden" class="rail-ext"><?= icon('external') ?><span class="tip">Se siden</span></a>
     </nav>
-    <form method="post" class="rail-out">
+    <form method="post" class="rail-out" data-reload>
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="logout">
       <button aria-label="Log ud"><?= icon('logout') ?><span class="tip">Log ud</span></button>
@@ -804,6 +798,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <span><strong><?= e(implode(' ', array_slice(preg_split('/\s+/', trim($me['name'])), 0, 2))) ?></strong><small><?= e($me['email']) ?></small></span>
         <?= icon('down') ?>
       </a>
+      <button class="bell music-btn" type="button" data-player-open aria-label="Åbn musikafspiller"><?= icon('music') ?></button>
       <a class="bell" href="./?view=calendar" aria-label="Notifikationer"><?= icon('bell') ?><?php if ($bellItems): ?><i></i><?php endif; ?></a>
     </header>
 
@@ -1134,6 +1129,13 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
       <form method="post" id="fetch-logos"><?= csrf_field() ?><input type="hidden" name="action" value="fetch_logos"></form>
 
     <?php elseif ($view === 'settings'): ?>
+      <?php if ($isOwner): ?>
+        <section class="tiles">
+          <a class="tile" href="./?view=profile"><span class="tile-ic"><?= icon('user') ?></span><span><strong>Profil & CV</strong><small>Navn, billede, erfaring og uddannelse</small></span><?= icon('right') ?></a>
+          <a class="tile" href="./?view=projects"><span class="tile-ic"><?= icon('grid') ?></span><span><strong>Projekter</strong><small>Billeder og projekter på forsiden</small></span><?= icon('right') ?></a>
+          <a class="tile" href="../" target="_blank"><span class="tile-ic"><?= icon('external') ?></span><span><strong>Se siden</strong><small>Åbn langkildelarsen.dk</small></span><?= icon('arrow') ?></a>
+        </section>
+      <?php endif; ?>
       <div class="cols">
         <form method="post" class="panel form">
           <?= csrf_field() ?>
@@ -1404,6 +1406,29 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
     <?php endif; ?>
   </main>
 </div>
+<section class="mp" id="mp" hidden aria-label="Musikafspiller">
+  <div class="mp-head" data-drag>
+    <span class="mp-grip"><?= icon('drag') ?></span>
+    <span class="mp-label">Musik</span>
+    <button type="button" class="mp-x" data-player-close aria-label="Luk afspilleren"><?= icon('cross') ?></button>
+  </div>
+  <div class="mp-screen">
+    <img class="mp-cover" src="https://i.ytimg.com/vi/byOVTxnILMU/hqdefault.jpg" alt="">
+    <div id="mp-yt"></div>
+  </div>
+  <p class="mp-title" id="mp-title">YouTube Mix</p>
+  <input type="range" class="mp-seek" id="mp-seek" min="0" max="1000" value="0" aria-label="Spol">
+  <div class="mp-times"><span id="mp-cur">0:00</span><span id="mp-dur">0:00</span></div>
+  <div class="mp-ctrl">
+    <button type="button" class="mp-b" data-mp="prev" aria-label="Forrige"><?= icon('prev') ?></button>
+    <button type="button" class="mp-b big" data-mp="toggle" aria-label="Afspil"><span class="i-play"><?= icon('play') ?></span><span class="i-pause"><?= icon('pause') ?></span></button>
+    <button type="button" class="mp-b" data-mp="next" aria-label="Næste"><?= icon('next') ?></button>
+  </div>
+  <div class="mp-vol">
+    <button type="button" class="mp-b small" data-mp="mute" aria-label="Slå lyd fra"><span class="i-vol"><?= icon('vol2') ?></span><span class="i-mute"><?= icon('mute') ?></span></button>
+    <input type="range" id="mp-volume" min="0" max="100" value="60" aria-label="Lydstyrke">
+  </div>
+</section>
 <aside class="install" id="install" hidden>
   <img src="../assets/brand/dash-180.png" alt="" class="install-ic">
   <div class="install-txt">
