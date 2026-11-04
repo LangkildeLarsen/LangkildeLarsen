@@ -2640,3 +2640,9 @@ html.mp-playing .card, html:has(.mp.playing) .card, html:has(.mp.playing):not(.m
 .wt:hover .wt-x, .wt-x:focus-visible { opacity: 1; }
 .wt-x:hover { background: var(--card-2); color: var(--ink); }
 @media (hover: none) { .wt-x { opacity: 1; } }
+
+input:focus, textarea:focus, select:focus { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .55); }
+:focus-visible { outline-color: rgba(255, 255, 255, .7); }
+.rem-add input:focus { box-shadow: none; background: transparent; }
+.rem-add:focus-within { box-shadow: var(--inset), inset 0 0 0 1.5px rgba(255, 255, 255, .55); }
+.mp input[type="range"]:focus, .dk-vol input[type="range"]:focus, .sx-field input:focus { box-shadow: none; }
