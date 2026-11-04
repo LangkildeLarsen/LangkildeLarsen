@@ -94,8 +94,8 @@ function exp_item(array $x): string
     <?php $pills = ['orange', 'green', 'yellow', 'blue']; $pillText = ['Start', 'Omsætning', 'Om året', 'Om året']; ?>
     <?php foreach ($p['highlights'] as $i => $h): ?>
       <div class="card mini reveal" style="--d: <?= $i ?>">
-        <span><?= e($h['label']) ?></span>
         <strong><b data-count="<?= e($h['value']) ?>"><?= e($h['value']) ?></b><em class="pill-s <?= $pills[$i % 4] ?>"><?= e($pillText[$i] ?? '') ?></em></strong>
+        <span><?= e(mb_strtoupper(mb_substr($h['label'], 0, 1)) . mb_substr($h['label'], 1)) ?></span>
       </div>
     <?php endforeach; ?>
 
