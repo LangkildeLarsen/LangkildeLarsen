@@ -125,7 +125,6 @@
       dlg.querySelector('[data-lp-dtitle]').textContent = b.dataset.edit ? 'Rediger genvej' : 'Ny genvej';
       setDrop('img', b.dataset.img || '');
       setPos(b.dataset.pos || '50% 50%');
-      f.center.checked = !!b.dataset.center;
       setDrop('icon', b.dataset.icon || '');
       active = 'img';
       dlg.showModal();

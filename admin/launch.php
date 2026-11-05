@@ -61,12 +61,11 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
       <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $iconUrl = launch_src($l['icon'] ?? ''); $hasIcon = $iconUrl !== ''; if ($hasIcon) { $fav = $iconUrl; } $imgUrl = launch_src($l['img'] ?? ''); ?>
         <div class="sc" data-host="<?= e($host) ?>" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
-          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?><?= !empty($l['center']) ? ' has-center' : '' ?>">
-            <?php if (!empty($l['center'])): ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
+          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?> has-center">
+            <img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
           <span class="sc-bar">
-            <span class="sc-logo"><img src="<?= e($fav) ?>" alt="" data-fallback referrerpolicy="no-referrer"></span>
             <span class="sc-tx"><strong><?= e($l['name']) ?></strong></span>
             <span class="sc-go"><?= icon('arrow') ?></span>
           </span>
@@ -124,7 +123,6 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </div>
     <label>Eller link til billede<input name="img_url" placeholder="https://…/billede.jpg" inputmode="url"></label>
     <label>Eller link til ikon<input name="icon_url" placeholder="https://…/ikon.png" inputmode="url"></label>
-    <label class="check"><input type="checkbox" name="center" value="1"> Vis ikonet midt på billedet</label>
     <label class="check"><input type="checkbox" name="auto" value="1" checked> Hent sidens billede automatisk, hvis jeg ikke vælger et</label>
     <div class="actions">
       <button class="btn">Gem</button>

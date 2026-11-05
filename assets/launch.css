@@ -167,3 +167,4 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .sc:hover .sc-img.has-center.has-img::after { background: rgb(0 0 0 / 35%); }
 .sc-center { z-index: 2; }
 .sc-center[src*="fav-96"] { border-radius: 0; }
+.sc-bar { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 18px 14px; }
