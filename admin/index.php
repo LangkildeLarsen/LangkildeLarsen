@@ -722,8 +722,29 @@ if ($action) {
             $ui['bg'] = '';
             flash('Standardbaggrunden er sat igen.');
         } else {
-            $saved = save_upload($_FILES['bg'] ?? [], 'backgrounds', 'bg-' . bin2hex(random_bytes(3)));
-            if ($saved) {
+            $ui['bg_dim'] = max(0, min(85, (int)($_POST['bg_dim'] ?? ($ui['bg_dim'] ?? 45))));
+            $ui['bg_blur'] = max(0, min(60, (int)($_POST['bg_blur'] ?? ($ui['bg_blur'] ?? 24))));
+            $hasFile = !empty($_FILES['bg']['tmp_name']);
+            $saved = $hasFile ? save_upload($_FILES['bg'], 'backgrounds', 'bg-' . bin2hex(random_bytes(3))) : null;
+            if ($saved && function_exists('imagecreatefromstring')) {
+                $full = UPLOAD_DIR . '/' . $saved;
+                $sz = @getimagesize($full);
+                if ($sz && $sz[0] > 2560 && ($im = @imagecreatefromstring((string)file_get_contents($full)))) {
+                    $nw = 2560;
+                    $nh = (int)round($sz[1] * $nw / $sz[0]);
+                    $dst = imagecreatetruecolor($nw, $nh);
+                    imagecopyresampled($dst, $im, 0, 0, 0, 0, $nw, $nh, $sz[0], $sz[1]);
+                    $jpg = preg_replace('/\.\w+$/', '.jpg', $saved);
+                    imagejpeg($dst, UPLOAD_DIR . '/' . $jpg, 84);
+                    if ($jpg !== $saved) {
+                        @unlink($full);
+                    }
+                    $saved = $jpg;
+                }
+            }
+            if (!$hasFile) {
+                flash('Baggrunden er opdateret.');
+            } elseif ($saved) {
                 if (!empty($ui['bg'])) {
                     @unlink(UPLOAD_DIR . '/' . $ui['bg']);
                 }
@@ -1169,7 +1190,9 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 <script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
 </head>
-<body>
+<?php $bgFile = (string)($ui['bg'] ?? ''); $hasBg = $bgFile !== '' && is_file(UPLOAD_DIR . '/' . $bgFile); ?>
+<body<?= $hasBg ? ' class="has-bg" style="--bg-dim: ' . ((int)($ui['bg_dim'] ?? 45) / 100) . '; --glass-blur: ' . (int)($ui['bg_blur'] ?? 24) . 'px"' : '' ?>>
+<?php if ($hasBg): ?><div class="dash-bg" style="background-image: url('../uploads/<?= e($bgFile) ?>?v=<?= filemtime(UPLOAD_DIR . '/' . $bgFile) ?>')" aria-hidden="true"></div><?php endif; ?>
 <div class="app">
   <aside class="rail" aria-label="Menu">
     <a href="./" class="rail-logo" aria-label="Oversigt"><img src="../assets/brand/dash-mark.png" alt=""></a>
@@ -1771,6 +1794,21 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <p class="muted small">Hvor mange gange om ugen du vil træne. Du kan også logge via Jarvis, fx "jeg har trænet i dag".</p>
         <label>Træninger pr. uge<input type="number" name="week_goal" min="1" max="7" value="<?= (int)$tr['week_goal'] ?>"></label>
         <div class="actions"><button class="btn">Gem</button></div>
+      </form>
+
+      <form method="post" enctype="multipart/form-data" class="panel form" id="baggrund" data-reload>
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_background">
+        <h2 class="section-title">Baggrund</h2>
+        <p class="muted small">Et billede bag hele dashboardet. Kortene bliver til mat glas med blur ovenpå.</p>
+        <?php if ($hasBg): ?><div class="bg-preview" style="background-image: url('../uploads/<?= e($bgFile) ?>')"></div><?php endif; ?>
+        <label>Billede (JPG, PNG eller WebP)<input type="file" name="bg" accept="image/jpeg,image/png,image/webp"></label>
+        <label>Mørkere baggrund <span class="muted small" data-out="bg_dim"><?= (int)($ui['bg_dim'] ?? 45) ?>%</span><input type="range" name="bg_dim" min="0" max="85" value="<?= (int)($ui['bg_dim'] ?? 45) ?>" data-live="--bg-dim" data-scale="100"></label>
+        <label>Blur på glasset <span class="muted small" data-out="bg_blur"><?= (int)($ui['bg_blur'] ?? 24) ?>px</span><input type="range" name="bg_blur" min="0" max="60" value="<?= (int)($ui['bg_blur'] ?? 24) ?>" data-live="--glass-blur" data-unit="px"></label>
+        <div class="actions">
+          <button class="btn">Gem</button>
+          <?php if ($hasBg): ?><button class="btn ghost danger" name="reset" value="1">Fjern baggrund</button><?php endif; ?>
+        </div>
       </form>
 
       <form method="post" class="panel form" id="vejr">

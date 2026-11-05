@@ -2734,3 +2734,36 @@ input:focus, textarea:focus, select:focus { box-shadow: inset 0 0 0 1.5px rgba(2
 .cal-ev { grid-template-columns: 92px minmax(0, 1fr) auto; }
 .cal-tip .cal-ev { grid-template-columns: 92px minmax(0, 1fr); }
 .cal-ev-h { white-space: nowrap; }
+
+.dash-bg { position: fixed; inset: 0; z-index: -2; background-size: cover; background-position: center; transform: scale(1.02); }
+.dash-bg::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / var(--bg-dim, .45)); transition: background .2s ease; }
+body.has-bg, html:has(body.has-bg) { background: #000; }
+body.has-bg .app, html.mp-playing body.has-bg .app, html:has(.mp.playing) body.has-bg .app { background: transparent !important; }
+body.has-bg .card, body.has-bg .panel, body.has-bg .rail, body.has-bg .stat, body.has-bg .tile,
+html.mp-playing body.has-bg .card, html:has(.mp.playing) body.has-bg .card {
+  background: rgb(16 16 18 / 42%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px)) saturate(140%) !important;
+  backdrop-filter: blur(var(--glass-blur, 24px)) saturate(140%) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), inset 0 0 0 1px rgb(255 255 255 / 6%), 0 20px 50px rgb(0 0 0 / 25%) !important;
+}
+body.has-bg .rail { background: rgb(16 16 18 / 50%) !important; }
+body.has-bg .round, body.has-bg .bell, body.has-bg .search-btn, body.has-bg .pill-link, body.has-bg .drop, body.has-bg .jv-state,
+body.has-bg .wxs-bub, body.has-bg .rem-add, body.has-bg .hj-chips button, body.has-bg .trc-slot:not(.on):not(.next) i,
+body.has-bg .c-cal .day:not(.today):not(.off), body.has-bg .kpi, body.has-bg .ask input, body.has-bg .tr-stats div {
+  background-color: rgb(255 255 255 / 7%);
+}
+body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / 3%); }
+body.has-bg .wxs-d, body.has-bg .rem-row, body.has-bg .wt, body.has-bg .cal-ev { border-color: rgb(255 255 255 / 9%); }
+body.has-bg .dp, body.has-bg .cal-pop, body.has-bg .cal-tip, body.has-bg .notif-pop, body.has-bg .tr-form {
+  background: rgb(22 22 24 / 72%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  backdrop-filter: blur(30px) saturate(150%);
+}
+.bg-preview { height: 140px; border-radius: 18px; background-size: cover; background-position: center; box-shadow: var(--inset); }
+@media (max-width: 900px) {
+  body.has-bg .rail { background: rgb(16 16 18 / 60%) !important; }
+}
+body.has-bg { background: transparent !important; }
+html:has(body.has-bg) { background: #000 !important; }
+body.has-bg .rem-when:not([aria-expanded="true"]):not(:hover) { background: rgb(255 255 255 / 9%); }
+body.has-bg .install { background: rgb(22 22 24 / 70%); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); }

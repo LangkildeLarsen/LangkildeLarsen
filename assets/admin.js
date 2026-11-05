@@ -1322,3 +1322,12 @@
   document.addEventListener('cards:updated', init);
   init();
 })();
+
+document.addEventListener('input', e => {
+  const r = e.target.closest('input[data-live]');
+  if (!r) return;
+  const v = r.dataset.scale ? Number(r.value) / Number(r.dataset.scale) : r.value + (r.dataset.unit || '');
+  document.body.style.setProperty(r.dataset.live, v);
+  const out = document.querySelector('[data-out="' + r.name + '"]');
+  if (out) out.textContent = r.value + (r.dataset.unit || '%');
+});
