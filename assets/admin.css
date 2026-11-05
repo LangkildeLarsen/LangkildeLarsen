@@ -2800,3 +2800,6 @@ body:not(.has-bg) > .cal-pop, body:not(.has-bg) > .cal-tip, body:not(.has-bg) > 
 body > .dp .dp-presets button:not(:hover), body > .dp .dp-head button, body > .dp .dp-hours button:not(.on), body > .dp .dp-mins button:not(.on),
 body > .cal-pop .dp-hours button:not(.on), body > .cal-pop .dp-mins button:not(.on), body > .cal-pop .cal-pop-x, body > .cal-pop input[name="title"] { background: rgb(255 255 255 / 9%); box-shadow: none; }
 body > .cal-pop input[name="title"]:focus { box-shadow: none; background: rgb(255 255 255 / 13%); }
+
+.boot-text::after { content: none !important; }
+.boot, .boot * { cursor: none !important; }
