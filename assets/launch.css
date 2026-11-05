@@ -121,3 +121,5 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .lp-search input { position: relative; z-index: 1; }
 .lp-search input:focus { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%), 0 20px 50px rgb(0 0 0 / 30%); }
 .lp-ask input:focus { box-shadow: none; background: rgb(255 255 255 / calc(var(--el-a, .08) + .05)); }
+.lp { grid-template-rows: auto 1fr; }
+.lp-hero { padding-bottom: 6vh; }

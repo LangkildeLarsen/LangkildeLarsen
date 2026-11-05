@@ -87,57 +87,6 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     <?php if ($editing): ?><p class="lp-hint">Træk i kortene for at ændre rækkefølgen.</p><?php endif; ?>
   </main>
 
-  <section class="lp-info" style="--n: <?= max(1, count(array_filter($opt['cards']))) ?>">
-    <?php if ($opt['cards']['jarvis']): ?>
-    <div class="lp-card lp-jarvis jv" data-jv data-s="idle">
-      <?= jarvis_orb('lp-orb') ?>
-      <div class="lp-jv-body">
-        <span class="jv-state" hidden><i></i><span data-jv-label>Klar</span></span>
-        <p class="lp-say" data-lp-say><?= e(training_nag($trD, $trS)) ?></p>
-        <form class="lp-ask" data-lp-ask>
-          <?= csrf_field() ?>
-          <input type="hidden" name="action" value="chat">
-          <input name="text" placeholder="Spørg Jarvis…" autocomplete="off" <?= claude_key() !== '' ? '' : 'disabled' ?>>
-          <button aria-label="Send" <?= claude_key() !== '' ? '' : 'disabled' ?>><?= icon('send') ?></button>
-        </form>
-      </div>
-    </div>
-    <?php endif; ?>
-    <?php if ($opt['cards']['weather']): ?>
-    <a class="lp-card" href="./" data-wx<?= (!$wxe || $wxe['t'] < time() - 1200) ? ' data-wx-refresh' : '' ?>>
-      <?php if ($wx): [$wl, $wi] = weather_info($wx['code'], $wx['day']); ?>
-        <h3><?= icon($wi) ?><?= e($wxp['name']) ?></h3>
-        <p class="lp-big"><?= (int)$wx['temp'] ?>°</p>
-        <p class="lp-sub"><?= e($wl) ?><?php if (!empty($wx['days'][0])): ?> · <?= (int)$wx['days'][0]['min'] ?>° / <?= (int)$wx['days'][0]['max'] ?>°<?php endif; ?></p>
-      <?php else: ?>
-        <h3><?= icon('cloud') ?><?= e($wxp['name']) ?></h3>
-        <p class="lp-sub">Henter vejret…</p>
-      <?php endif; ?>
-    </a>
-    <?php endif; ?>
-    <?php if ($opt['cards']['event']): ?>
-    <a class="lp-card" href="./">
-      <h3><?= icon('calendar') ?>Næste aftale</h3>
-      <?php if ($nextEv): ?>
-        <p class="lp-big lp-big-s"><?= e($nextEv['title']) ?></p>
-        <p class="lp-sub"><?= e(day_label($nextEv['start']) . ' · ' . event_time($nextEv)) ?></p>
-      <?php else: ?>
-        <p class="lp-sub">Ingen aftaler de næste 30 dage.</p>
-      <?php endif; ?>
-    </a>
-    <?php endif; ?>
-    <?php if ($opt['cards']['rem']): ?>
-    <a class="lp-card" href="./">
-      <h3><?= icon('bell') ?>Påmindelser</h3>
-      <?php if ($remOpen): ?>
-        <div class="lp-rem"><?php foreach (array_slice($remOpen, 0, 2) as $r): ?><span<?= $r['due'] <= time() ? ' class="due"' : '' ?>><?= e(rem_when($r['due'])) ?></span><?= e($r['text']) ?><?php endforeach; ?></div>
-      <?php else: ?>
-        <p class="lp-sub">Ingen påmindelser.</p>
-      <?php endif; ?>
-      <div class="lp-dots"><?php for ($i = 0; $i < $trS['goal']; $i++): ?><i class="<?= $i < $trS['sessions'] ? 'on' : '' ?>"><?= $i < $trS['sessions'] ? icon('check') : $i + 1 ?></i><?php endfor; ?><small>træning</small></div>
-    </a>
-    <?php endif; ?>
-  </section>
 </div>
 
 <dialog class="lp-dialog" data-lp-dialog>

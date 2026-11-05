@@ -1891,11 +1891,6 @@ if ($view === 'launch') {
         </div>
         <label>Søgemaskine<select name="search"><?php foreach (launch_engines() as $k => [$n]): ?><option value="<?= e($k) ?>"<?= $lpo['search'] === $k ? ' selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
         <label class="check"><input type="checkbox" name="greet" value="1"<?= $lpo['greet'] ? ' checked' : '' ?>> Vis hilsen under uret</label>
-        <p class="muted small">Kort nederst:</p>
-        <label class="check"><input type="checkbox" name="c_jarvis" value="1"<?= $lpo['cards']['jarvis'] ? ' checked' : '' ?>> Jarvis</label>
-        <label class="check"><input type="checkbox" name="c_weather" value="1"<?= $lpo['cards']['weather'] ? ' checked' : '' ?>> Vejret</label>
-        <label class="check"><input type="checkbox" name="c_event" value="1"<?= $lpo['cards']['event'] ? ' checked' : '' ?>> Næste aftale</label>
-        <label class="check"><input type="checkbox" name="c_rem" value="1"<?= $lpo['cards']['rem'] ? ' checked' : '' ?>> Påmindelser og træning</label>
         <div class="actions"><button class="btn">Gem</button></div>
       </form>
 
