@@ -2767,3 +2767,14 @@ body.has-bg { background: transparent !important; }
 html:has(body.has-bg) { background: #000 !important; }
 body.has-bg .rem-when:not([aria-expanded="true"]):not(:hover) { background: rgb(255 255 255 / 9%); }
 body.has-bg .install { background: rgb(22 22 24 / 70%); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); }
+
+body.has-bg .card, body.has-bg .panel, body.has-bg .stat, body.has-bg .tile,
+html.mp-playing body.has-bg .card, html:has(.mp.playing) body.has-bg .card { background: rgb(16 16 18 / var(--glass-a, .42)) !important; }
+body.has-bg .rail { background: rgb(16 16 18 / calc(var(--glass-a, .42) + .08)) !important; }
+body.has-bg .round, body.has-bg .bell, body.has-bg .search-btn, body.has-bg .pill-link, body.has-bg .drop, body.has-bg .jv-state,
+body.has-bg .wxs-bub, body.has-bg .rem-add, body.has-bg .hj-chips button, body.has-bg .trc-slot:not(.on):not(.next) i,
+body.has-bg .c-cal .day:not(.today):not(.off), body.has-bg .kpi, body.has-bg .ask input, body.has-bg .tr-stats div,
+body.has-bg .rem-when:not([aria-expanded="true"]):not(:hover), body.has-bg .rem-snz button:not(:hover), body.has-bg .trc-undo {
+  background-color: rgb(255 255 255 / var(--el-a, .07));
+}
+body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / calc(var(--el-a, .07) / 2)); }
