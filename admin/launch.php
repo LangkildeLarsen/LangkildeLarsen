@@ -58,16 +58,14 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </form>
 
     <div class="lp-cards" data-lp-cards>
-      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $hasIcon = !empty($l['icon']) && is_file(UPLOAD_DIR . '/' . $l['icon']); if ($hasIcon) { $fav = '../uploads/' . $l['icon'] . '?v=' . filemtime(UPLOAD_DIR . '/' . $l['icon']); } $imgUrl = ($l['img'] && is_file(UPLOAD_DIR . '/' . $l['img'])) ? '../uploads/' . $l['img'] . '?v=' . filemtime(UPLOAD_DIR . '/' . $l['img']) : ''; ?>
+      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $iconUrl = launch_src($l['icon'] ?? ''); $hasIcon = $iconUrl !== ''; if ($hasIcon) { $fav = $iconUrl; } $imgUrl = launch_src($l['img'] ?? ''); ?>
         <div class="sc" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
-          <span class="sc-img<?= $l['img'] ? ' has-img' : '' ?>">
-            <?php if ($l['img'] && is_file(UPLOAD_DIR . '/' . $l['img'])): ?>
-              <img class="sc-photo" src="../uploads/<?= e($l['img']) ?>?v=<?= filemtime(UPLOAD_DIR . '/' . $l['img']) ?>" alt="" loading="lazy">
-            <?php endif; ?>
+          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?>">
+            <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer"><?php endif; ?>
           </span>
           <span class="sc-bar">
-            <span class="sc-logo"><img src="<?= e($fav) ?>" alt="" data-fallback></span>
+            <span class="sc-logo"><img src="<?= e($fav) ?>" alt="" data-fallback referrerpolicy="no-referrer"></span>
             <span class="sc-tx"><strong><?= e($l['name']) ?></strong></span>
             <span class="sc-go"><?= icon('arrow') ?></span>
           </span>

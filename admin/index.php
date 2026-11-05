@@ -565,9 +565,7 @@ if ($action) {
             foreach ($lp['links'] as $l) {
                 if ($l['id'] === ($_POST['id'] ?? '')) {
                     foreach (['img', 'icon'] as $k) {
-                        if (!empty($l[$k])) {
-                            @unlink(UPLOAD_DIR . '/' . $l[$k]);
-                        }
+                        launch_drop_file($l[$k] ?? '');
                     }
                 }
             }
@@ -602,20 +600,17 @@ if ($action) {
             $urlChanged = $row['url'] !== $url;
             $row['url'] = $url;
             if (!empty($_POST['remove_img']) && $row['img']) {
-                @unlink(UPLOAD_DIR . '/' . $row['img']);
+                launch_drop_file($row['img']);
                 $row['img'] = '';
             }
             if (!empty($_POST['remove_icon']) && !empty($row['icon'])) {
-                @unlink(UPLOAD_DIR . '/' . $row['icon']);
+                launch_drop_file($row['icon']);
                 $row['icon'] = '';
             }
-            if (empty($_FILES['icon']['tmp_name']) && trim((string)($_POST['icon_url'] ?? '')) !== '') {
-                $ic = launch_icon_from_url((string)$_POST['icon_url'], $row['id']);
-                if ($ic) {
-                    $row['icon'] = $ic;
-                } else {
-                    flash('Kunne ikke hente ikonet fra linket.');
-                }
+            $iconLink = launch_norm_url((string)($_POST['icon_url'] ?? ''));
+            if (empty($_FILES['icon']['tmp_name']) && $iconLink !== '') {
+                launch_drop_file($row['icon'] ?? '');
+                $row['icon'] = $iconLink;
             }
             if (!empty($_FILES['icon']['tmp_name'])) {
                 $ic = save_upload($_FILES['icon'], 'launch', 'ic-' . $row['id']);
@@ -625,14 +620,11 @@ if ($action) {
                     flash('Ikonet kunne ikke bruges. Prøv PNG, SVG eller WebP.');
                 }
             }
-            if (empty($_FILES['img']['tmp_name']) && trim((string)($_POST['img_url'] ?? '')) !== '') {
-                $gotImg = launch_img_from_url((string)$_POST['img_url'], $row['id']);
-                if ($gotImg) {
-                    $row['img'] = $gotImg;
-                    $_POST['auto'] = '';
-                } else {
-                    flash('Kunne ikke hente billedet fra linket.');
-                }
+            $imgLink = launch_norm_url((string)($_POST['img_url'] ?? ''));
+            if (empty($_FILES['img']['tmp_name']) && $imgLink !== '') {
+                launch_drop_file($row['img']);
+                $row['img'] = $imgLink;
+                $_POST['auto'] = '';
             }
             if (!empty($_FILES['img']['tmp_name'])) {
                 $saved = save_upload($_FILES['img'], 'launch', 'lp-' . $row['id']);

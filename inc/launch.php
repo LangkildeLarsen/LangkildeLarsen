@@ -20,35 +20,25 @@ function launch_load(?array $user = null): array
         save_json(ukey('launch', $user), $d);
     }
     $presets = [
-        'efuture_img_1' => ['efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/10/efuture-suv-elcykler.webp'],
+        'v2_efuture_img' => ['efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/10/efuture-suv-elcykler.webp'],
+        'v2_cyk_img' => ['portal.efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/05/din-cykelportal-efuture.webp'],
+        'v2_cyk_icon' => ['portal.efuture.dk', 'icon', 'https://www.efuture.dk/wp-content/uploads/2026/05/Cykelportal-icon.webp'],
     ];
+    $dirty = false;
     foreach ($presets as $key => [$host, $field, $src]) {
         if (!empty($d['mig'][$key])) {
             continue;
         }
         foreach ($d['links'] as &$l) {
-            if (launch_host($l['url']) === $host) {
-                $got = $field === 'img' ? launch_img_from_url($src, $l['id']) : launch_icon_from_url($src, $l['id']);
-                if ($got) {
-                    $l[$field] = $got;
-                }
+            if (launch_host($l['url']) === $host && (empty($l[$field]) || !launch_src($l[$field]))) {
+                $l[$field] = $src;
             }
         }
         unset($l);
         $d['mig'][$key] = 1;
-        save_json(ukey('launch', $user), $d);
+        $dirty = true;
     }
-    if (empty($d['mig']['cykelportal_icon'])) {
-        foreach ($d['links'] as &$l) {
-            if (launch_host($l['url']) === 'portal.efuture.dk' && empty($l['icon'])) {
-                $l['icon'] = launch_icon_from_url('https://www.efuture.dk/wp-content/uploads/2026/05/Cykelportal-icon.webp', $l['id']) ?? '';
-            }
-            if (launch_host($l['url']) === 'portal.efuture.dk' && empty($l['img'])) {
-                $l['img'] = launch_img_from_url('https://www.efuture.dk/wp-content/uploads/2026/05/din-cykelportal-efuture.webp', $l['id']) ?? '';
-            }
-        }
-        unset($l);
-        $d['mig']['cykelportal_icon'] = 1;
+    if ($dirty) {
         save_json(ukey('launch', $user), $d);
     }
     return $d;
@@ -183,4 +173,24 @@ function launch_opts(array $lp): array
         'greet' => $o['greet'] ?? true,
         'cards' => ($o['cards'] ?? []) + ['jarvis' => true, 'weather' => true, 'event' => true, 'rem' => true],
     ];
+}
+
+function launch_src(?string $v): string
+{
+    $v = (string)$v;
+    if ($v === '') {
+        return '';
+    }
+    if (preg_match('~^https?://~i', $v)) {
+        return $v;
+    }
+    return is_file(UPLOAD_DIR . '/' . $v) ? '../uploads/' . $v . '?v=' . filemtime(UPLOAD_DIR . '/' . $v) : '';
+}
+
+function launch_drop_file(?string $v): void
+{
+    $v = (string)$v;
+    if ($v !== '' && !preg_match('~^https?://~i', $v)) {
+        @unlink(UPLOAD_DIR . '/' . $v);
+    }
 }
