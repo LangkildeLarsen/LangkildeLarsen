@@ -2781,3 +2781,11 @@ body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / calc(var(--el-
 
 .dash-bg { inset: -60px; filter: blur(var(--img-blur, 0px)); transform: none; }
 .dash-bg::after { inset: 0; }
+
+.settings-grid { columns: 2 440px; column-gap: 16px; }
+.settings-grid > *, .settings-grid .cols > * { break-inside: avoid; -webkit-column-break-inside: avoid; display: block; width: 100%; max-width: none; margin: 0 0 16px; }
+.settings-grid .cols { display: contents; }
+.settings-grid .panel.form { display: grid; }
+.settings-grid .panel.siri { display: block; }
+.tiles { margin-bottom: 16px; }
+.settings-grid input[type="range"] { accent-color: #fff; padding: 0; height: 22px; background: transparent; box-shadow: none; }

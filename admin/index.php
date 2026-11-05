@@ -1646,6 +1646,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <a class="tile" href="../" target="_blank"><span class="tile-ic"><?= icon('external') ?></span><span><strong>Se siden</strong><small>Åbn langkildelarsen.dk</small></span><?= icon('arrow') ?></a>
         </section>
       <?php endif; ?>
+      <div class="settings-grid">
       <div class="cols">
         <form method="post" class="panel form">
           <?= csrf_field() ?>
@@ -1862,6 +1863,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
           <li>Vælg <strong>Føj til hjemmeskærm</strong> → <strong>Tilføj</strong>.</li>
         </ol>
         <p class="muted small">Så åbner Jarvis i fuld skærm som en app, og du forbliver logget ind i 60 dage.</p>
+      </div>
       </div>
 
     <?php elseif ($view === 'budget'): ?>
