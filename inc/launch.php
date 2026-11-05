@@ -37,6 +37,16 @@ function launch_load(?array $user = null): array
         $d['mig']['v2_bikedesk_icon'] = 1;
         $dirty = true;
     }
+    if (empty($d['mig']['v5_center_cykelportal'])) {
+        foreach ($d['links'] as &$l) {
+            if (launch_host($l['url']) === 'portal.efuture.dk') {
+                $l['center'] = true;
+            }
+        }
+        unset($l);
+        $d['mig']['v5_center_cykelportal'] = 1;
+        $dirty = true;
+    }
     if (empty($d['mig']['v4_center_icons'])) {
         foreach ($d['links'] as &$l) {
             if (in_array(launch_host($l['url']), ['youtube.com', 'facebook.com', 'm.facebook.com'], true)) {
