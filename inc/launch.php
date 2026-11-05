@@ -23,6 +23,7 @@ function launch_load(?array $user = null): array
         'v2_efuture_img' => ['efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/10/efuture-suv-elcykler.webp'],
         'v2_cyk_img' => ['portal.efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/05/din-cykelportal-efuture.webp'],
         'v2_cyk_icon' => ['portal.efuture.dk', 'icon', 'https://www.efuture.dk/wp-content/uploads/2026/05/Cykelportal-icon.webp'],
+        'v2_bikedesk_icon' => ['app.c1st.com', 'icon', 'https://langkildelarsen.dk/assets/brand/bikedesk.svg'],
     ];
     $dirty = false;
     foreach ($presets as $key => [$host, $field, $src]) {

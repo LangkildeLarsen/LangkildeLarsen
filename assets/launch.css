@@ -145,3 +145,4 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .lp-opts input[type="checkbox"] { accent-color: #fff; }
 .sc-img:not(.has-img) { background: rgb(255 255 255 / calc(var(--el-a, .08) * .6)); }
 .editing .sc:not(.add) { animation: none !important; }
+.sc-logo img[src$=".svg"] { border-radius: 0; width: 20px; height: 20px; }
