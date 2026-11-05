@@ -192,14 +192,13 @@
       if (!c || e.button !== 0 || e.target.closest('.sc-tools')) return;
       card = c;
       sx = e.clientX; sy = e.clientY;
-      clearTimeout(timer);
-      timer = setTimeout(() => start(e), editing ? 150 : 450);
+      e.preventDefault();
     });
     grid.addEventListener('pointermove', e => {
       if (!card) return;
       if (!dragging) {
-        if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) { clearTimeout(timer); card = null; }
-        return;
+        if (Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return;
+        start(e);
       }
       e.preventDefault();
       const prev = card.style.pointerEvents;
@@ -252,3 +251,4 @@
   const wx = $('[data-wx-refresh]');
   if (wx) fetch('index.php?ajax=weather', { credentials: 'same-origin' }).catch(() => {});
 })();
+document.addEventListener('dragstart', e => { if (e.target.closest && e.target.closest('.sc')) e.preventDefault(); });
