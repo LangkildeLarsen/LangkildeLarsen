@@ -184,3 +184,5 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .lp-appbg input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .lp-appbg input[type="color"]::-webkit-color-swatch { border: 1px solid rgb(255 255 255 / 20%); border-radius: 10px; }
 .sc-app .mono { color: inherit; mix-blend-mode: difference; }
+.sc-link { z-index: 5; cursor: pointer; }
+.sc-tools { z-index: 6; }
