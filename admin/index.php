@@ -553,11 +553,9 @@ if ($action) {
         $lp['opt'] = [
             'search' => (string)($_POST['search'] ?? 'google'),
             'greet' => !empty($_POST['greet']),
-            'cards' => ['jarvis' => !empty($_POST['c_jarvis']), 'weather' => !empty($_POST['c_weather']), 'event' => !empty($_POST['c_event']), 'rem' => !empty($_POST['c_rem'])],
         ];
         launch_save($lp);
-        flash('Launchpad er gemt.');
-        redirect('index.php?view=settings#launchpad');
+        redirect('index.php?view=launch&edit=1');
     }
 
     if (in_array($action, ['launch_save', 'launch_remove', 'launch_order'], true)) {
@@ -1909,21 +1907,6 @@ if ($view === 'launch') {
         <h2 class="section-title">Træning</h2>
         <p class="muted small">Hvor mange gange om ugen du vil træne. Du kan også logge via Jarvis, fx "jeg har trænet i dag".</p>
         <label>Træninger pr. uge<input type="number" name="week_goal" min="1" max="7" value="<?= (int)$tr['week_goal'] ?>"></label>
-        <div class="actions"><button class="btn">Gem</button></div>
-      </form>
-
-      <?php $lpo = launch_opts(launch_load()); ?>
-      <form method="post" class="panel form" id="launchpad">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="launch_opts">
-        <h2 class="section-title">Launchpad</h2>
-        <p class="muted small">Din nye fane i Chrome. Baggrund, glas og blur følger indstillingerne under Baggrund.</p>
-        <div class="actions">
-          <a class="btn ghost" href="./?view=launch">Åbn Launchpad</a>
-          <a class="btn ghost" href="./?view=launch&amp;edit=1">Rediger genveje</a>
-        </div>
-        <label>Søgemaskine<select name="search"><?php foreach (launch_engines() as $k => [$n]): ?><option value="<?= e($k) ?>"<?= $lpo['search'] === $k ? ' selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
-        <label class="check"><input type="checkbox" name="greet" value="1"<?= $lpo['greet'] ? ' checked' : '' ?>> Vis hilsen under uret</label>
         <div class="actions"><button class="btn">Gem</button></div>
       </form>
 

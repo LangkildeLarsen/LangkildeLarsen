@@ -43,7 +43,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     <nav>
       <?php if ($editing): ?><a href="./?view=launch" class="lp-pill on"><?= icon('check') ?>Færdig</a><?php endif; ?>
       <a href="./" class="lp-round" aria-label="Åbn Jarvis" title="Jarvis"><?= icon('home') ?></a>
-      <a href="./?view=settings#launchpad" class="lp-round" aria-label="Indstillinger til Launchpad" title="Indstillinger"><?= icon('user') ?></a>
+      <a href="./?view=launch<?= $editing ? '' : '&amp;edit=1' ?>" class="lp-round<?= $editing ? ' on' : '' ?>" aria-label="Rediger genveje" title="Rediger genveje"><?= icon('gear') ?></a>
     </nav>
   </header>
 
@@ -81,7 +81,15 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
       <?php endforeach; ?>
       <?php if ($editing): ?><button type="button" class="sc add" data-edit="" data-name="" data-url=""><span class="sc-plus"><?= icon('plus') ?></span><small>Tilføj genvej</small></button><?php endif; ?>
     </div>
-    <?php if ($editing): ?><p class="lp-hint">Træk i kortene for at ændre rækkefølgen.</p><?php endif; ?>
+    <?php if ($editing): ?>
+      <p class="lp-hint">Træk i kortene for at ændre rækkefølgen.</p>
+      <form method="post" class="lp-opts">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="launch_opts">
+        <label>Søgemaskine<select name="search" onchange="this.form.submit()"><?php foreach ($engines as $k => [$n]): ?><option value="<?= e($k) ?>"<?= $opt['search'] === $k ? ' selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
+        <label class="check"><input type="checkbox" name="greet" value="1"<?= $opt['greet'] ? ' checked' : '' ?> onchange="this.form.submit()"> Vis hilsen</label>
+      </form>
+    <?php endif; ?>
   </main>
 
 </div>
