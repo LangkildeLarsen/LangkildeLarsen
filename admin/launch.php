@@ -61,7 +61,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
       <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $iconUrl = launch_src($l['icon'] ?? ''); $hasIcon = $iconUrl !== ''; if ($hasIcon) { $fav = $iconUrl; } $imgUrl = launch_src($l['img'] ?? ''); ?>
         <div class="sc" data-host="<?= e($host) ?>" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
-          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?>">
+          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?><?= !empty($l['center']) ? ' has-center' : '' ?>">
             <?php if (!empty($l['center'])): ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
