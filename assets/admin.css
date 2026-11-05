@@ -2789,3 +2789,6 @@ body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / calc(var(--el-
 .settings-grid .panel.siri { display: block; }
 .tiles { margin-bottom: 16px; }
 .settings-grid input[type="range"] { accent-color: #fff; padding: 0; height: 22px; background: transparent; box-shadow: none; }
+
+.ask input:focus, .hj-ask input:focus, .chat-compose input:focus, .dm-compose input:focus, .sx-field input:focus { box-shadow: none !important; outline: none; }
+body.has-bg .ask input:focus { background-color: rgb(255 255 255 / calc(var(--el-a, .07) + .05)); }
