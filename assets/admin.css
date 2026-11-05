@@ -2792,3 +2792,11 @@ body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / calc(var(--el-
 
 .ask input:focus, .hj-ask input:focus, .chat-compose input:focus, .dm-compose input:focus, .sx-field input:focus { box-shadow: none !important; outline: none; }
 body.has-bg .ask input:focus { background-color: rgb(255 255 255 / calc(var(--el-a, .07) + .05)); }
+
+body > .cal-pop, body > .cal-tip, body > .dp { position: fixed; z-index: 120; }
+body > .cal-pop, body > .cal-tip, body > .dp { background: rgb(22 22 24 / 62%); -webkit-backdrop-filter: blur(30px) saturate(150%); backdrop-filter: blur(30px) saturate(150%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%), 0 30px 70px rgb(0 0 0 / 55%); }
+body:not(.has-bg) > .cal-pop, body:not(.has-bg) > .cal-tip, body:not(.has-bg) > .dp { background: rgb(22 22 24 / 80%); }
+@media (max-width: 520px) { body > .cal-pop, body > .dp { left: 12px; right: 12px; top: auto; bottom: calc(env(safe-area-inset-bottom) + 96px); width: auto; } }
+body > .dp .dp-presets button:not(:hover), body > .dp .dp-head button, body > .dp .dp-hours button:not(.on), body > .dp .dp-mins button:not(.on),
+body > .cal-pop .dp-hours button:not(.on), body > .cal-pop .dp-mins button:not(.on), body > .cal-pop .cal-pop-x, body > .cal-pop input[name="title"] { background: rgb(255 255 255 / 9%); box-shadow: none; }
+body > .cal-pop input[name="title"]:focus { box-shadow: none; background: rgb(255 255 255 / 13%); }

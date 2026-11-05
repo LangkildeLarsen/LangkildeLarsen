@@ -1195,6 +1195,15 @@
       const input = form.querySelector('[data-due]');
       if (!btn || !dp || btn.dataset.ready) return;
       btn.dataset.ready = '1';
+      document.querySelectorAll('body > .dp').forEach(x => x.remove());
+      document.body.appendChild(dp);
+      const placeDp = () => {
+        if (matchMedia('(max-width: 520px)').matches) { dp.style.left = ''; dp.style.top = ''; return; }
+        const fr = form.getBoundingClientRect();
+        const w = dp.offsetWidth, h = dp.offsetHeight;
+        dp.style.left = Math.max(12, Math.min(innerWidth - w - 12, fr.right - w)) + 'px';
+        dp.style.top = (fr.bottom + 10 + h > innerHeight - 12 && fr.top - h - 10 > 12 ? fr.top - h - 10 : fr.bottom + 10) + 'px';
+      };
       let val = parse(input.value) || new Date(Date.now() + 3600000);
       let view = new Date(val.getFullYear(), val.getMonth(), 1);
       const lab = form.querySelector('[data-when-label]');
@@ -1226,7 +1235,7 @@
           '<div class="dp-mins">' + [0, 15, 30, 45].map(m => '<button type="button" data-m="' + m + '" class="' + (m === val.getMinutes() ? 'on' : '') + '">:' + pad(m) + '</button>').join('') + '</div></div>' +
           '<div class="dp-foot"><span>' + label(val) + '</span><button type="button" class="dp-ok" data-ok>Færdig</button></div>';
       };
-      const open = () => { view = new Date(val.getFullYear(), val.getMonth(), 1); render(); dp.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+      const open = () => { view = new Date(val.getFullYear(), val.getMonth(), 1); render(); dp.hidden = false; placeDp(); btn.setAttribute('aria-expanded', 'true'); };
       const close = () => { dp.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
       btn.addEventListener('click', e => { e.preventDefault(); dp.hidden ? open() : close(); });
       dp.addEventListener('click', e => {
@@ -1240,7 +1249,8 @@
         if (b.dataset.m) { const d = new Date(val); d.setMinutes(+b.dataset.m); set(d); return; }
         if (b.dataset.ok !== undefined) close();
       });
-      document.addEventListener('click', e => { if (!dp.hidden && !form.contains(e.target)) close(); });
+      document.addEventListener('click', e => { if (!dp.hidden && !form.contains(e.target) && !dp.contains(e.target)) close(); });
+      addEventListener('resize', () => { if (!dp.hidden) placeDp(); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape' && !dp.hidden) close(); });
       form.addEventListener('submit', () => close());
     });
@@ -1263,8 +1273,10 @@
     grid.dataset.ready = '1';
     let data = {};
     try { data = JSON.parse(grid.dataset.calDays || '{}') || {}; } catch (e) {}
+    document.querySelectorAll('body > .cal-pop, body > .cal-tip').forEach(x => x.remove());
     const tip = card.querySelector('[data-cal-tip]');
     const pop = card.querySelector('[data-cal-pop]');
+    document.body.append(tip, pop);
     const list = pop.querySelector('[data-cal-list]');
     const addForm = pop.querySelector('.cal-pop-add');
     const dateIn = pop.querySelector('[data-cal-date]');
@@ -1273,10 +1285,14 @@
     let hour = '', minute = '00';
     const rows = (k, withX) => (data[k] || []).map(e => '<div class="cal-ev' + (e.l ? ' local' : '') + '"><span class="cal-ev-h">' + esc(e.h) + '</span><span class="cal-ev-t">' + esc(e.t) + (e.c && !e.l ? '<small>' + esc(e.c) + '</small>' : '') + '</span>' + (withX && e.l ? '<button name="id" value="' + esc(e.id) + '" class="cal-ev-x" aria-label="Slet">×</button>' : '') + '</div>').join('');
     const place = (el, btn) => {
-      const cr = card.getBoundingClientRect(), br = btn.getBoundingClientRect();
-      el.style.left = Math.max(12, Math.min(cr.width - el.offsetWidth - 12, br.left - cr.left + br.width / 2 - el.offsetWidth / 2)) + 'px';
-      el.style.top = (br.bottom - cr.top + 8) + 'px';
+      const br = btn.getBoundingClientRect();
+      if (matchMedia('(max-width: 520px)').matches && el === pop) { el.style.left = ''; el.style.top = ''; return; }
+      const w = el.offsetWidth, h = el.offsetHeight;
+      el.style.left = Math.max(12, Math.min(innerWidth - w - 12, br.left + br.width / 2 - w / 2)) + 'px';
+      const below = br.bottom + 8;
+      el.style.top = (below + h > innerHeight - 12 && br.top - h - 8 > 12 ? br.top - h - 8 : below) + 'px';
     };
+    addEventListener('scroll', () => { tip.hidden = true; }, { passive: true });
     const syncTime = () => { timeIn.value = hour ? hour + ':' + minute : ''; mins.hidden = !hour; };
 
     grid.addEventListener('mouseover', e => {
