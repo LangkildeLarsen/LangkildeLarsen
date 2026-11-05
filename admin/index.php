@@ -598,6 +598,7 @@ if ($action) {
             $row = &$lp['links'][$idx];
             $row['name'] = $name;
             $row['pos'] = launch_pos((string)($_POST['pos'] ?? ''));
+            $row['center'] = !empty($_POST['center']) || ($idx === count($lp['links']) - 1 && !$id && in_array(launch_host($url), ['youtube.com', 'facebook.com'], true));
             $urlChanged = $row['url'] !== $url;
             $row['url'] = $url;
             if (!empty($_POST['remove_img']) && $row['img']) {

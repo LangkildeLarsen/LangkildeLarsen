@@ -62,6 +62,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
         <div class="sc" data-host="<?= e($host) ?>" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
           <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?>">
+            <?php if (!empty($l['center'])): ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
           <span class="sc-bar">
@@ -71,7 +72,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           </span>
           <?php if ($editing): ?>
             <span class="sc-tools">
-              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
+              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" data-center="<?= !empty($l['center']) ? '1' : '' ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
               <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="launch_remove"><input type="hidden" name="id" value="<?= e($l['id']) ?>"><button class="sc-del" aria-label="Fjern <?= e($l['name']) ?>"><?= icon('cross') ?></button></form>
             </span>
           <?php endif; ?>
@@ -123,6 +124,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </div>
     <label>Eller link til billede<input name="img_url" placeholder="https://…/billede.jpg" inputmode="url"></label>
     <label>Eller link til ikon<input name="icon_url" placeholder="https://…/ikon.png" inputmode="url"></label>
+    <label class="check"><input type="checkbox" name="center" value="1"> Vis ikonet midt på billedet</label>
     <label class="check"><input type="checkbox" name="auto" value="1" checked> Hent sidens billede automatisk, hvis jeg ikke vælger et</label>
     <div class="actions">
       <button class="btn">Gem</button>

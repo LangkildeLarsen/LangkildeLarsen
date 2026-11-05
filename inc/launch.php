@@ -37,6 +37,16 @@ function launch_load(?array $user = null): array
         $d['mig']['v2_bikedesk_icon'] = 1;
         $dirty = true;
     }
+    if (empty($d['mig']['v4_center_icons'])) {
+        foreach ($d['links'] as &$l) {
+            if (in_array(launch_host($l['url']), ['youtube.com', 'facebook.com', 'm.facebook.com'], true)) {
+                $l['center'] = true;
+            }
+        }
+        unset($l);
+        $d['mig']['v4_center_icons'] = 1;
+        $dirty = true;
+    }
     foreach ($presets as $key => [$host, $field, $src]) {
         if (!empty($d['mig'][$key])) {
             continue;
