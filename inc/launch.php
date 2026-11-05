@@ -26,6 +26,17 @@ function launch_load(?array $user = null): array
         'v2_bikedesk_icon' => ['app.c1st.com', 'icon', 'https://langkildelarsen.dk/assets/brand/bikedesk.svg'],
     ];
     $dirty = false;
+    if (empty($d['mig']['v3_bikedesk_efuture_icon'])) {
+        foreach ($d['links'] as &$l) {
+            if (launch_host($l['url']) === 'app.c1st.com') {
+                $l['icon'] = 'https://www.google.com/s2/favicons?domain=efuture.dk&sz=128';
+            }
+        }
+        unset($l);
+        $d['mig']['v3_bikedesk_efuture_icon'] = 1;
+        $d['mig']['v2_bikedesk_icon'] = 1;
+        $dirty = true;
+    }
     foreach ($presets as $key => [$host, $field, $src]) {
         if (!empty($d['mig'][$key])) {
             continue;
