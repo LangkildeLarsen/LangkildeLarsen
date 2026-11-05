@@ -39,11 +39,40 @@
   const dlg = $('[data-lp-dialog]');
   let active = 'img';
   const zone = k => dlg && dlg.querySelector('[data-drop="' + k + '"]');
+  const posBox = dlg && dlg.querySelector('[data-pos-box]');
+  const setPos = v => {
+    if (!posBox) return;
+    posBox.querySelector('[data-pos-in]').value = v;
+    posBox.querySelector('[data-pos-img]').style.objectPosition = v;
+    const [x, y] = v.split(' ');
+    const dot = posBox.querySelector('[data-pos-dot]');
+    dot.style.left = x;
+    dot.style.top = y;
+    const z = zone('img');
+    if (z) z.querySelector('[data-prev]').style.backgroundPosition = v;
+  };
+  if (posBox) {
+    const frame = posBox.querySelector('[data-pos-frame]');
+    let down = false;
+    const at = e => {
+      const r = frame.getBoundingClientRect();
+      const x = Math.round(Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)));
+      const y = Math.round(Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100)));
+      setPos(x + '% ' + y + '%');
+    };
+    frame.addEventListener('pointerdown', e => { down = true; frame.setPointerCapture(e.pointerId); at(e); });
+    frame.addEventListener('pointermove', e => { if (down) at(e); });
+    frame.addEventListener('pointerup', () => { down = false; });
+  }
   const setDrop = (k, url) => {
     const z = zone(k);
     if (!z) return;
     const prev = z.querySelector('[data-prev]');
     prev.style.backgroundImage = url ? 'url("' + url + '")' : '';
+    if (k === 'img' && posBox) {
+      posBox.hidden = !url;
+      if (url) posBox.querySelector('[data-pos-img]').src = url;
+    }
     z.classList.toggle('has', !!url);
     z.querySelector('input[type=checkbox]').checked = false;
   };
@@ -95,6 +124,7 @@
       f.url.value = b.dataset.url || '';
       dlg.querySelector('[data-lp-dtitle]').textContent = b.dataset.edit ? 'Rediger genvej' : 'Ny genvej';
       setDrop('img', b.dataset.img || '');
+      setPos(b.dataset.pos || '50% 50%');
       setDrop('icon', b.dataset.icon || '');
       active = 'img';
       dlg.showModal();

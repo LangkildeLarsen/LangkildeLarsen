@@ -597,6 +597,7 @@ if ($action) {
             }
             $row = &$lp['links'][$idx];
             $row['name'] = $name;
+            $row['pos'] = launch_pos((string)($_POST['pos'] ?? ''));
             $urlChanged = $row['url'] !== $url;
             $row['url'] = $url;
             if (!empty($_POST['remove_img']) && $row['img']) {

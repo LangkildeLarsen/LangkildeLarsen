@@ -206,3 +206,8 @@ function launch_drop_file(?string $v): void
         @unlink(UPLOAD_DIR . '/' . $v);
     }
 }
+
+function launch_pos(?string $v): string
+{
+    return preg_match('/^(\d{1,3})% (\d{1,3})%$/', (string)$v, $m) ? min(100, (int)$m[1]) . '% ' . min(100, (int)$m[2]) . '%' : '50% 50%';
+}
