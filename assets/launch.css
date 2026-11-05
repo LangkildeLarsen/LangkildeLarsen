@@ -123,3 +123,6 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .lp-ask input:focus { box-shadow: none; background: rgb(255 255 255 / calc(var(--el-a, .08) + .05)); }
 .lp { grid-template-rows: auto 1fr; }
 .lp-hero { padding-bottom: 6vh; }
+.sc-tx strong { font-size: 16px; }
+.sc-logo img[src*="fav-96"] { border-radius: 0; }
+.sc-big[src*="fav-96"] { border-radius: 0; }

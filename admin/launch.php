@@ -58,20 +58,20 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </form>
 
     <div class="lp-cards" data-lp-cards>
-      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); ?>
+      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; ?>
         <div class="sc" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
           <span class="sc-img<?= $l['img'] ? ' has-img' : '' ?>">
             <?php if ($l['img'] && is_file(UPLOAD_DIR . '/' . $l['img'])): ?>
               <img class="sc-photo" src="../uploads/<?= e($l['img']) ?>?v=<?= filemtime(UPLOAD_DIR . '/' . $l['img']) ?>" alt="" loading="lazy">
             <?php else: ?>
-              <img class="sc-blur" src="https://www.google.com/s2/favicons?domain=<?= e(rawurlencode($host)) ?>&amp;sz=128" alt="" data-fallback>
-              <img class="sc-big" src="https://www.google.com/s2/favicons?domain=<?= e(rawurlencode($host)) ?>&amp;sz=128" alt="" data-fallback>
+              <img class="sc-blur" src="<?= e($fav) ?>" alt="" data-fallback>
+              <img class="sc-big" src="<?= e($fav) ?>" alt="" data-fallback>
             <?php endif; ?>
           </span>
           <span class="sc-bar">
-            <span class="sc-logo"><img src="https://www.google.com/s2/favicons?domain=<?= e(rawurlencode($host)) ?>&amp;sz=64" alt="" data-fallback></span>
-            <span class="sc-tx"><strong><?= e($l['name']) ?></strong><small><?= e($host) ?></small></span>
+            <span class="sc-logo"><img src="<?= e($fav) ?>" alt="" data-fallback></span>
+            <span class="sc-tx"><strong><?= e($l['name']) ?></strong></span>
             <span class="sc-go"><?= icon('arrow') ?></span>
           </span>
           <?php if ($editing): ?>
