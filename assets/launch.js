@@ -37,8 +37,54 @@
   });
 
   const dlg = $('[data-lp-dialog]');
+  let active = 'img';
+  const zone = k => dlg && dlg.querySelector('[data-drop="' + k + '"]');
+  const setDrop = (k, url) => {
+    const z = zone(k);
+    if (!z) return;
+    const prev = z.querySelector('[data-prev]');
+    prev.style.backgroundImage = url ? 'url("' + url + '")' : '';
+    z.classList.toggle('has', !!url);
+    z.querySelector('input[type=checkbox]').checked = false;
+  };
+  const useFile = (k, file) => {
+    if (!file || !/^image\//.test(file.type)) return;
+    const z = zone(k);
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    z.querySelector('input[type=file]').files = dt.files;
+    setDrop(k, URL.createObjectURL(file));
+  };
   if (dlg) {
     const f = dlg.querySelector('form');
+    dlg.querySelectorAll('[data-drop]').forEach(z => {
+      const k = z.dataset.drop;
+      const input = z.querySelector('input[type=file]');
+      z.addEventListener('click', e => {
+        if (e.target.closest('[data-clear]')) {
+          e.preventDefault();
+          input.value = '';
+          setDrop(k, '');
+          z.querySelector('input[type=checkbox]').checked = true;
+          return;
+        }
+        active = k;
+        input.click();
+      });
+      z.addEventListener('focus', () => { active = k; });
+      z.addEventListener('mouseenter', () => { active = k; });
+      z.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+      input.addEventListener('change', () => { if (input.files[0]) useFile(k, input.files[0]); });
+      z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+      z.addEventListener('dragleave', () => z.classList.remove('over'));
+      z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); useFile(k, e.dataTransfer.files[0]); });
+    });
+    dlg.addEventListener('paste', e => {
+      const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+      if (!item) return;
+      e.preventDefault();
+      useFile(active, item.getAsFile());
+    });
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-edit]');
       if (!b) return;
@@ -48,7 +94,9 @@
       f.name.value = b.dataset.name || '';
       f.url.value = b.dataset.url || '';
       dlg.querySelector('[data-lp-dtitle]').textContent = b.dataset.edit ? 'Rediger genvej' : 'Ny genvej';
-      dlg.querySelector('[data-lp-rmimg]').hidden = !b.dataset.img;
+      setDrop('img', b.dataset.img || '');
+      setDrop('icon', b.dataset.icon || '');
+      active = 'img';
       dlg.showModal();
       setTimeout(() => (b.dataset.edit ? f.url : f.name).focus(), 30);
     });

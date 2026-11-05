@@ -126,3 +126,15 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .sc-tx strong { font-size: 16px; }
 .sc-logo img[src*="fav-96"] { border-radius: 0; }
 .sc-big[src*="fav-96"] { border-radius: 0; }
+
+.lp-drops { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; }
+.lp-drop { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 8px; min-height: 140px; padding: 10px; border-radius: 18px; border: 1.5px dashed rgb(255 255 255 / 22%); background: rgb(255 255 255 / 4%); cursor: pointer; outline: none; transition: border-color .2s ease, background .2s ease; }
+.lp-drop:hover, .lp-drop:focus-visible, .lp-drop.over { border-color: rgb(255 255 255 / 60%); background: rgb(255 255 255 / 8%); }
+.lp-drop-prev { border-radius: 12px; background: rgb(255 255 255 / 5%) center / cover no-repeat; min-height: 74px; }
+.lp-drop-icon .lp-drop-prev { background-size: 48px; background-position: center; }
+.lp-drop-tx { display: grid; text-align: left; }
+.lp-drop-tx strong { font-size: 13px; color: var(--ink); }
+.lp-drop-tx small { font-size: 11px; color: var(--muted); }
+.lp-drop-x { position: absolute; top: 14px; right: 14px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgb(0 0 0 / 60%); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; display: none; }
+.lp-drop.has .lp-drop-x { display: block; }
+.lp-drop-x:hover { background: var(--red); }

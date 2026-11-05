@@ -19,7 +19,48 @@ function launch_load(?array $user = null): array
         $d = ['links' => launch_defaults()];
         save_json(ukey('launch', $user), $d);
     }
+    if (empty($d['mig']['cykelportal_icon'])) {
+        foreach ($d['links'] as &$l) {
+            if (launch_host($l['url']) === 'portal.efuture.dk' && empty($l['icon'])) {
+                $l['icon'] = launch_icon_from_url('https://www.efuture.dk/wp-content/uploads/2026/05/Cykelportal-icon.webp', $l['id']) ?? '';
+            }
+            if (launch_host($l['url']) === 'portal.efuture.dk' && empty($l['img'])) {
+                $l['img'] = launch_img_from_url('https://www.efuture.dk/wp-content/uploads/2026/05/din-cykelportal-efuture.webp', $l['id']) ?? '';
+            }
+        }
+        unset($l);
+        $d['mig']['cykelportal_icon'] = 1;
+        save_json(ukey('launch', $user), $d);
+    }
     return $d;
+}
+
+function launch_img_from_url(string $url, string $id): ?string
+{
+    $url = launch_norm_url($url);
+    $bin = $url !== '' ? launch_http($url, 6000000) : null;
+    return $bin ? save_image($bin['body'], 'launch', 'lp-' . $id, 6000000) : null;
+}
+
+function launch_icon_from_url(string $url, string $id): ?string
+{
+    $url = launch_norm_url($url);
+    if ($url === '') {
+        return null;
+    }
+    $bin = launch_http($url, 3000000);
+    if (!$bin) {
+        return null;
+    }
+    if (str_contains(substr($bin['body'], 0, 400), '<svg') && !preg_match('~<script|on\w+\s*=~i', $bin['body'])) {
+        $dir = UPLOAD_DIR . '/launch';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($dir . '/ic-' . $id . '.svg', $bin['body']);
+        return 'launch/ic-' . $id . '.svg';
+    }
+    return save_image($bin['body'], 'launch', 'ic-' . $id, 3000000);
 }
 
 function launch_save(array $d, ?array $user = null): void

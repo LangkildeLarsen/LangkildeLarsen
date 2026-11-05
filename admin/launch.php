@@ -58,15 +58,12 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </form>
 
     <div class="lp-cards" data-lp-cards>
-      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; ?>
+      <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $hasIcon = !empty($l['icon']) && is_file(UPLOAD_DIR . '/' . $l['icon']); if ($hasIcon) { $fav = '../uploads/' . $l['icon'] . '?v=' . filemtime(UPLOAD_DIR . '/' . $l['icon']); } $imgUrl = ($l['img'] && is_file(UPLOAD_DIR . '/' . $l['img'])) ? '../uploads/' . $l['img'] . '?v=' . filemtime(UPLOAD_DIR . '/' . $l['img']) : ''; ?>
         <div class="sc" data-id="<?= e($l['id']) ?>" draggable="<?= $editing ? 'true' : 'false' ?>" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
           <span class="sc-img<?= $l['img'] ? ' has-img' : '' ?>">
             <?php if ($l['img'] && is_file(UPLOAD_DIR . '/' . $l['img'])): ?>
               <img class="sc-photo" src="../uploads/<?= e($l['img']) ?>?v=<?= filemtime(UPLOAD_DIR . '/' . $l['img']) ?>" alt="" loading="lazy">
-            <?php else: ?>
-              <img class="sc-blur" src="<?= e($fav) ?>" alt="" data-fallback>
-              <img class="sc-big" src="<?= e($fav) ?>" alt="" data-fallback>
             <?php endif; ?>
           </span>
           <span class="sc-bar">
@@ -76,7 +73,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           </span>
           <?php if ($editing): ?>
             <span class="sc-tools">
-              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= $l['img'] ? '1' : '' ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
+              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
               <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="launch_remove"><input type="hidden" name="id" value="<?= e($l['id']) ?>"><button class="sc-del" aria-label="Fjern <?= e($l['name']) ?>"><?= icon('cross') ?></button></form>
             </span>
           <?php endif; ?>
@@ -97,9 +94,25 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     <h2 data-lp-dtitle>Ny genvej</h2>
     <label>Navn<input name="name" required maxlength="40" placeholder="Fx EFUTURE"></label>
     <label>Adresse<input name="url" required placeholder="efuture.dk"></label>
-    <label>Billede (valgfrit)<input type="file" name="img" accept="image/jpeg,image/png,image/webp"></label>
+    <div class="lp-drops">
+      <div class="lp-drop" data-drop="img" tabindex="0" role="button" aria-label="Billede: klik, træk eller sæt ind">
+        <span class="lp-drop-prev" data-prev></span>
+        <span class="lp-drop-tx"><strong>Billede</strong><small>Klik, træk ind eller Ctrl+V</small></span>
+        <button type="button" class="lp-drop-x" data-clear aria-label="Fjern billede">×</button>
+        <input type="file" name="img" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+        <input type="checkbox" name="remove_img" value="1" hidden>
+      </div>
+      <div class="lp-drop lp-drop-icon" data-drop="icon" tabindex="0" role="button" aria-label="Ikon: klik, træk eller sæt ind">
+        <span class="lp-drop-prev" data-prev></span>
+        <span class="lp-drop-tx"><strong>Ikon</strong><small>PNG, SVG eller WebP</small></span>
+        <button type="button" class="lp-drop-x" data-clear aria-label="Fjern ikon">×</button>
+        <input type="file" name="icon" accept="image/png,image/svg+xml,image/webp,image/jpeg" hidden>
+        <input type="checkbox" name="remove_icon" value="1" hidden>
+      </div>
+    </div>
+    <label>Eller link til billede<input name="img_url" placeholder="https://…/billede.jpg" inputmode="url"></label>
+    <label>Eller link til ikon<input name="icon_url" placeholder="https://…/ikon.png" inputmode="url"></label>
     <label class="check"><input type="checkbox" name="auto" value="1" checked> Hent sidens billede automatisk, hvis jeg ikke vælger et</label>
-    <label class="check" data-lp-rmimg hidden><input type="checkbox" name="remove_img" value="1"> Fjern nuværende billede</label>
     <div class="actions">
       <button class="btn">Gem</button>
       <button type="button" class="btn ghost" data-lp-close>Annuller</button>
