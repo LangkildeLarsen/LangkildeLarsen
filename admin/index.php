@@ -9,6 +9,7 @@ require dirname(__DIR__) . '/inc/weather.php';
 require dirname(__DIR__) . '/inc/training.php';
 require dirname(__DIR__) . '/inc/reminders.php';
 require dirname(__DIR__) . '/inc/watch.php';
+require dirname(__DIR__) . '/inc/launch.php';
 
 users_migrate();
 if (!empty($_SESSION['admin']) && empty($_SESSION['uid'])) {
@@ -545,6 +546,80 @@ if ($action) {
         ev_remove((string)($_POST['id'] ?? ''));
         $cmBack = preg_match('/^\d{4}-\d{2}$/', (string)($_POST['cm'] ?? '')) ? '?cm=' . $_POST['cm'] : '';
         redirect('index.php' . $cmBack);
+    }
+
+    if ($action === 'launch_opts') {
+        $lp = launch_load();
+        $lp['opt'] = [
+            'search' => (string)($_POST['search'] ?? 'google'),
+            'greet' => !empty($_POST['greet']),
+            'cards' => ['jarvis' => !empty($_POST['c_jarvis']), 'weather' => !empty($_POST['c_weather']), 'event' => !empty($_POST['c_event']), 'rem' => !empty($_POST['c_rem'])],
+        ];
+        launch_save($lp);
+        flash('Launchpad er gemt.');
+        redirect('index.php?view=settings#launchpad');
+    }
+
+    if (in_array($action, ['launch_save', 'launch_remove', 'launch_order'], true)) {
+        $lp = launch_load();
+        $back = 'index.php?view=launch&edit=1';
+        if ($action === 'launch_remove') {
+            foreach ($lp['links'] as $l) {
+                if ($l['id'] === ($_POST['id'] ?? '') && $l['img']) {
+                    @unlink(UPLOAD_DIR . '/' . $l['img']);
+                }
+            }
+            $lp['links'] = array_values(array_filter($lp['links'], fn($l) => $l['id'] !== ($_POST['id'] ?? '')));
+        } elseif ($action === 'launch_order') {
+            $order = array_flip(array_filter(explode(',', (string)($_POST['order'] ?? ''))));
+            usort($lp['links'], fn($a, $b) => ($order[$a['id']] ?? 999) <=> ($order[$b['id']] ?? 999));
+            launch_save($lp);
+            header('Content-Type: application/json');
+            echo '{"ok":true}';
+            exit;
+        } else {
+            $url = launch_norm_url((string)($_POST['url'] ?? ''));
+            $name = mb_substr(trim((string)($_POST['name'] ?? '')), 0, 40);
+            if ($url === '' || $name === '') {
+                flash('Skriv både navn og adresse.');
+                redirect($back);
+            }
+            $id = (string)($_POST['id'] ?? '');
+            $idx = null;
+            foreach ($lp['links'] as $i => $l) {
+                if ($l['id'] === $id) {
+                    $idx = $i;
+                }
+            }
+            if ($idx === null) {
+                $lp['links'][] = ['id' => bin2hex(random_bytes(4)), 'name' => $name, 'url' => $url, 'img' => ''];
+                $idx = count($lp['links']) - 1;
+            }
+            $row = &$lp['links'][$idx];
+            $row['name'] = $name;
+            $urlChanged = $row['url'] !== $url;
+            $row['url'] = $url;
+            if (!empty($_POST['remove_img']) && $row['img']) {
+                @unlink(UPLOAD_DIR . '/' . $row['img']);
+                $row['img'] = '';
+            }
+            if (!empty($_FILES['img']['tmp_name'])) {
+                $saved = save_upload($_FILES['img'], 'launch', 'lp-' . $row['id']);
+                if ($saved) {
+                    $row['img'] = $saved;
+                } else {
+                    flash('Billedet kunne ikke bruges. Prøv JPG, PNG eller WebP.');
+                }
+            } elseif (!empty($_POST['auto']) && ($row['img'] === '' || $urlChanged) && empty($_POST['remove_img'])) {
+                $got = launch_fetch_image($url, $row['id']);
+                if ($got) {
+                    $row['img'] = $got;
+                }
+            }
+            unset($row);
+        }
+        launch_save($lp);
+        redirect($back);
     }
 
     if ($action === 'watch_add') {
@@ -1180,6 +1255,10 @@ $cal = in_array($view, ['dashboard', 'calendar'], true) ? cal_events($view === '
 $hasCal = (bool)cal_sources();
 
 $pageTitle = $titles[$view] ?? 'Oversigt';
+if ($view === 'launch') {
+    require __DIR__ . '/launch.php';
+    exit;
+}
 ?><!doctype html>
 <html lang="da" data-version="<?= e(app_version()) ?>">
 <head>
@@ -1797,6 +1876,26 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <h2 class="section-title">Træning</h2>
         <p class="muted small">Hvor mange gange om ugen du vil træne. Du kan også logge via Jarvis, fx "jeg har trænet i dag".</p>
         <label>Træninger pr. uge<input type="number" name="week_goal" min="1" max="7" value="<?= (int)$tr['week_goal'] ?>"></label>
+        <div class="actions"><button class="btn">Gem</button></div>
+      </form>
+
+      <?php $lpo = launch_opts(launch_load()); ?>
+      <form method="post" class="panel form" id="launchpad">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="launch_opts">
+        <h2 class="section-title">Launchpad</h2>
+        <p class="muted small">Din nye fane i Chrome. Baggrund, glas og blur følger indstillingerne under Baggrund.</p>
+        <div class="actions">
+          <a class="btn ghost" href="./?view=launch">Åbn Launchpad</a>
+          <a class="btn ghost" href="./?view=launch&amp;edit=1">Rediger genveje</a>
+        </div>
+        <label>Søgemaskine<select name="search"><?php foreach (launch_engines() as $k => [$n]): ?><option value="<?= e($k) ?>"<?= $lpo['search'] === $k ? ' selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
+        <label class="check"><input type="checkbox" name="greet" value="1"<?= $lpo['greet'] ? ' checked' : '' ?>> Vis hilsen under uret</label>
+        <p class="muted small">Kort nederst:</p>
+        <label class="check"><input type="checkbox" name="c_jarvis" value="1"<?= $lpo['cards']['jarvis'] ? ' checked' : '' ?>> Jarvis</label>
+        <label class="check"><input type="checkbox" name="c_weather" value="1"<?= $lpo['cards']['weather'] ? ' checked' : '' ?>> Vejret</label>
+        <label class="check"><input type="checkbox" name="c_event" value="1"<?= $lpo['cards']['event'] ? ' checked' : '' ?>> Næste aftale</label>
+        <label class="check"><input type="checkbox" name="c_rem" value="1"<?= $lpo['cards']['rem'] ? ' checked' : '' ?>> Påmindelser og træning</label>
         <div class="actions"><button class="btn">Gem</button></div>
       </form>
 

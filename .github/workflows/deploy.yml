@@ -36,6 +36,7 @@ jobs:
               --exclude-glob .git* \
               --exclude ^\.github/ \
               --exclude ^data/ \
+              --exclude ^extension/ \
               --exclude-glob *.md \
               ./ $SFTP_PATH;
             rm -r -f $SFTP_PATH/.git;

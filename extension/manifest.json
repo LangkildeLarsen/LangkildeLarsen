@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Jarvis Launchpad",
+  "version": "1.0.0",
+  "description": "Din Jarvis Launchpad som ny fane – plus en farvevælger, der kopierer farven til udklipsholderen.",
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "action": {
+    "default_title": "Farvevælger",
+    "default_popup": "picker.html",
+    "default_icon": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" }
+  },
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+Shift+C" }, "description": "Åbn farvevælgeren" }
+  },
+  "permissions": ["clipboardWrite", "storage"],
+  "icons": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" }
+}
