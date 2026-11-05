@@ -144,3 +144,4 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .lp-opts select { height: 34px; padding: 0 30px 0 12px; border-radius: 99px; border: 0; background-color: rgb(255 255 255 / 9%); color: var(--ink); font: inherit; font-size: 13px; box-shadow: none; }
 .lp-opts input[type="checkbox"] { accent-color: #fff; }
 .sc-img:not(.has-img) { background: rgb(255 255 255 / calc(var(--el-a, .08) * .6)); }
+.editing .sc:not(.add) { animation: none !important; }
