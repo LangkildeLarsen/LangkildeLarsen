@@ -63,6 +63,10 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
           <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?> has-center" style="--ov: <?= launch_ov($l['ov'] ?? null) / 100 ?>">
             <?php $ibg = launch_color($l['iconbg'] ?? ''); if ($ibg): ?><span class="sc-app" style="background: <?= e($ibg) ?>"><img src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback></span><?php else: ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
+            <?php if (!$imgUrl && $own): ?>
+              <span class="sc-term" aria-hidden="true"><span class="sc-term-log"><?php foreach (['init kernel.sys', 'mount /dev/brain', 'load ui.dark', 'check coffee.level', 'sync reminders.db', 'handshake uplink'] as $tl): ?>&gt; <?= e($tl) ?> <?= str_repeat('.', 22 - strlen($tl)) ?> <span>OK</span>
+<?php endforeach; ?></span><span class="sc-term-hex"><?php for ($hx = 0; $hx < 3; $hx++): ?>0x<?= strtoupper(substr(md5($hx . 'jv'), 0, 4)) ?>  <?= strtoupper(substr(md5($hx . 'a'), 0, 4) . ' ' . substr(md5($hx . 'b'), 0, 4) . ' ' . substr(md5($hx . 'c'), 0, 4)) . "\n" ?><?php endfor; ?></span></span>
+            <?php endif; ?>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
           <span class="sc-bar">
