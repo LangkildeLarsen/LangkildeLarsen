@@ -82,7 +82,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           <?php endif; ?>
         </div>
       <?php endforeach; ?>
-      <button type="button" class="sc add" data-edit="" data-name="" data-url=""><span class="sc-plus"><?= icon('plus') ?></span><small>Tilføj genvej</small></button>
+      <?php if ($editing): ?><button type="button" class="sc add" data-edit="" data-name="" data-url=""><span class="sc-plus"><?= icon('plus') ?></span><small>Tilføj genvej</small></button><?php endif; ?>
     </div>
     <?php if ($editing): ?><p class="lp-hint">Træk i kortene for at ændre rækkefølgen.</p><?php endif; ?>
   </main>
