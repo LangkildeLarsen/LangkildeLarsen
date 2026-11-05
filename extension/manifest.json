@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Jarvis Launchpad",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Din Jarvis Launchpad som ny fane – plus en farvevælger, der kopierer farven til udklipsholderen.",
   "chrome_url_overrides": { "newtab": "newtab.html" },
   "action": {
