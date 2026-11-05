@@ -135,31 +135,77 @@
   }
 
   const grid = $('[data-lp-cards]');
-  if (grid && document.body.classList.contains('editing')) {
-    let drag = null;
-    grid.addEventListener('dragstart', e => {
-      drag = e.target.closest('.sc[data-id]');
-      if (!drag) return;
-      drag.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    grid.addEventListener('dragover', e => {
-      if (!drag) return;
-      e.preventDefault();
-      const over = e.target.closest('.sc[data-id]');
-      if (!over || over === drag) return;
-      const r = over.getBoundingClientRect();
-      const after = (e.clientX - r.left) / r.width > .5;
-      over.parentNode.insertBefore(drag, after ? over.nextSibling : over);
-    });
-    grid.addEventListener('dragend', () => {
-      if (!drag) return;
-      drag.classList.remove('dragging');
-      drag = null;
+  if (grid) {
+    const editing = document.body.classList.contains('editing');
+    grid.querySelectorAll('a, img').forEach(el => el.setAttribute('draggable', 'false'));
+    let card = null, timer = null, dragging = false, suppress = false;
+    let sx = 0, sy = 0, offX = 0, offY = 0, tx = 0, ty = 0;
+    const save = () => {
       const form = $('[data-lp-order]');
       form.order.value = [...grid.querySelectorAll('.sc[data-id]')].map(x => x.dataset.id).join(',');
       fetch('index.php', { method: 'POST', body: new FormData(form), credentials: 'same-origin' }).catch(() => {});
+    };
+    const follow = (x, y) => {
+      const r = card.getBoundingClientRect();
+      const nx = r.left - tx, ny = r.top - ty;
+      tx = x - offX - nx;
+      ty = y - offY - ny;
+      card.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(1.04)';
+    };
+    const start = e => {
+      dragging = true;
+      const r = card.getBoundingClientRect();
+      offX = sx - r.left;
+      offY = sy - r.top;
+      tx = 0; ty = 0;
+      card.classList.add('lift');
+      grid.classList.add('sorting');
+      try { card.setPointerCapture(e.pointerId); } catch (x) {}
+      if (navigator.vibrate) navigator.vibrate(10);
+    };
+    const end = () => {
+      clearTimeout(timer);
+      if (dragging) {
+        card.classList.remove('lift');
+        card.style.transform = '';
+        grid.classList.remove('sorting');
+        suppress = true;
+        setTimeout(() => { suppress = false; }, 250);
+        save();
+      }
+      dragging = false;
+      card = null;
+    };
+    grid.addEventListener('pointerdown', e => {
+      const c = e.target.closest('.sc[data-id]');
+      if (!c || e.button !== 0 || e.target.closest('.sc-tools')) return;
+      card = c;
+      sx = e.clientX; sy = e.clientY;
+      clearTimeout(timer);
+      timer = setTimeout(() => start(e), editing ? 150 : 450);
     });
+    grid.addEventListener('pointermove', e => {
+      if (!card) return;
+      if (!dragging) {
+        if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) { clearTimeout(timer); card = null; }
+        return;
+      }
+      e.preventDefault();
+      const prev = card.style.pointerEvents;
+      card.style.pointerEvents = 'none';
+      const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.sc[data-id]');
+      card.style.pointerEvents = prev;
+      if (over && over !== card) {
+        const r = over.getBoundingClientRect();
+        const after = (e.clientY - r.top) / r.height > .5 && Math.abs(e.clientY - (r.top + r.height / 2)) > r.height / 4 ? e.clientY > r.top + r.height / 2 : (e.clientX - r.left) / r.width > .5;
+        grid.insertBefore(card, after ? over.nextSibling : over);
+      }
+      follow(e.clientX, e.clientY);
+    });
+    grid.addEventListener('pointerup', end);
+    grid.addEventListener('pointercancel', end);
+    grid.addEventListener('click', e => { if (suppress) { e.preventDefault(); e.stopPropagation(); } }, true);
+    grid.addEventListener('contextmenu', e => { if (dragging) e.preventDefault(); });
   }
 
   const ask = $('[data-lp-ask]');
