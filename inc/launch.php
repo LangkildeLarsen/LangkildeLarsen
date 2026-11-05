@@ -259,3 +259,8 @@ function launch_color(?string $v): string
 {
     return preg_match('/^#[0-9a-f]{6}$/i', (string)$v) ? strtolower((string)$v) : '';
 }
+
+function launch_ov($v): int
+{
+    return $v === null || $v === '' ? 45 : max(0, min(90, (int)$v));
+}

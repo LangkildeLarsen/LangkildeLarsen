@@ -187,3 +187,11 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .sc-link { z-index: 5; cursor: pointer; }
 .sc-tools { z-index: 6; }
 .sc-app { width: 56px; height: 56px; box-shadow: 0 10px 24px rgb(0 0 0 / 35%); border: 0; }
+
+.sc-img.has-center.has-img::after { background: rgb(0 0 0 / var(--ov, .45)); }
+.sc:hover .sc-img.has-center.has-img::after { background: rgb(0 0 0 / calc(var(--ov, .45) * .75)); }
+.lp-pos-frame::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / var(--ov, .45)); pointer-events: none; }
+.lp-pos-frame i { z-index: 1; }
+.lp-ov { display: grid !important; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px !important; }
+.lp-ov span { color: var(--muted); font-size: 12px; min-width: 34px; }
+.lp-ov input[type="range"] { accent-color: #fff; padding: 0; height: 22px; background: transparent; box-shadow: none; }

@@ -64,6 +64,14 @@
     frame.addEventListener('pointermove', e => { if (down) at(e); });
     frame.addEventListener('pointerup', () => { down = false; });
   }
+  const setOv = v => {
+    if (!posBox) return;
+    const r = posBox.querySelector('[data-ov-in]');
+    r.value = v;
+    posBox.querySelector('[data-ov-out]').textContent = v + '%';
+    posBox.querySelector('[data-pos-frame]').style.setProperty('--ov', v / 100);
+  };
+  if (posBox) posBox.querySelector('[data-ov-in]').addEventListener('input', e => setOv(e.target.value));
   const setDrop = (k, url) => {
     const z = zone(k);
     if (!z) return;
@@ -125,6 +133,7 @@
       dlg.querySelector('[data-lp-dtitle]').textContent = b.dataset.edit ? 'Rediger genvej' : 'Ny genvej';
       setDrop('img', b.dataset.img || '');
       setPos(b.dataset.pos || '50% 50%');
+      setOv(b.dataset.ov || '45');
       f.querySelector('[data-appicon]').checked = !!b.dataset.iconbg;
       f.querySelector('[data-iconbg]').value = b.dataset.iconbg || '#ffffff';
       setDrop('icon', b.dataset.icon || '');

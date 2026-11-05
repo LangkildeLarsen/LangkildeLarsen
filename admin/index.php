@@ -598,6 +598,7 @@ if ($action) {
             $row = &$lp['links'][$idx];
             $row['name'] = $name;
             $row['pos'] = launch_pos((string)($_POST['pos'] ?? ''));
+            $row['ov'] = launch_ov($_POST['ov'] ?? null);
             $row['iconbg'] = !empty($_POST['appicon']) ? launch_color((string)($_POST['iconbg'] ?? '')) : '';
             $row['center'] = !empty($_POST['center']) || ($idx === count($lp['links']) - 1 && !$id && in_array(launch_host($url), ['youtube.com', 'facebook.com'], true));
             $urlChanged = $row['url'] !== $url;

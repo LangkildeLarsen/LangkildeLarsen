@@ -61,7 +61,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
       <?php foreach ($lp['links'] as $l): $host = launch_host($l['url']); $hue = launch_hue($host); $own = $host === 'langkildelarsen.dk' || str_ends_with($host, '.langkildelarsen.dk'); $fav = $own ? '../assets/brand/fav-96.png' : 'https://www.google.com/s2/favicons?domain=' . rawurlencode($host) . '&sz=128'; $iconUrl = launch_src($l['icon'] ?? ''); $hasIcon = $iconUrl !== ''; if ($hasIcon) { $fav = $iconUrl; } $imgUrl = launch_src($l['img'] ?? ''); ?>
         <div class="sc" data-host="<?= e($host) ?>" data-id="<?= e($l['id']) ?>" draggable="false" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
-          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?> has-center">
+          <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?> has-center" style="--ov: <?= launch_ov($l['ov'] ?? null) / 100 ?>">
             <?php $ibg = launch_color($l['iconbg'] ?? ''); if ($ibg): ?><span class="sc-app" style="background: <?= e($ibg) ?>"><img src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback></span><?php else: ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
@@ -71,7 +71,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           </span>
           <?php if ($editing): ?>
             <span class="sc-tools">
-              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" data-iconbg="<?= e(launch_color($l['iconbg'] ?? '')) ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
+              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" data-iconbg="<?= e(launch_color($l['iconbg'] ?? '')) ?>" data-ov="<?= launch_ov($l['ov'] ?? null) ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
               <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="launch_remove"><input type="hidden" name="id" value="<?= e($l['id']) ?>"><button class="sc-del" aria-label="Fjern <?= e($l['name']) ?>"><?= icon('cross') ?></button></form>
             </span>
           <?php endif; ?>
@@ -118,8 +118,9 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
     </div>
     <div class="lp-pos" data-pos-box hidden>
       <span class="lp-pos-h"><strong>Position af billede</strong><small>Klik eller træk i billedet</small></span>
-      <div class="lp-pos-frame" data-pos-frame><img alt="" data-pos-img referrerpolicy="no-referrer"><i data-pos-dot></i></div>
+      <div class="lp-pos-frame" data-pos-frame style="--ov: .45"><img alt="" data-pos-img referrerpolicy="no-referrer"><i data-pos-dot></i></div>
       <input type="hidden" name="pos" value="50% 50%" data-pos-in>
+      <label class="lp-ov">Mørkt overlay <span data-ov-out>45%</span><input type="range" name="ov" min="0" max="90" value="45" data-ov-in></label>
     </div>
     <div class="lp-appbg">
       <label class="check"><input type="checkbox" name="appicon" value="1" data-appicon> Vis ikonet som app-ikon med farvet baggrund</label>
