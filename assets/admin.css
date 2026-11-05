@@ -2778,3 +2778,6 @@ body.has-bg .rem-when:not([aria-expanded="true"]):not(:hover), body.has-bg .rem-
   background-color: rgb(255 255 255 / var(--el-a, .07));
 }
 body.has-bg .c-cal .day.off { background-color: rgb(255 255 255 / calc(var(--el-a, .07) / 2)); }
+
+.dash-bg { inset: -60px; filter: blur(var(--img-blur, 0px)); transform: none; }
+.dash-bg::after { inset: 0; }

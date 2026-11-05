@@ -726,6 +726,7 @@ if ($action) {
             $ui['bg_blur'] = max(0, min(60, (int)($_POST['bg_blur'] ?? ($ui['bg_blur'] ?? 24))));
             $ui['bg_card'] = max(0, min(95, (int)($_POST['bg_card'] ?? ($ui['bg_card'] ?? 42))));
             $ui['bg_el'] = max(0, min(40, (int)($_POST['bg_el'] ?? ($ui['bg_el'] ?? 7))));
+            $ui['bg_img_blur'] = max(0, min(40, (int)($_POST['bg_img_blur'] ?? ($ui['bg_img_blur'] ?? 0))));
             $hasFile = !empty($_FILES['bg']['tmp_name']);
             $saved = $hasFile ? save_upload($_FILES['bg'], 'backgrounds', 'bg-' . bin2hex(random_bytes(3))) : null;
             if ($saved && function_exists('imagecreatefromstring')) {
@@ -1193,7 +1194,7 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
 <script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
 </head>
 <?php $bgFile = (string)($ui['bg'] ?? ''); $hasBg = $bgFile !== '' && is_file(UPLOAD_DIR . '/' . $bgFile); ?>
-<body<?= $hasBg ? ' class="has-bg" style="--bg-dim: ' . ((int)($ui['bg_dim'] ?? 45) / 100) . '; --glass-blur: ' . (int)($ui['bg_blur'] ?? 24) . 'px; --glass-a: ' . ((int)($ui['bg_card'] ?? 42) / 100) . '; --el-a: ' . ((int)($ui['bg_el'] ?? 7) / 100) . '"' : '' ?>>
+<body<?= $hasBg ? ' class="has-bg" style="--bg-dim: ' . ((int)($ui['bg_dim'] ?? 45) / 100) . '; --glass-blur: ' . (int)($ui['bg_blur'] ?? 24) . 'px; --glass-a: ' . ((int)($ui['bg_card'] ?? 42) / 100) . '; --el-a: ' . ((int)($ui['bg_el'] ?? 7) / 100) . '; --img-blur: ' . (int)($ui['bg_img_blur'] ?? 0) . 'px"' : '' ?>>
 <?php if ($hasBg): ?><div class="dash-bg" style="background-image: url('../uploads/<?= e($bgFile) ?>?v=<?= filemtime(UPLOAD_DIR . '/' . $bgFile) ?>')" aria-hidden="true"></div><?php endif; ?>
 <div class="app">
   <aside class="rail" aria-label="Menu">
@@ -1805,7 +1806,8 @@ $pageTitle = $titles[$view] ?? 'Oversigt';
         <p class="muted small">Et billede bag hele dashboardet. Kortene bliver til mat glas med blur ovenpå.</p>
         <?php if ($hasBg): ?><div class="bg-preview" style="background-image: url('../uploads/<?= e($bgFile) ?>')"></div><?php endif; ?>
         <label>Billede (JPG, PNG eller WebP)<input type="file" name="bg" accept="image/jpeg,image/png,image/webp"></label>
-        <label>Overlay (mørkere baggrund) <span class="muted small" data-out="bg_dim"><?= (int)($ui['bg_dim'] ?? 45) ?>%</span><input type="range" name="bg_dim" min="0" max="85" value="<?= (int)($ui['bg_dim'] ?? 45) ?>" data-live="--bg-dim" data-scale="100"></label>
+        <label>Blur på baggrundsbilledet <span class="muted small" data-out="bg_img_blur"><?= (int)($ui['bg_img_blur'] ?? 0) ?>px</span><input type="range" name="bg_img_blur" min="0" max="40" value="<?= (int)($ui['bg_img_blur'] ?? 0) ?>" data-live="--img-blur" data-unit="px"></label>
+        <label>Sort overlay på baggrundsbilledet <span class="muted small" data-out="bg_dim"><?= (int)($ui['bg_dim'] ?? 45) ?>%</span><input type="range" name="bg_dim" min="0" max="85" value="<?= (int)($ui['bg_dim'] ?? 45) ?>" data-live="--bg-dim" data-scale="100"></label>
         <label>Kortenes gennemsigtighed <span class="muted small" data-out="bg_card"><?= (int)($ui['bg_card'] ?? 42) ?>%</span><input type="range" name="bg_card" min="0" max="95" value="<?= (int)($ui['bg_card'] ?? 42) ?>" data-live="--glass-a" data-scale="100"></label>
         <label>Knapper og felter <span class="muted small" data-out="bg_el"><?= (int)($ui['bg_el'] ?? 7) ?>%</span><input type="range" name="bg_el" min="0" max="40" value="<?= (int)($ui['bg_el'] ?? 7) ?>" data-live="--el-a" data-scale="100"></label>
         <label>Blur på glasset <span class="muted small" data-out="bg_blur"><?= (int)($ui['bg_blur'] ?? 24) ?>px</span><input type="range" name="bg_blur" min="0" max="60" value="<?= (int)($ui['bg_blur'] ?? 24) ?>" data-live="--glass-blur" data-unit="px"></label>
