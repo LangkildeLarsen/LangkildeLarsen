@@ -19,6 +19,25 @@ function launch_load(?array $user = null): array
         $d = ['links' => launch_defaults()];
         save_json(ukey('launch', $user), $d);
     }
+    $presets = [
+        'efuture_img_1' => ['efuture.dk', 'img', 'https://www.efuture.dk/wp-content/uploads/2026/10/efuture-suv-elcykler.webp'],
+    ];
+    foreach ($presets as $key => [$host, $field, $src]) {
+        if (!empty($d['mig'][$key])) {
+            continue;
+        }
+        foreach ($d['links'] as &$l) {
+            if (launch_host($l['url']) === $host) {
+                $got = $field === 'img' ? launch_img_from_url($src, $l['id']) : launch_icon_from_url($src, $l['id']);
+                if ($got) {
+                    $l[$field] = $got;
+                }
+            }
+        }
+        unset($l);
+        $d['mig'][$key] = 1;
+        save_json(ukey('launch', $user), $d);
+    }
     if (empty($d['mig']['cykelportal_icon'])) {
         foreach ($d['links'] as &$l) {
             if (launch_host($l['url']) === 'portal.efuture.dk' && empty($l['icon'])) {
