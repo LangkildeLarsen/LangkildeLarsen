@@ -1029,6 +1029,9 @@
   const pad = n => String(n).padStart(2, '0');
   const pick = (arr, n) => arr.slice().sort(() => Math.random() - .5).slice(0, n);
   let audio = null;
+  if (boot.dataset.sound) {
+    try { audio = new Audio(boot.dataset.sound); audio.preload = 'auto'; audio.load(); } catch (e) { audio = null; }
+  }
   let timers = [];
   let loops = [];
   let running = false;
@@ -1115,11 +1118,16 @@
     boot.classList.remove('out', 'on');
     void boot.offsetWidth;
     if (!boot.dataset.sound) { sequence(); return; }
-    if (audio) audio.pause();
-    audio = new Audio(boot.dataset.sound);
+    if (!audio) { audio = new Audio(boot.dataset.sound); audio.preload = 'auto'; }
+    audio.pause();
+    try { audio.currentTime = 0; } catch (e) {}
     audio.volume = 0.9;
-    sequence();
+    let started = false;
+    const go = () => { if (!started) { started = true; sequence(); } };
+    audio.addEventListener('playing', go, { once: true });
+    setTimeout(go, 1300);
     audio.play().catch(() => {
+      go();
       const unlock = () => {
         ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.removeEventListener(ev, unlock, true));
         if (running && audio && audio.paused) audio.play().catch(() => {});

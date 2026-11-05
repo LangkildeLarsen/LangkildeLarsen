@@ -501,6 +501,11 @@ if ($action) {
         $path = sound_path();
         if (!empty($_POST['remove_sound'])) {
             @unlink($path);
+            $pub = load_json(ukey('startsound-pub'));
+            if (!empty($pub['name'])) {
+                @unlink(UPLOAD_DIR . '/sound/' . $pub['name']);
+            }
+            save_json(ukey('startsound-pub'), []);
             flash('Startlyden er fjernet.');
         } elseif (!empty($_FILES['sound']['tmp_name']) && is_uploaded_file($_FILES['sound']['tmp_name'])) {
             $f = $_FILES['sound'];
@@ -1157,6 +1162,29 @@ function jarvis_orb(string $class = ''): string
 function sound_path(?array $user = null): string
 {
     return DATA_DIR . '/' . ukey('startsound', $user) . '.mp3';
+}
+
+function sound_public_url(?array $user = null): string
+{
+    $src = sound_path($user);
+    if (!is_file($src)) {
+        return '';
+    }
+    $meta = load_json(ukey('startsound-pub', $user));
+    $name = $meta['name'] ?? '';
+    $dir = UPLOAD_DIR . '/sound';
+    if ($name === '' || !is_file($dir . '/' . $name) || ($meta['m'] ?? 0) !== filemtime($src)) {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        if ($name !== '') {
+            @unlink($dir . '/' . $name);
+        }
+        $name = bin2hex(random_bytes(12)) . '.mp3';
+        copy($src, $dir . '/' . $name);
+        save_json(ukey('startsound-pub', $user), ['name' => $name, 'm' => filemtime($src)]);
+    }
+    return '../uploads/sound/' . $name;
 }
 
 function weather_card(?array $w): string
@@ -2218,7 +2246,7 @@ if ($view === 'launch') {
 </div>
 <?php $music = ($ui['music'] ?? null) ?: ['v' => 'byOVTxnILMU', 'list' => 'RDbyOVTxnILMU', 'url' => 'https://www.youtube.com/watch?v=byOVTxnILMU&list=RDbyOVTxnILMU']; ?>
 <?php if (($ui['splash'] ?? true)): ?>
-<div class="boot" id="boot" hidden data-sound="<?= is_file(sound_path()) ? 'index.php?ajax=sound&amp;v=' . filemtime(sound_path()) : '' ?>" data-name="<?= e(first_name($me)) ?>">
+<div class="boot" id="boot" hidden data-sound="<?= e(sound_public_url()) ?>" data-name="<?= e(first_name($me)) ?>">
   <div class="boot-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="boot-hud boot-tl" aria-hidden="true">
     <span class="boot-tag">JARVIS OS 5.5</span>

@@ -7,3 +7,8 @@ Options -Indexes
     Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'"
   </IfModule>
 </FilesMatch>
+<FilesMatch "\.(mp3|webp|jpg|jpeg|png)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=2592000"
+  </IfModule>
+</FilesMatch>
