@@ -37,6 +37,19 @@ function launch_load(?array $user = null): array
         $d['mig']['v2_bikedesk_icon'] = 1;
         $dirty = true;
     }
+    if (empty($d['mig']['v7_appicons'])) {
+        foreach ($d['links'] as &$l) {
+            $h = launch_host($l['url']);
+            if ($h === 'efuture.dk') {
+                $l['iconbg'] = '#ffffff';
+            } elseif ($h === 'app.c1st.com') {
+                $l['iconbg'] = '#011223';
+            }
+        }
+        unset($l);
+        $d['mig']['v7_appicons'] = 1;
+        $dirty = true;
+    }
     if (empty($d['mig']['v6_center_jarvis'])) {
         foreach ($d['links'] as &$l) {
             if (launch_host($l['url']) === 'langkildelarsen.dk') {
@@ -240,4 +253,9 @@ function launch_drop_file(?string $v): void
 function launch_pos(?string $v): string
 {
     return preg_match('/^(\d{1,3})% (\d{1,3})%$/', (string)$v, $m) ? min(100, (int)$m[1]) . '% ' . min(100, (int)$m[2]) . '%' : '50% 50%';
+}
+
+function launch_color(?string $v): string
+{
+    return preg_match('/^#[0-9a-f]{6}$/i', (string)$v) ? strtolower((string)$v) : '';
 }

@@ -174,3 +174,13 @@ a.lp-card:hover { background: rgb(16 16 18 / calc(var(--glass-a, .6) + .12)); }
 .sorting .sc:not(.lift) { transition: transform .25s ease; }
 .sorting .sc-link { pointer-events: none; }
 .editing .sc:not(.add) { cursor: grab; }
+
+.sc-app { position: relative; z-index: 2; display: grid; place-items: center; width: 68px; height: 68px; border-radius: 22.5%; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%), 0 12px 28px rgb(0 0 0 / 45%); transition: transform .4s cubic-bezier(.2, .8, .2, 1); }
+.sc-app img { width: 62%; height: 62%; object-fit: contain; border-radius: 0; }
+.sc-app .mono { font-size: 28px; color: #000; }
+.sc:hover .sc-app { transform: scale(1.1); }
+.lp-appbg { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lp-appbg input[type="color"] { width: 44px; height: 32px; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer; }
+.lp-appbg input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.lp-appbg input[type="color"]::-webkit-color-swatch { border: 1px solid rgb(255 255 255 / 20%); border-radius: 10px; }
+.sc-app .mono { color: inherit; mix-blend-mode: difference; }

@@ -62,7 +62,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
         <div class="sc" data-host="<?= e($host) ?>" data-id="<?= e($l['id']) ?>" draggable="false" style="--h: <?= $hue ?>">
           <a class="sc-link" href="<?= e($l['url']) ?>" aria-label="<?= e($l['name']) ?>"></a>
           <span class="sc-img<?= $imgUrl ? ' has-img' : '' ?> has-center">
-            <img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback>
+            <?php $ibg = launch_color($l['iconbg'] ?? ''); if ($ibg): ?><span class="sc-app" style="background: <?= e($ibg) ?>"><img src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback></span><?php else: ?><img class="sc-center" src="<?= e($fav) ?>" alt="" referrerpolicy="no-referrer" data-fallback><?php endif; ?>
             <?php if ($imgUrl): ?><img class="sc-photo" src="<?= e($imgUrl) ?>" alt="" loading="lazy" referrerpolicy="no-referrer" style="object-position: <?= e(launch_pos($l['pos'] ?? '')) ?>"><?php endif; ?>
           </span>
           <span class="sc-bar">
@@ -71,7 +71,7 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
           </span>
           <?php if ($editing): ?>
             <span class="sc-tools">
-              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" data-center="<?= !empty($l['center']) ? '1' : '' ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
+              <button type="button" class="sc-edit" data-edit="<?= e($l['id']) ?>" data-name="<?= e($l['name']) ?>" data-url="<?= e($l['url']) ?>" data-img="<?= e($imgUrl) ?>" data-icon="<?= $hasIcon ? e($fav) : '' ?>" data-pos="<?= e(launch_pos($l['pos'] ?? '')) ?>" data-iconbg="<?= e(launch_color($l['iconbg'] ?? '')) ?>" aria-label="Rediger <?= e($l['name']) ?>"><?= icon('gear') ?></button>
               <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="launch_remove"><input type="hidden" name="id" value="<?= e($l['id']) ?>"><button class="sc-del" aria-label="Fjern <?= e($l['name']) ?>"><?= icon('cross') ?></button></form>
             </span>
           <?php endif; ?>
@@ -120,6 +120,10 @@ $eng = $engines[$opt['search']] ?? $engines['google'];
       <span class="lp-pos-h"><strong>Position af billede</strong><small>Klik eller træk i billedet</small></span>
       <div class="lp-pos-frame" data-pos-frame><img alt="" data-pos-img referrerpolicy="no-referrer"><i data-pos-dot></i></div>
       <input type="hidden" name="pos" value="50% 50%" data-pos-in>
+    </div>
+    <div class="lp-appbg">
+      <label class="check"><input type="checkbox" name="appicon" value="1" data-appicon> Vis ikonet som app-ikon med farvet baggrund</label>
+      <input type="color" name="iconbg" value="#ffffff" data-iconbg aria-label="Baggrundsfarve til app-ikon">
     </div>
     <label>Eller link til billede<input name="img_url" placeholder="https://…/billede.jpg" inputmode="url"></label>
     <label>Eller link til ikon<input name="icon_url" placeholder="https://…/ikon.png" inputmode="url"></label>
