@@ -204,3 +204,8 @@ body.sk { padding-top: max(24px, env(safe-area-inset-top)); }
 .sk-cam-frame { min-height: 340px; }
 @media (max-width: 800px) { .sk-cam-frame { aspect-ratio: auto; height: 420px; } }
 .sk-flash.err { background: rgba(255, 77, 77, .12); color: var(--red); }
+
+.sk-brand-ic { background: url(ski/icon.svg) center / cover; border-radius: 0; }
+.sk-auth-logo { box-shadow: none; }
+.sk-install { background: var(--card); box-shadow: var(--inset); }
+.sk-share { color: var(--ink); }

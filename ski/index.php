@@ -36,9 +36,10 @@ function ski_head(): string
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Skiferie">
 <title>Skiferie · Mayrhofen</title>
-<link rel="manifest" href="manifest.php?v=2">
+<link rel="manifest" href="manifest.php?v=3">
+<link rel="icon" type="image/svg+xml" href="../assets/ski/icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/ski/icon-32.png">
-<link rel="apple-touch-icon" href="../assets/ski/icon-180.png">
+<link rel="apple-touch-icon" href="../assets/ski/icon-180.png?v=3">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=' . filemtime($root . '/assets/admin.css') . '">
 <link rel="stylesheet" href="../assets/ski.css?v=' . filemtime($root . '/assets/ski.css') . '">';

@@ -20,12 +20,12 @@ echo json_encode([
     'scope' => '/ski/',
     'display' => 'standalone',
     'orientation' => 'portrait',
-    'background_color' => '#07112a',
+    'background_color' => '#000000',
     'theme_color' => '#050505',
     'lang' => 'da',
     'icons' => [
-        ['src' => '/assets/ski/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
-        ['src' => '/assets/ski/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
-        ['src' => '/assets/ski/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+        ['src' => '/assets/ski/icon-192.png?v=3', 'sizes' => '192x192', 'type' => 'image/png'],
+        ['src' => '/assets/ski/icon-512.png?v=3', 'sizes' => '512x512', 'type' => 'image/png'],
+        ['src' => '/assets/ski/icon-512.png?v=3', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
     ],
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
