@@ -223,11 +223,11 @@ if ($action !== '') {
         $members = ski_members();
         $from = (string)($_POST['from'] ?? '');
         $to = (string)($_POST['to'] ?? '');
-        $ore = (int)($_POST['ore'] ?? 0);
-        if (isset($members[$from], $members[$to]) && $from !== $to && $ore > 0 && in_array($mid, [$from, $to], true)) {
+        $ore = (int)round(ski_parse_amount((string)($_POST['amount'] ?? '0')) * 100);
+        if (isset($members[$from], $members[$to]) && $from !== $to && $ore > 0 && $ore < 100000000 && in_array($mid, [$from, $to], true)) {
             ski_mutate('expenses', function (&$l) use ($from, $to, $ore, $mid) {
                 $id = ski_id();
-                $l[$id] = ['id' => $id, 'type' => 'payment', 'text' => 'Betaling', 'amount' => $ore / 100, 'cur' => 'DKK', 'ore' => $ore, 'by' => $from, 'split' => [$to], 'added' => $mid, 'created' => date('c')];
+                $l[$id] = ['id' => $id, 'type' => 'payment', 'text' => 'MobilePay', 'amount' => $ore / 100, 'cur' => 'DKK', 'ore' => $ore, 'by' => $from, 'split' => [$to], 'added' => $mid, 'created' => date('c')];
             });
         }
         ski_redirect('udgifter');
@@ -441,6 +441,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <li class="sk-day<?= $d === date('Y-m-d') ? ' today' : '' ?><?= $d < date('Y-m-d') ? ' was' : '' ?><?= $evs ? ' has' : '' ?>">
             <div class="sk-day-h"><span><?= $wd ?></span><strong><?= (int)date('j', strtotime($d)) ?>.</strong><small><?= date('n', strtotime($d)) === '12' ? 'dec.' : 'jan.' ?></small></div>
             <p class="sk-day-tag"><?= $i === 0 ? 'Afrejse' : ($i === count($tripDays) - 1 ? 'Hjemrejse' : ($d === SKI_BOOKING['checkin'] ? 'Ankomst' : ($d === '2026-12-31' ? 'Nytårsaften' : ($d === '2027-01-01' ? 'Nytårsdag' : 'Skidag')))) ?></p>
+            <?php if ($d >= SKI_BOOKING['checkin']): ?><p class="sk-lift"><span></span>Lifter 8:00–16:00</p><?php endif; ?>
             <?php foreach ($evs as $x): ?>
               <div class="sk-ev">
                 <p class="sk-ev-t"><?php if ($x['time']): ?><time><?= e($x['time']) ?></time><?php endif; ?><?= e($x['title']) ?></p>
@@ -577,8 +578,10 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
                   <?= ski_avatar($f) ?><span class="sk-arrow"><?= icon('arrow') ?></span><?= ski_avatar($t) ?>
                   <span class="sk-who"><?= e(explode(' ', $f['name'])[0]) ?> skylder <?= e(explode(' ', $t['name'])[0]) ?><small><?= $mv['from'] === $mid ? 'Det er dig, der skal betale' : ($mv['to'] === $mid ? 'Du skal have pengene' : '') ?></small></span>
                   <span class="sk-val"><?= ski_money($mv['ore']) ?></span>
-                  <?php if (in_array($mid, [$mv['from'], $mv['to']], true)): ?>
-                    <form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input type="hidden" name="ore" value="<?= $mv['ore'] ?>"><button class="btn ghost small">Betalt</button></form>
+                  <?php if ($mv['from'] === $mid): ?>
+                    <form method="post" data-ajax class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input name="amount" inputmode="decimal" value="<?= e(number_format($mv['ore'] / 100, 2, ',', '')) ?>" aria-label="Beløb overført til <?= e($t['name']) ?>"><button class="btn small sk-mp">Overført på MobilePay</button></form>
+                  <?php elseif ($mv['to'] === $mid): ?>
+                    <form method="post" data-ajax data-confirm class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input type="hidden" name="amount" value="<?= e(number_format($mv['ore'] / 100, 2, ',', '')) ?>"><button class="btn ghost small">Modtaget</button></form>
                   <?php endif; ?>
                 </li>
               <?php endforeach; ?>
@@ -615,7 +618,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
               <?php foreach ($expenses as $x): $by = $members[$x['by']] ?? null; if (!$by) continue; $pay = ($x['type'] ?? '') === 'payment'; $to = $pay ? ($members[$x['split'][0]] ?? null) : null; ?>
                 <li class="<?= $pay ? 'pay' : '' ?>">
                   <?= ski_avatar($by) ?>
-                  <span class="sk-who"><?= $pay ? e(explode(' ', $by['name'])[0]) . ' betalte ' . e($to ? explode(' ', $to['name'])[0] : '?') : e($x['text']) ?><small><?= $pay ? 'Afregning' : 'Betalt af ' . e(explode(' ', $by['name'])[0]) . ' · delt mellem ' . count($x['split']) ?> · <?= e(dk_date($x['created'])) ?></small></span>
+                  <span class="sk-who"><?= $pay ? e(explode(' ', $by['name'])[0]) . ' overførte til ' . e($to ? explode(' ', $to['name'])[0] : '?') : e($x['text']) ?><small><?= $pay ? 'Via MobilePay · trukket fra' : 'Betalt af ' . e(explode(' ', $by['name'])[0]) . ' · delt mellem ' . count($x['split']) ?> · <?= e(dk_date($x['created'])) ?></small></span>
                   <span class="sk-val"><?= $x['cur'] === 'EUR' ? number_format($x['amount'], 2, ',', '.') . ' €<small>' . ski_money($x['ore']) . '</small>' : ski_money($x['ore']) ?></span>
                   <?php if ($x['added'] === $mid || $x['by'] === $mid || $isOwner): ?><form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="exp_delete"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="sk-x" aria-label="Slet"><?= icon('cross') ?></button></form><?php else: ?><span class="sk-x-pad"></span><?php endif; ?>
                 </li>
