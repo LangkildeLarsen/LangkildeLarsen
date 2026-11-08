@@ -322,7 +322,18 @@ function ski_plan(): array
             return $p;
         });
     }
-    unset($plan['_seeded']);
+    if (!isset($plan['_seeded2'])) {
+        $plan = ski_mutate('plan', function (&$p) {
+            if (!isset($p['_seeded2'])) {
+                $p['_seeded2'] = date('c');
+                $p['afgang'] = ['id' => 'afgang', 'date' => '2026-12-25', 'time' => '16:30', 'title' => 'Afgang fra Blåvand', 'note' => 'Alle i samme bil direkte til Mayrhofen. Ca. 12 timers kørsel plus 3 timer til pauser og indkøb.', 'by' => '', 'created' => date('c')];
+                $p['ankomst'] = ['id' => 'ankomst', 'date' => '2026-12-26', 'time' => '07:30', 'title' => 'Ankomst i Mayrhofen', 'note' => 'Halvanden time til parkering, bagage, skiudstyr på og liftkort, inden liften.', 'by' => '', 'created' => date('c')];
+                $p['lift'] = ['id' => 'lift', 'date' => '2026-12-26', 'time' => '09:00', 'title' => 'Første tur med liften', 'note' => '', 'by' => '', 'created' => date('c')];
+            }
+            return $p;
+        });
+    }
+    unset($plan['_seeded'], $plan['_seeded2']);
     uasort($plan, fn($a, $b) => strcmp($a['date'] . ($a['time'] ?: '99'), $b['date'] . ($b['time'] ?: '99')));
     return $plan;
 }

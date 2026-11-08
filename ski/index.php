@@ -145,7 +145,7 @@ if ($action !== '') {
     if ($action === 'plan_delete') {
         $id = (string)($_POST['id'] ?? '');
         ski_mutate('plan', function (&$p) use ($id, $mid, $isOwner) {
-            if ($id !== '_seeded' && isset($p[$id]) && ($p[$id]['by'] === $mid || $isOwner)) {
+            if ($id !== '' && $id[0] !== '_' && isset($p[$id]) && ($p[$id]['by'] === $mid || $isOwner)) {
                 unset($p[$id]);
             }
         });
@@ -284,7 +284,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <div class="trip-count" data-trip-start="<?= $st['start'] ?>">
         <?php if ($st['phase'] === 'before'): ?>
           <p class="sk-big"><span data-trip-d><?= $st['days'] ?></span><small> <?= $st['days'] === 1 ? 'dag' : 'dage' ?></small></p>
-          <p class="sk-sub"><span data-trip-hm><?= $st['hours'] ?> t <?= $st['mins'] ?> min</span> til vi står på ski, <?= e(first_name(['name' => $me['name'], 'email' => $me['email']])) ?></p>
+          <p class="sk-sub"><span data-trip-hm><?= $st['hours'] ?> t <?= $st['mins'] ?> min</span> til vi kører fra Blåvand kl. <?= date('H:i', $st['start']) ?>, <?= e(first_name(['name' => $me['name'], 'email' => $me['email']])) ?></p>
         <?php elseif ($st['phase'] === 'during'): ?>
           <p class="sk-big">Dag <?= $st['day'] ?><small> af <?= $st['total'] ?></small></p>
           <p class="sk-sub">God tur på pisterne</p>

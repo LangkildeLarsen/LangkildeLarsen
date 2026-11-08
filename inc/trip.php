@@ -6,6 +6,7 @@ const TRIP = [
     'country' => 'Østrig',
     'start' => '2026-12-25',
     'end' => '2027-01-02',
+    'depart' => '2026-12-25 16:30',
     'lat' => 47.1667,
     'lon' => 11.8667,
     'spots' => [
@@ -18,15 +19,16 @@ function trip_status(int $now = 0): array
 {
     $now = $now ?: time();
     $tz = new DateTimeZone('Europe/Vienna');
-    $start = (new DateTime(TRIP['start'], $tz))->getTimestamp();
+    $start = (new DateTime(TRIP['depart'], $tz))->getTimestamp();
     $end = (new DateTime(TRIP['end'] . ' 23:59:59', $tz))->getTimestamp();
-    $days = (int)round(($end - $start) / 86400);
+    $first = (new DateTime(TRIP['start'], $tz))->getTimestamp();
+    $days = (int)round(($end - $first) / 86400);
     if ($now < $start) {
         $left = $start - $now;
         return ['phase' => 'before', 'start' => $start, 'end' => $end, 'nights' => $days - 1, 'days' => intdiv($left, 86400), 'hours' => intdiv($left % 86400, 3600), 'mins' => intdiv($left % 3600, 60)];
     }
     if ($now <= $end) {
-        return ['phase' => 'during', 'start' => $start, 'end' => $end, 'nights' => $days - 1, 'day' => intdiv($now - $start, 86400) + 1, 'total' => $days];
+        return ['phase' => 'during', 'start' => $start, 'end' => $end, 'nights' => $days - 1, 'day' => intdiv($now - $first, 86400) + 1, 'total' => $days];
     }
     return ['phase' => 'after', 'start' => $start, 'end' => $end, 'nights' => $days - 1];
 }
@@ -154,7 +156,7 @@ function trip_card(): string
     $h = '<div class="trip-count" data-trip-start="' . $st['start'] . '">';
     if ($st['phase'] === 'before') {
         $h .= '<p class="trip-big"><span data-trip-d>' . $st['days'] . '</span><small> ' . ($st['days'] === 1 ? 'dag' : 'dage') . '</small></p>';
-        $h .= '<p class="trip-sub"><span data-trip-hm>' . $st['hours'] . ' t ' . $st['mins'] . ' min</span> til afrejse · ' . e($range) . '</p>';
+        $h .= '<p class="trip-sub"><span data-trip-hm>' . $st['hours'] . ' t ' . $st['mins'] . ' min</span> til afgang kl. ' . date('H:i', $st['start']) . ' · ' . e($range) . '</p>';
     } elseif ($st['phase'] === 'during') {
         $h .= '<p class="trip-big">Dag ' . $st['day'] . '<small> af ' . $st['total'] . '</small></p><p class="trip-sub">God tur på pisterne · ' . e($range) . '</p>';
     } else {
