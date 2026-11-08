@@ -1532,7 +1532,7 @@ if ($view === 'launch') {
         <section class="card c-trip">
           <div class="card-head">
             <h2><?= e(TRIP['title']) ?></h2>
-            <span class="pill-link"><?= e(TRIP['place'] . ', ' . TRIP['country']) ?></span>
+            <a href="../ski/" class="pill-link"><?= e(TRIP['place']) ?> · Åbn</a>
           </div>
           <?= trip_card() ?>
         </section>
