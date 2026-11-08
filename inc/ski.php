@@ -30,8 +30,8 @@ const SKI_BOOKING = [
     ],
 ];
 
-const SKI_SUGGEST = ['Ski', 'Skistøvler', 'Skistave', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj'];
-const SKI_SUGGEST_BOARD = ['Snowboard', 'Snowboardstøvler', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj'];
+const SKI_SUGGEST = ['Ski', 'Skistøvler', 'Skistave', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj', 'Kondomer'];
+const SKI_SUGGEST_BOARD = ['Snowboard', 'Snowboardstøvler', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj', 'Kondomer'];
 
 function ski_mutate(string $name, callable $fn)
 {
@@ -623,8 +623,17 @@ function ski_packing_fill(array $member): void
     $id = $member['id'];
     ski_packing_mutate($id, function (&$l) use ($member) {
         if (!empty($l['_filled'])) {
+            if (empty($l['_v2'])) {
+                $have = array_map('mb_strtolower', array_column(array_filter($l, 'is_array'), 'text'));
+                if (!in_array('kondomer', $have, true)) {
+                    $iid = ski_id();
+                    $l[$iid] = ['id' => $iid, 'text' => 'Kondomer', 'done' => false, 'created' => date('c')];
+                }
+                $l['_v2'] = date('c');
+            }
             return;
         }
+        $l['_v2'] = date('c');
         $have = array_map('mb_strtolower', array_column(array_filter($l, 'is_array'), 'text'));
         $t = time();
         foreach (ski_suggestions($member) as $i => $text) {
