@@ -355,12 +355,11 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 <script src="../assets/snow.js?v=<?= filemtime(dirname(__DIR__) . '/assets/snow.js') ?>" defer></script>
 <script src="../assets/ski.js?v=<?= filemtime(dirname(__DIR__) . '/assets/ski.js') ?>" defer></script>
 </head>
-<body class="sk" data-csrf="<?= e(csrf_token()) ?>">
+<body class="sk sk-<?= $st['phase'] ?>" data-csrf="<?= e(csrf_token()) ?>">
 <div class="sk-app">
   <header class="sk-top">
     <div class="sk-brand"><span class="sk-brand-ic"><?= icon('snow') ?></span><span>Skiferie</span></div>
     <div class="sk-top-r">
-      <?php if ($isOwner): ?><a href="../admin/" class="pill-link">Jarvis</a><?php endif; ?>
       <?= ski_avatar($me, 'lg') ?>
       <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="logout"><button class="round" aria-label="Log ud" title="Log ud"><?= icon('logout') ?></button></form>
     </div>

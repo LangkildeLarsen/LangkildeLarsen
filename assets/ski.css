@@ -259,3 +259,20 @@ html:has(body.sk), body.sk, body.sk-auth { background: #000; }
 @media (max-width: 560px) { .sk-pay-f { flex-basis: 100%; justify-content: flex-end; } .sk-pay-f input { flex: 1; } }
 
 .sk-track, .sk-board { order: -1; }
+
+.sk-hero { order: 10; }
+.sk-before .sk-hero { order: -10; }
+.sk-track { order: 1; }
+.sk-board { order: 2; }
+.sk-exp { order: 3; }
+#min-liste { order: 4; }
+#faelles { order: 5; }
+.sk-plan { order: 6; }
+.sk-book { order: 7; grid-column: span 6; }
+.sk-snow { order: 8; grid-column: span 6; }
+.sk-cams { order: 9; grid-column: span 12; }
+.sk-before .sk-hero { grid-column: span 12; }
+.sk-hero { grid-column: span 12; }
+body:not(.sk-before) .sk-hero .trip-count, body:not(.sk-before) .sk-hero .sk-eyebrow { display: none; }
+body:not(.sk-before) .sk-hero .sk-crew { margin-top: 0; }
+@media (max-width: 1100px) { .sk-book, .sk-snow { grid-column: span 12; } }
