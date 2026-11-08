@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/inc/media.php';
 require dirname(__DIR__) . '/inc/messages.php';
 require dirname(__DIR__) . '/inc/claude.php';
 require dirname(__DIR__) . '/inc/weather.php';
+require dirname(__DIR__) . '/inc/trip.php';
 require dirname(__DIR__) . '/inc/training.php';
 require dirname(__DIR__) . '/inc/reminders.php';
 require dirname(__DIR__) . '/inc/watch.php';
@@ -1276,6 +1277,13 @@ if (($_GET['ajax'] ?? '') === 'weather') {
     exit;
 }
 
+if (($_GET['ajax'] ?? '') === 'trip_snow') {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo trip_snow_html(trip_snow());
+    exit;
+}
+
 if (($_GET['ajax'] ?? '') === 'unread') {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
@@ -1519,6 +1527,16 @@ if ($view === 'launch') {
           <?php $wxc = load_json('weather-cache'); $wxp = weather_place(); $wxe = $wxc[$wxp['lat'] . ',' . $wxp['lon']] ?? null; ?>
           <div class="wx-wrap" data-wx<?= (!$wxe || $wxe['t'] < time() - 1200) ? ' data-wx-refresh' : '' ?>><?= weather_card($wxe['d'] ?? null) ?></div>
         </section>
+
+        <?php if ($isOwner): ?>
+        <section class="card c-trip">
+          <div class="card-head">
+            <h2><?= e(TRIP['title']) ?></h2>
+            <span class="pill-link"><?= e(TRIP['place'] . ', ' . TRIP['country']) ?></span>
+          </div>
+          <?= trip_card() ?>
+        </section>
+        <?php endif; ?>
 
         <section class="card c-train">
           <div class="card-head">

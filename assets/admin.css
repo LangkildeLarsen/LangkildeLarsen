@@ -2803,3 +2803,33 @@ body > .cal-pop input[name="title"]:focus { box-shadow: none; background: rgb(25
 
 .boot-text::after { content: none !important; }
 .boot, .boot * { cursor: none !important; }
+
+.dash .c-trip { grid-column: span 4; display: flex; flex-direction: column; }
+@media (max-width: 1400px) { .dash .c-trip { grid-column: span 6; } }
+@media (max-width: 900px) { .dash .c-trip { grid-column: span 12; } }
+.c-trip .card-head { justify-content: space-between; }
+.trip-count { margin-bottom: 18px; }
+.trip-big { margin: 0; font-size: 56px; line-height: .95; letter-spacing: -.04em; }
+.trip-big small { font-size: .4em; letter-spacing: 0; color: var(--muted); }
+.trip-sub { margin: 8px 0 0; color: var(--soft); font-size: 14px; }
+.trip-snow { flex: 1; display: flex; flex-direction: column; }
+.trip-snow .wx-empty { min-height: 160px; }
+.trip-spots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.trip-spot { display: grid; gap: 2px; padding: 14px 16px; border-radius: 18px; background: var(--card-2); box-shadow: var(--inset); }
+.trip-spot-l { color: var(--soft); font-size: 13px; }
+.trip-spot-l small { color: var(--muted); }
+.trip-spot-v { font-size: 30px; letter-spacing: -.03em; line-height: 1.1; }
+.trip-spot-v small { font-size: 14px; color: var(--muted); letter-spacing: 0; }
+.trip-spot-s { color: var(--muted); font-size: 12px; }
+.trip-bars { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 4px; align-items: end; height: 84px; margin-top: 16px; }
+.trip-bar { display: grid; grid-template-rows: 1fr auto; gap: 6px; height: 100%; text-align: center; }
+.trip-bar i { align-self: end; display: block; height: max(var(--h), 3px); border-radius: 6px; background: rgba(255, 255, 255, .78); }
+.trip-bar.fc i { background: rgba(255, 255, 255, .28); }
+.trip-bar.now i { background: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, .35); }
+.trip-bar small { color: var(--muted); font-size: 10px; }
+.trip-bar.now small { color: var(--ink); }
+.trip-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.trip-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; background: var(--card-2); box-shadow: var(--inset); color: var(--soft); font-size: 13px; }
+.trip-chip .ic { width: 15px; height: 15px; }
+.trip-last { margin: 10px 0 0; }
+body.has-bg .trip-spot, body.has-bg .trip-chip { background: rgb(255 255 255 / 6%); }

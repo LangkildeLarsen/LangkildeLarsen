@@ -1355,3 +1355,33 @@ document.addEventListener('input', e => {
   const out = document.querySelector('[data-out="' + r.name + '"]');
   if (out) out.textContent = r.value + (r.dataset.unit || '%');
 });
+
+(() => {
+  const tick = () => {
+    const box = document.querySelector('[data-trip-start]');
+    if (!box) return;
+    const left = Number(box.dataset.tripStart) * 1000 - Date.now();
+    const d = box.querySelector('[data-trip-d]');
+    const hm = box.querySelector('[data-trip-hm]');
+    if (!d || !hm || left <= 0) return;
+    const days = Math.floor(left / 864e5);
+    d.textContent = days;
+    d.nextElementSibling.textContent = days === 1 ? ' dag' : ' dage';
+    hm.textContent = `${Math.floor(left % 864e5 / 36e5)} t ${Math.floor(left % 36e5 / 6e4)} min ${String(Math.floor(left % 6e4 / 1e3)).padStart(2, '0')} s`;
+  };
+  const load = () => {
+    tick();
+    const box = document.querySelector('[data-trip-snow]');
+    if (!box || box.dataset.busy) return;
+    if (!box.hasAttribute('data-trip-refresh')) return;
+    box.dataset.busy = '1';
+    fetch('index.php?ajax=trip_snow', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(html => { box.innerHTML = html; box.removeAttribute('data-trip-refresh'); })
+      .catch(() => {})
+      .finally(() => { delete box.dataset.busy; });
+  };
+  setInterval(tick, 1000);
+  document.addEventListener('page:ready', load);
+  load();
+})();
