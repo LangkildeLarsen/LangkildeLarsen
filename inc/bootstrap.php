@@ -54,14 +54,14 @@ function default_profile(): array
     return [
         'name' => 'Emil Langkilde Oehlenschläger Larsen',
         'title' => 'UI/UX · Grafisk designer · E-commerce · Marketing',
-        'location' => 'Esbjerg, Danmark',
+        'location' => '',
         'email' => 'emil@langkildelarsen.dk',
         'linkedin' => 'https://www.linkedin.com/in/langkildelarsen/',
         'dribbble' => 'https://dribbble.com/longkilos',
         'photo' => '',
         'about' => "Jeg er grafisk designer med speciale i UI/UX og har en iværksætters tilgang til design. I fem år byggede og drev jeg min egen webshop, Home Shoppen, som nåede en samlet omsætning på 15 mio. kr. – så jeg ved, hvad der skal til for at gøre en idé til en forretning.\n\nJeg er uddannet multimediedesigner og har arbejdet i Photoshop i over ti år. Jeg ser hvert projekt som en chance for at lære noget nyt og går til opgaverne både strategisk og kreativt.",
         'status' => 'Åben for nye projekter',
-        'now' => 'Grafisk webdesigner hos EFUTURE i Esbjerg, hvor jeg arbejder med webshoppen, design, indhold og markedsføring af elcykler.',
+        'now' => 'Grafisk webdesigner hos EFUTURE, hvor jeg arbejder med webshoppen, design, indhold og markedsføring af elcykler.',
         'experience' => [
             ['role' => 'Grafisk webdesigner', 'company' => 'EFUTURE', 'url' => 'https://efuture.dk', 'period' => 'dec. 2024 – nu', 'text' => 'Webshop, grafisk design, produktindhold og markedsføring. WordPress og e-handel.'],
             ['role' => 'Grafisk webdesigner, praktik', 'company' => 'Sikkerhedsgiganten', 'url' => 'https://www.sikkerhedsgiganten.dk', 'period' => 'jan. 2024 – mar. 2024', 'text' => 'Udvikling og lancering af en komplet ny Shopify Plus-hjemmeside.'],
@@ -127,6 +127,20 @@ function run_migrations(): void
             save_json('profile', $saved);
         }
         $done['title-v2'] = date('c');
+        save_json('migrations', $done);
+    }
+    if (empty($done['remove-esbjerg-frontpage'])) {
+        $saved = load_json('profile');
+        if ($saved) {
+            if (isset($saved['location']) && stripos($saved['location'], 'esbjerg') !== false) {
+                $saved['location'] = '';
+            }
+            if (isset($saved['now'])) {
+                $saved['now'] = preg_replace('/\s+i Esbjerg\b/iu', '', $saved['now']);
+            }
+            save_json('profile', $saved);
+        }
+        $done['remove-esbjerg-frontpage'] = date('c');
         save_json('migrations', $done);
     }
 }

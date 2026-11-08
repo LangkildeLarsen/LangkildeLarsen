@@ -42,7 +42,7 @@ function exp_item(array $x): string
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050505">
 <title><?= e($p['name']) ?> · <?= e($p['title']) ?></title>
-<meta name="description" content="<?= e($p['title']) ?> – <?= e($p['location']) ?>">
+<meta name="description" content="<?= e($p['title']) ?><?= $p['location'] ? ' – ' . e($p['location']) : '' ?>">
 <meta property="og:title" content="<?= e($p['name']) ?>">
 <meta property="og:description" content="<?= e($p['title']) ?>">
 <meta property="og:image" content="<?= e($photo) ?>">
@@ -71,7 +71,7 @@ function exp_item(array $x): string
 
   <main class="grid">
     <section class="card c-hero">
-      <p class="eyebrow-pill"><span class="dot"></span><?= e($p['location']) ?></p>
+      <?php if ($p['location']): ?><p class="eyebrow-pill"><span class="dot"></span><?= e($p['location']) ?></p><?php endif; ?>
       <h1 aria-label="<?= e($p['name']) ?>"><?php foreach ($words as $i => $w): ?><span class="w<?= $i ? ' dim' : '' ?>" style="--i: <?= $i ?>" aria-hidden="true"><?= e($w) ?></span> <?php endforeach; ?></h1>
       <p class="title"><?= e($p['title']) ?></p>
       <div class="links">
