@@ -99,6 +99,7 @@ if (!$me) {
     $mode = ($personal && empty($personal['used'])) || ski_invite_valid($joinToken) ? 'join' : 'login';
     $qs = $mode === 'join' ? ($personal ? '?invite=' . e($inviteToken) : '?join=' . e($joinToken)) : '';
     $first = $personal ? explode(' ', $personal['name'])[0] : '';
+    $nick = $personal ? ski_nick(['name' => $personal['name'], 'id' => 'p-' . $personal['key']]) : '';
     $others = [];
     if ($mode === 'join') {
         ski_seed_travellers();
@@ -109,11 +110,11 @@ if (!$me) {
             }
         }
     }
-    $names = array_map(fn($x) => explode(' ', $x['name'])[0], $others);
+    $names = array_map(fn($x) => ski_nick($x), $others);
     $waitText = count($names) > 1 ? implode(', ', array_slice($names, 0, -1)) . ' og ' . end($names) . ' venter på dig' : ($names ? $names[0] . ' venter på dig' : '');
     $st = trip_status();
     $heroImg = 'https://images.contenthub.dev/390osprlshgj/450280868de9f7683c35a94ed4fb614b/mbb_mountopolis_winter_neu_2025_harakiri_1.jpg?fm=jpg&fl=progressive&fit=fill&q=60&w=1200';
-    $ogTitle = $mode === 'join' ? ($first ? $first . ', du er inviteret til Mayrhofen' : 'Du er inviteret til Mayrhofen') : 'Skiferie · Mayrhofen';
+    $ogTitle = $mode === 'join' ? ($nick ? $nick . ', du er inviteret til Mayrhofen' : 'Du er inviteret til Mayrhofen') : 'Skiferie · Mayrhofen';
     ?><!doctype html>
 <html lang="da">
 <head>
@@ -131,7 +132,7 @@ if (!$me) {
   </div>
   <div class="sk-join-body">
     <?php if ($mode === 'join'): ?>
-      <h1><?= $first ? 'Hej ' . e($first) . '!' : 'Kom med til Mayrhofen!' ?></h1>
+      <h1><?= $nick ? 'Hej ' . e($nick) . '!' : 'Kom med til Mayrhofen!' ?></h1>
       <p class="sk-join-lead">Glæd dig til Mayrhofen! Det bliver vildt. Ni dage i Zillertal med pister fra morgen til eftermiddag, après-ski, nytårsaften i bjergene og os fem samlet i samme bil derned.</p>
     <?php else: ?>
       <h1>Skiferie</h1>
@@ -459,7 +460,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
   <div class="sk-install" data-install<?= $welcome ? ' data-welcome' : '' ?> hidden>
     <img src="../assets/ski/icon-180.png" alt="">
     <div>
-      <p class="sk-install-t"><?= $welcome ? 'Velkommen med, ' . e(explode(' ', $me['name'])[0]) . '! Gem nu appen på hjemmeskærmen' : 'Gem Skiferie på hjemmeskærmen' ?></p>
+      <p class="sk-install-t"><?= $welcome ? 'Velkommen med, ' . e(ski_nick($me)) . '! Gem nu appen på hjemmeskærmen' : 'Gem Skiferie på hjemmeskærmen' ?></p>
       <p class="muted small">Tryk på <span class="sk-share" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M7 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg></span> nederst i Safari og vælg <strong>Føj til hjemmeskærm</strong>. Så åbner appen direkte, uden at du skal logge ind igen.</p>
     </div>
     <button type="button" class="sk-x" data-install-x aria-label="Luk"><?= icon('cross') ?></button>
@@ -490,10 +491,10 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <?php if ($flash): ?><p class="sk-flash<?= str_contains($flash, 'kunne ikke') || str_starts_with($flash, 'Skriv') ? ' err' : '' ?>"><?= e($flash) ?></p><?php endif; ?>
           <p class="sk-inv-h">Invitér de rejsende</p>
           <ul class="sk-inv">
-            <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $joined = $tm && empty($tm['pending']); $inv = $joined ? null : ski_invite_for($t['name']); $first = explode(' ', $t['name'])[0]; ?>
+            <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $joined = $tm && empty($tm['pending']); $inv = $joined ? null : ski_invite_for($t['name']); $first = ski_nick($t); ?>
               <li>
                 <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
-                <span class="sk-who"><?= e($t['name']) ?><small><?= $joined ? 'Er med i appen' : 'Personligt link · ikke oprettet endnu' ?></small></span>
+                <span class="sk-who"><?= e(($t['nick'] ?? '') !== '' ? $t['nick'] : $t['name']) ?><small><?= e($t['name']) ?> · <?= $joined ? 'Er med i appen' : 'Personligt link · ikke oprettet endnu' ?></small></span>
                 <?php if (!$joined): ?>
                   <div class="sk-inv-btns">
                     <button type="button" class="btn ghost small" data-copy-text="<?= e($inv['url']) ?>"><?= icon('link') ?> Kopiér link</button>
@@ -579,7 +580,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <?php foreach (SKI_BOOKING['travellers'] as $t): $tm = ski_traveller_member($t['name'], $members); ?>
           <li>
             <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
-            <span class="sk-who"><?= e($t['name']) ?><small><?= e($t['role']) ?><?= $t['extra'] ? ' · ' . e(implode(', ', $t['extra'])) : '' ?><?= $tm && empty($tm['pending']) ? '' : ' · ikke oprettet endnu' ?></small></span>
+            <span class="sk-who"><?= e($t['name']) ?><?= !empty($t['nick']) && $t['nick'] !== explode(' ', $t['name'])[0] ? ' <em class="sk-nick">' . e($t['nick']) . '</em>' : '' ?><small><?= e($t['role']) ?><?= $t['extra'] ? ' · ' . e(implode(', ', $t['extra'])) : '' ?><?= $tm && empty($tm['pending']) ? '' : ' · ikke oprettet endnu' ?></small></span>
             <span class="sk-val"><?= ski_kr($t['price']) ?></span>
           </li>
         <?php endforeach; ?>
@@ -626,7 +627,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <li class="<?= $r['m']['id'] === $mid ? 'is-me' : '' ?>">
             <span class="sk-pos"><?= $i + 1 ?></span>
             <?= ski_avatar($r['m']) ?>
-            <span class="sk-who"><?= e($r['m']['name']) ?><small><?= count($r['days']) ? count($r['days']) . ' ' . (count($r['days']) === 1 ? 'dag' : 'dage') . ' registreret' : 'Ingen fart endnu' ?></small></span>
+            <span class="sk-who"><?= e(ski_nick($r['m'])) ?><small><?= count($r['days']) ? count($r['days']) . ' ' . (count($r['days']) === 1 ? 'dag' : 'dage') . ' registreret' : 'Ingen fart endnu' ?></small></span>
             <span class="sk-val sk-val-big"><?= ski_km($r['max']) ?><small>km/t</small></span>
           </li>
         <?php endforeach; ?>
@@ -635,7 +636,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <h3 class="sk-h3">Seneste registreringer</h3>
         <ul class="sk-runs">
           <?php foreach (array_slice($runs, 0, 12) as $r): $m = $members[$r['member']] ?? null; if (!$m) continue; ?>
-            <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'slopes' => 'Slopes', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['max']) ?> km/t</span>
+            <li><?= ski_avatar($m) ?><span><?= e(ski_nick($m)) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'slopes' => 'Slopes', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['max']) ?> km/t</span>
               <?php if ($r['member'] === $mid || $isOwner): ?><form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="run_delete"><input type="hidden" name="id" value="<?= e($r['id']) ?>"><button class="sk-x" aria-label="Slet tur"><?= icon('cross') ?></button></form><?php endif; ?>
             </li>
           <?php endforeach; ?>
@@ -659,7 +660,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
               <?php foreach ($money['moves'] as $mv): $f = $members[$mv['from']]; $t = $members[$mv['to']]; ?>
                 <li class="<?= in_array($mid, [$mv['from'], $mv['to']], true) ? 'mine' : '' ?>">
                   <?= ski_avatar($f) ?><span class="sk-arrow"><?= icon('arrow') ?></span><?= ski_avatar($t) ?>
-                  <span class="sk-who"><?= e(explode(' ', $f['name'])[0]) ?> skylder <?= e(explode(' ', $t['name'])[0]) ?><small><?= $mv['from'] === $mid ? 'Det er dig, der skal betale' : ($mv['to'] === $mid ? 'Du skal have pengene' : '') ?></small></span>
+                  <span class="sk-who"><?= e(ski_nick($f)) ?> skylder <?= e(ski_nick($t)) ?><small><?= $mv['from'] === $mid ? 'Det er dig, der skal betale' : ($mv['to'] === $mid ? 'Du skal have pengene' : '') ?></small></span>
                   <span class="sk-val"><?= ski_money($mv['ore']) ?></span>
                   <?php $amt = number_format($mv['ore'] / 100, 2, ',', ''); ?>
                   <?php if ($mv['from'] === $mid): ?>
@@ -679,7 +680,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <h3 class="sk-h3">Pr. person</h3>
           <ul class="sk-people">
             <?php foreach ($members as $m): $b = $money['bal'][$m['id']] ?? 0; ?>
-              <li><?= ski_avatar($m) ?><span class="sk-who"><?= e($m['name']) ?><small>Andel af udgifter: <?= ski_money($money['spent'][$m['id']] ?? 0) ?></small></span><span class="sk-val <?= $b < 0 ? 'neg' : ($b > 0 ? 'pos' : '') ?>"><?= $b === 0 ? '0 kr.' : ($b > 0 ? '+' : '−') . ski_money(abs($b)) ?></span></li>
+              <li><?= ski_avatar($m) ?><span class="sk-who"><?= e(ski_nick($m)) ?><small>Andel af udgifter: <?= ski_money($money['spent'][$m['id']] ?? 0) ?></small></span><span class="sk-val <?= $b < 0 ? 'neg' : ($b > 0 ? 'pos' : '') ?>"><?= $b === 0 ? '0 kr.' : ($b > 0 ? '+' : '−') . ski_money(abs($b)) ?></span></li>
             <?php endforeach; ?>
           </ul>
         </div>
@@ -692,9 +693,9 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
               <label class="wide">Hvad<input name="text" maxlength="80" required placeholder="Fx benzin, aftensmad, indkøb"></label>
               <label>Beløb<input name="amount" inputmode="decimal" required placeholder="0,00"></label>
               <label>Valuta<select name="cur"><option value="DKK">kr.</option><option value="EUR">€ (kurs <?= str_replace('.', ',', (string)SKI_EUR) ?>)</option></select></label>
-              <label class="wide">Betalt af<select name="by"><?php foreach ($members as $m): ?><option value="<?= e($m['id']) ?>"<?= $m['id'] === $mid ? ' selected' : '' ?>><?= e($m['name']) ?></option><?php endforeach; ?></select></label>
+              <label class="wide">Betalt af<select name="by"><?php foreach ($members as $m): ?><option value="<?= e($m['id']) ?>"<?= $m['id'] === $mid ? ' selected' : '' ?>><?= e(ski_nick($m)) ?></option><?php endforeach; ?></select></label>
               <fieldset class="wide sk-split"><legend>Deles mellem</legend>
-                <?php foreach ($members as $m): ?><label class="sk-pick"><input type="checkbox" name="split[]" value="<?= e($m['id']) ?>" checked><span><?= ski_avatar($m) ?><?= e(explode(' ', $m['name'])[0]) ?></span></label><?php endforeach; ?>
+                <?php foreach ($members as $m): ?><label class="sk-pick"><input type="checkbox" name="split[]" value="<?= e($m['id']) ?>" checked><span><?= ski_avatar($m) ?><?= e(ski_nick($m)) ?></span></label><?php endforeach; ?>
               </fieldset>
               <button class="btn wide">Tilføj udgift</button>
             </form>
@@ -705,12 +706,12 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
               <?php foreach ($expenses as $x): $by = $members[$x['by']] ?? null; if (!$by) continue; $pay = ($x['type'] ?? '') === 'payment'; $to = $pay ? ($members[$x['split'][0]] ?? null) : null; ?>
                 <li class="<?= $pay ? 'pay' : '' ?>">
                   <?= ski_avatar($by) ?>
-                  <span class="sk-who"><?= $pay ? e(explode(' ', $by['name'])[0]) . ' overførte til ' . e($to ? explode(' ', $to['name'])[0] : '?') : e($x['text']) ?><small><?= $pay ? 'Via MobilePay · trukket fra' : 'Betalt af ' . e(explode(' ', $by['name'])[0]) . ' · delt mellem ' . count($x['split']) ?> · <?= e(dk_date($x['created'])) ?></small></span>
+                  <span class="sk-who"><?= $pay ? e(ski_nick($by)) . ' overførte til ' . e($to ? ski_nick($to) : '?') : e($x['text']) ?><small><?= $pay ? 'Via MobilePay · trukket fra' : 'Betalt af ' . e(ski_nick($by)) . ' · delt mellem ' . count($x['split']) ?> · <?= e(dk_date($x['created'])) ?></small></span>
                   <span class="sk-val"><?= $x['cur'] === 'EUR' ? number_format($x['amount'], 2, ',', '.') . ' €<small>' . ski_money($x['ore']) . '</small>' : ski_money($x['ore']) ?></span>
                   <?php if (!$pay && ($x['added'] === $mid || $x['by'] === $mid || $isOwner)): ?>
                     <details class="sk-exp-edit"><summary class="sk-x" aria-label="Ret deling" title="Ret hvem den deles mellem"><?= icon('user') ?></summary>
                       <form method="post" data-ajax class="sk-exp-edit-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_split"><input type="hidden" name="id" value="<?= e($x['id']) ?>">
-                        <div class="sk-split"><?php foreach ($members as $m): ?><label class="sk-pick"><input type="checkbox" name="split[]" value="<?= e($m['id']) ?>"<?= in_array($m['id'], $x['split'], true) ? ' checked' : '' ?>><span><?= ski_avatar($m) ?><?= e(explode(' ', $m['name'])[0]) ?></span></label><?php endforeach; ?></div>
+                        <div class="sk-split"><?php foreach ($members as $m): ?><label class="sk-pick"><input type="checkbox" name="split[]" value="<?= e($m['id']) ?>"<?= in_array($m['id'], $x['split'], true) ? ' checked' : '' ?>><span><?= ski_avatar($m) ?><?= e(ski_nick($m)) ?></span></label><?php endforeach; ?></div>
                         <button class="btn small">Gem deling</button>
                       </form>
                     </details>
@@ -751,7 +752,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <?php foreach ($shared as $x): $haveMe = in_array($mid, $x['have'], true); $by = $members[$x['by']] ?? null; ?>
           <li class="<?= $haveMe ? 'done' : '' ?>">
             <form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="shared_toggle"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="sk-check" aria-label="<?= $haveMe ? 'Jeg har den ikke med' : 'Jeg har den med' ?>"><?= icon('check') ?></button></form>
-            <span class="sk-item-t"><?= e($x['text']) ?><small><?= $by ? 'Tilføjet af ' . e($by['name']) : '' ?><?= $x['have'] ? ' · ' . count($x['have']) . ' har den med' : '' ?></small></span>
+            <span class="sk-item-t"><?= e($x['text']) ?><small><?= $by ? 'Tilføjet af ' . e(ski_nick($by)) : '' ?><?= $x['have'] ? ' · ' . count($x['have']) . ' har den med' : '' ?></small></span>
             <span class="sk-avs sm"><?php foreach ($x['have'] as $h): if (isset($members[$h])): ?><?= ski_avatar($members[$h]) ?><?php endif; endforeach; ?></span>
             <?php if ($x['by'] === $mid || $isOwner): ?><form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="shared_delete"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="sk-x" aria-label="Slet"><?= icon('cross') ?></button></form><?php else: ?><span class="sk-x-pad"></span><?php endif; ?>
           </li>

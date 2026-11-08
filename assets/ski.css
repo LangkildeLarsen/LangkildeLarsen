@@ -487,3 +487,4 @@ body.sk-join-page { margin: 0; padding: 24px; min-height: 100vh; display: grid; 
 .sk-join-wait .sk-av.lg { width: 46px; height: 46px; box-shadow: 0 0 0 3px var(--card-2); }
 .sk-join-wait .sk-avs .sk-av + .sk-av { margin-left: -12px; }
 @media (max-width: 560px) { .sk-join-wait { flex-direction: column; align-items: flex-start; } }
+.sk-nick { font-style: normal; color: var(--muted); font-size: 13px; margin-left: 4px; }

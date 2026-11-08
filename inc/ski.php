@@ -22,11 +22,11 @@ const SKI_BOOKING = [
     'checkout' => '2027-01-02',
     'included' => ['Liftkort Mayrhofen', 'Guideservice'],
     'travellers' => [
-        ['name' => 'Emil Langkilde O. Larsen', 'role' => 'Rejsebestiller', 'price' => 6888, 'extra' => []],
-        ['name' => 'Jeppe Smedegaard', 'role' => 'Rejsende', 'price' => 6888, 'extra' => [], 'gear' => 'snowboard'],
-        ['name' => 'Gustav Langkilde O. Larsen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
-        ['name' => 'Nikolaj Holm Iversen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
-        ['name' => 'Nicolaj Baun Christensen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
+        ['name' => 'Emil Langkilde O. Larsen', 'nick' => 'Emil', 'role' => 'Rejsebestiller', 'price' => 6888, 'extra' => []],
+        ['name' => 'Jeppe Smedegaard', 'nick' => 'Smedegaard', 'role' => 'Rejsende', 'price' => 6888, 'extra' => [], 'gear' => 'snowboard'],
+        ['name' => 'Gustav Langkilde O. Larsen', 'nick' => 'Guffe', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
+        ['name' => 'Nikolaj Holm Iversen', 'nick' => 'Iver', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
+        ['name' => 'Nicolaj Baun Christensen', 'nick' => 'Baun', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
     ],
 ];
 
@@ -752,4 +752,23 @@ function ski_photo_seed(): void
     if ($changed) {
         save_json('ski/photo-seed', $done);
     }
+}
+
+function ski_nick(array $m): string
+{
+    if (!empty($m['nick'])) {
+        return $m['nick'];
+    }
+    $name = trim((string)($m['name'] ?? ''));
+    foreach (SKI_BOOKING['travellers'] as $t) {
+        if (!empty($t['nick']) && (mb_strtolower($t['name']) === mb_strtolower($name) || (isset($m['id']) && $m['id'] === 'p-' . ski_slug($t['name'])))) {
+            return $t['nick'];
+        }
+    }
+    $first = mb_strtolower(explode(' ', $name)[0]);
+    $hits = array_values(array_filter(SKI_BOOKING['travellers'], fn($t) => !empty($t['nick']) && mb_strtolower(explode(' ', $t['name'])[0]) === $first));
+    if (count($hits) === 1) {
+        return $hits[0]['nick'];
+    }
+    return explode(' ', $name)[0];
 }
