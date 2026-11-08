@@ -419,7 +419,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 <body class="sk sk-<?= $st['phase'] ?>" data-tab="alle" data-csrf="<?= e(csrf_token()) ?>">
 <div class="sk-app">
   <header class="sk-top">
-    <a href="#" class="sk-brand" data-tab-go="alle" aria-label="Overblik"><span class="sk-brand-ic"><?= icon('snow') ?></span><span>Skiferie</span></a>
+    <a href="#" class="sk-brand" data-tab-go="alle" aria-label="Overblik"><span class="sk-brand-ic"><?= icon('snow') ?></span></a>
     <div class="sk-top-r">
       <?= ski_avatar($me, 'lg') ?>
       <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="logout"><button class="round" aria-label="Log ud" title="Log ud"><?= icon('logout') ?></button></form>
