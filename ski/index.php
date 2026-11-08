@@ -98,32 +98,90 @@ $me = ski_current();
 if (!$me) {
     $mode = ($personal && empty($personal['used'])) || ski_invite_valid($joinToken) ? 'join' : 'login';
     $qs = $mode === 'join' ? ($personal ? '?invite=' . e($inviteToken) : '?join=' . e($joinToken)) : '';
+    $first = $personal ? explode(' ', $personal['name'])[0] : '';
+    $others = [];
+    if ($mode === 'join') {
+        ski_seed_travellers();
+        foreach (ski_members() as $om) {
+            $isSelf = $personal && ($om['id'] === 'p-' . $personal['key'] || mb_strtolower(explode(' ', $om['name'])[0]) === mb_strtolower($first));
+            if (!$isSelf) {
+                $others[] = $om;
+            }
+        }
+    }
+    $names = array_map(fn($x) => explode(' ', $x['name'])[0], $others);
+    $waitText = count($names) > 1 ? implode(', ', array_slice($names, 0, -1)) . ' og ' . end($names) . ' venter på dig' : ($names ? $names[0] . ' venter på dig' : '');
+    $st = trip_status();
+    $heroImg = 'https://images.contenthub.dev/390osprlshgj/450280868de9f7683c35a94ed4fb614b/mbb_mountopolis_winter_neu_2025_harakiri_1.jpg?fm=jpg&fl=progressive&fit=fill&q=60&w=1200';
+    $ogTitle = $mode === 'join' ? ($first ? $first . ', du er inviteret til Mayrhofen' : 'Du er inviteret til Mayrhofen') : 'Skiferie · Mayrhofen';
     ?><!doctype html>
 <html lang="da">
 <head>
 <?= ski_head() ?>
+<meta property="og:title" content="<?= e($ogTitle) ?>">
+<meta property="og:description" content="Skiferie i Mayrhofen 25. dec. – 2. jan. Opret dig og få nedtælling, sne, webcams og alt det praktiske samlet ét sted.">
+<meta property="og:image" content="<?= e($heroImg) ?>">
+<meta property="og:type" content="website">
+<script src="../assets/ski-join.js?v=<?= filemtime(dirname(__DIR__) . '/assets/ski-join.js') ?>" defer></script>
 </head>
-<body class="auth sk-auth">
-<form method="post" class="auth-box" action="./<?= $qs ?>">
-  <?= csrf_field() ?>
-  <img src="../assets/ski/icon-180.png" alt="" class="sk-auth-logo">
-  <h1><?= $mode === 'join' ? ($personal ? 'Hej ' . e(explode(' ', $personal['name'])[0]) : 'Kom med til Mayrhofen') : 'Skiferie' ?></h1>
-  <p class="muted"><?= $mode === 'join' ? 'Du er inviteret med på skiferien i Mayrhofen 25. dec. – 2. jan. Vælg en adgangskode, så er du med.' : ($personal ? 'Du er allerede oprettet. Log ind med din mail og adgangskode.' : 'Log ind med den mail og adgangskode, du oprettede dig med.') ?></p>
-  <?php if ($error): ?><p class="alert error"><?= e($error) ?></p><?php endif; ?>
-  <input type="hidden" name="action" value="<?= $mode ?>">
-  <?php if ($mode === 'join'): ?>
-    <?php if ($personal): ?><input type="hidden" name="invite" value="<?= e($inviteToken) ?>"><?php else: ?><input type="hidden" name="join" value="<?= e($joinToken) ?>"><?php endif; ?>
-    <label>Navn<input name="name" required autocomplete="name" maxlength="40" value="<?= e($_POST['name'] ?? ($personal['name'] ?? '')) ?>"></label>
-  <?php endif; ?>
-  <?php if ($mode === 'join' && $personal && $personal['email'] !== ''): ?>
-    <label>Mail<input type="email" value="<?= e($personal['email']) ?>" readonly></label>
-  <?php else: ?>
-    <label>Mail<input type="email" name="email" required autocomplete="username" value="<?= e($_POST['email'] ?? ($personal['email'] ?? '')) ?>"></label>
-  <?php endif; ?>
-  <label>Adgangskode<input type="password" name="password" required minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"></label>
-  <button class="btn"><?= $mode === 'join' ? 'Opret og kom med' : 'Log ind' ?></button>
-  <?php if ($mode === 'join'): ?><a href="./" class="muted small">Har du allerede en adgang? Log ind</a><?php endif; ?>
-</form>
+<body class="sk-join-page">
+<main class="sk-join">
+  <div class="sk-join-img" style="background-image: url('<?= e($heroImg) ?>')">
+    <span class="sk-join-tag"><span class="dot"></span>Mayrhofen, Østrig · 25. dec. – 2. jan.</span>
+  </div>
+  <div class="sk-join-body">
+    <?php if ($mode === 'join'): ?>
+      <h1><?= $first ? 'Hej ' . e($first) . '!' : 'Kom med til Mayrhofen!' ?></h1>
+      <p class="sk-join-lead">Glæd dig til Mayrhofen! Det bliver vildt. Ni dage i Zillertal med pister fra morgen til eftermiddag, après-ski, nytårsaften i bjergene og os fem samlet i samme bil derned.</p>
+    <?php else: ?>
+      <h1>Skiferie</h1>
+      <p class="sk-join-lead">Log ind med den mail og adgangskode, du oprettede dig med.</p>
+    <?php endif; ?>
+    <?php if ($st['phase'] === 'before'): ?>
+      <div class="sk-join-count" data-trip-start="<?= $st['start'] ?>">
+        <div><span data-c-d><?= $st['days'] ?></span><small>dage</small></div>
+        <div><span data-c-h><?= $st['hours'] ?></span><small>timer</small></div>
+        <div><span data-c-m><?= $st['mins'] ?></span><small>min</small></div>
+        <div><span data-c-s>0</span><small>sek</small></div>
+      </div>
+      <p class="muted small sk-join-cap">til vi kører fra Blåvand 25. dec. kl. <?= date('H:i', $st['start']) ?></p>
+    <?php endif; ?>
+    <?php if ($others): ?>
+      <div class="sk-join-wait">
+        <div class="sk-avs"><?php foreach ($others as $om): ?><?= ski_avatar(array_merge($om, ['pending' => false]), 'lg') ?><?php endforeach; ?></div>
+        <p><?= e($waitText) ?></p>
+      </div>
+    <?php endif; ?>
+    <?php if ($mode === 'join'): ?>
+      <p class="sk-join-h">Opret dig og få</p>
+      <ul class="sk-join-feat">
+        <li><?= icon('snow') ?>Sneprognose og snedybde</li>
+        <li><?= icon('play') ?>Live webcams fra pisterne</li>
+        <li><?= icon('calendar') ?>Program, hotel og nedtælling</li>
+        <li><?= icon('check') ?>Din egen og vores fælles huskeliste</li>
+        <li><?= icon('wallet') ?>Hvem skylder hvem</li>
+        <li><?= icon('chart') ?>Rangliste over topfart</li>
+      </ul>
+    <?php endif; ?>
+    <form method="post" class="sk-join-f" action="./<?= $qs ?>">
+      <?= csrf_field() ?>
+      <?php if ($error): ?><p class="alert error"><?= e($error) ?></p><?php endif; ?>
+      <input type="hidden" name="action" value="<?= $mode ?>">
+      <?php if ($mode === 'join'): ?>
+        <?php if ($personal): ?><input type="hidden" name="invite" value="<?= e($inviteToken) ?>"><?php else: ?><input type="hidden" name="join" value="<?= e($joinToken) ?>"><?php endif; ?>
+        <label>Navn<input name="name" required autocomplete="name" maxlength="40" value="<?= e($_POST['name'] ?? ($personal['name'] ?? '')) ?>"></label>
+      <?php endif; ?>
+      <?php if ($mode === 'join' && $personal && $personal['email'] !== ''): ?>
+        <label>Mail<input type="email" value="<?= e($personal['email']) ?>" readonly></label>
+      <?php else: ?>
+        <label>Mail<input type="email" name="email" required autocomplete="username" value="<?= e($_POST['email'] ?? ($personal['email'] ?? '')) ?>"></label>
+      <?php endif; ?>
+      <label>Adgangskode<input type="password" name="password" required minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"<?= $mode === 'join' ? ' placeholder="Mindst 8 tegn"' : '' ?>></label>
+      <button class="btn"><?= $mode === 'join' ? 'Opret mig og kom med' : 'Log ind' ?></button>
+      <?php if ($mode === 'join'): ?><a href="./" class="muted small sk-join-alt">Har du allerede en adgang? Log ind</a><?php endif; ?>
+    </form>
+  </div>
+</main>
 </body>
 </html>
 <?php
@@ -139,6 +197,9 @@ if ($isOwner && !str_contains(trim($me['name']), ' ')) {
 ski_seed_travellers();
 ski_fix_early_expenses();
 ski_packing_fill($me);
+if ($isOwner) {
+    ski_photo_seed();
+}
 
 if ($action !== '') {
     verify_csrf();
@@ -151,6 +212,24 @@ if ($action !== '') {
 
     if ($action === 'invite_new' && $isOwner) {
         ski_invite_new();
+        ski_redirect('inviter');
+    }
+
+    if ($action === 'photo_upload' || $action === 'photo_url') {
+        $target = $isOwner && !empty($_POST['id']) ? (string)$_POST['id'] : $mid;
+        if (!isset(ski_members()[$target])) {
+            $target = $mid;
+        }
+        if ($action === 'photo_url' && $isOwner) {
+            $err = ski_photo_fetch($target, trim((string)($_POST['url'] ?? '')));
+        } elseif (!empty($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
+            $err = ski_photo_save($target, (string)file_get_contents($_FILES['photo']['tmp_name']));
+        } else {
+            $err = 'Vælg et billede.';
+        }
+        if ($err !== '') {
+            $_SESSION['ski_flash'] = $err;
+        }
         ski_redirect('inviter');
     }
 
@@ -372,7 +451,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
   <header class="sk-top">
     <a href="#" class="sk-brand" data-tab-go="alle" aria-label="Overblik"><span class="sk-brand-ic"><?= icon('snow') ?></span></a>
     <div class="sk-top-r">
-      <?= ski_avatar($me, 'lg') ?>
+      <form method="post" enctype="multipart/form-data" data-ajax data-autosubmit class="sk-me-photo" title="Skift profilbillede"><?= csrf_field() ?><input type="hidden" name="action" value="photo_upload"><label><?= ski_avatar($me, 'lg') ?><input type="file" name="photo" accept="image/*" aria-label="Skift profilbillede"></label></form>
       <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="logout"><button class="round" aria-label="Log ud" title="Log ud"><?= icon('logout') ?></button></form>
     </div>
   </header>
@@ -432,7 +511,8 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
             <summary class="muted small">Administrer deltagere</summary>
             <ul class="sk-members">
               <?php foreach ($members as $m): ?>
-                <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e($m['email']) ?></small></span>
+                <li><form method="post" enctype="multipart/form-data" data-ajax data-autosubmit class="sk-me-photo" title="Upload billede af <?= e($m['name']) ?>"><?= csrf_field() ?><input type="hidden" name="action" value="photo_upload"><input type="hidden" name="id" value="<?= e($m['id']) ?>"><label><?= ski_avatar($m) ?><input type="file" name="photo" accept="image/*" aria-label="Billede af <?= e($m['name']) ?>"></label></form><span><?= e($m['name']) ?><small><?= $m['email'] !== '' ? e($m['email']) : 'Ikke oprettet endnu' ?></small></span>
+                  <details class="sk-photo-url"><summary class="sk-x" aria-label="Billede fra link" title="Billede fra link"><?= icon('link') ?></summary><form method="post" data-ajax class="sk-photo-url-f"><?= csrf_field() ?><input type="hidden" name="action" value="photo_url"><input type="hidden" name="id" value="<?= e($m['id']) ?>"><input name="url" type="url" placeholder="Link til billede" required><button class="btn small">Hent</button></form></details>
                   <?php if ($m['role'] !== 'owner'): ?><form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="remove_member"><input type="hidden" name="id" value="<?= e($m['id']) ?>"><button class="sk-x" aria-label="Fjern <?= e($m['name']) ?>"><?= icon('cross') ?></button></form><?php endif; ?>
                 </li>
               <?php endforeach; ?>

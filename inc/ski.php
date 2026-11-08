@@ -177,6 +177,10 @@ function ski_initials(array $m): string
 function ski_avatar(array $m, string $class = ''): string
 {
     $class .= !empty($m['pending']) ? ' pending' : '';
+    $photo = (string)($m['photo'] ?? '');
+    if ($photo !== '' && is_file(UPLOAD_DIR . '/' . $photo)) {
+        return '<span class="sk-av photo' . ($class ? ' ' . trim($class) : '') . '" style="--c: ' . e($m['color']) . '; background-image: url(\'../uploads/' . e($photo) . '?v=' . filemtime(UPLOAD_DIR . '/' . $photo) . '\')" title="' . e($m['name']) . '"><i>' . e(ski_initials($m)) . '</i></span>';
+    }
     return '<span class="sk-av' . ($class ? ' ' . trim($class) : '') . '" style="--c: ' . e($m['color']) . '" title="' . e($m['name']) . '">' . e(ski_initials($m)) . '</span>';
 }
 
@@ -442,6 +446,9 @@ function ski_invites(): array
 
 function ski_invite_find(string $token): ?array
 {
+    if (preg_match('/([a-f0-9]{32})$/', $token, $mm)) {
+        $token = $mm[1];
+    }
     if ($token === '') {
         return null;
     }
@@ -467,7 +474,7 @@ function ski_invite_for(string $name): array
         });
         $inv = ski_invites()[$key];
     }
-    return $inv + ['url' => ski_base_url() . '?invite=' . $inv['token']];
+    return $inv + ['url' => ski_base_url() . '?invite=' . ski_slug(explode(' ', $name)[0]) . '-' . $inv['token']];
 }
 
 function ski_app_token(string $id): string
@@ -644,4 +651,105 @@ function ski_packing_fill(array $member): void
         }
         $l['_filled'] = date('c');
     });
+}
+
+const SKI_PHOTO_SEED = [
+    'Gustav' => 'https://scontent-cph2-1.xx.fbcdn.net/v/t39.30808-1/608191568_26715145121406732_8039333338369676891_n.jpg?stp=dst-jpg_tt6&cstp=mx1536x1537&ctp=s200x200&_nc_cat=108&ccb=1-7&_nc_sid=e99d92&_nc_ohc=olFmo5vwwN0Q7kNvwEl8IkW&_nc_oc=AdozsgOD-gpoedzBoV7T1y1e9NYSAwpdULWqEksGuTvXmfGqVY5e_YBBB8kpmx2OKfE&_nc_zt=24&_nc_ht=scontent-cph2-1.xx&_nc_gid=Fo2LmSX6iHOJOJLpGE74vg&_nc_ss=7b2a8&oh=00_AQSqiG-HAIK58mUmWytQzWiaGng0h0qPlhYuw24pakfDzw&oe=6AF698E3',
+    'Jeppe' => 'https://scontent-cph2-1.xx.fbcdn.net/v/t39.30808-6/889652672_10232412919281385_9043823492813431313_n.jpg?stp=dst-jpg_tt6&cstp=mx960x957&ctp=s960x957&_nc_cat=107&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=NkFHpr0pMdEQ7kNvwEeYooM&_nc_oc=Adqatk2qpfd6Pj_m95wW7G8nx5jk12hyliZtw_rC6TBSmIaxOqOpmkqqk9r1dZ0IK70&_nc_zt=23&_nc_ht=scontent-cph2-1.xx&_nc_gid=mu7KtzIZ5SR8lfG0hRHN8A&_nc_ss=7b2a8&oh=00_AQQ_ljsN53OL_v5JEt_b-ruquH5i_FacYtrpwAjICwYKvw&oe=6AF6A938',
+    'Nikolaj Holm' => 'https://scontent-cph2-1.xx.fbcdn.net/v/t1.6435-9/79136604_3786825631331470_4661710644985200640_n.jpg?stp=dst-jpg_tt6&cstp=mx526x526&ctp=s526x526&_nc_cat=111&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=_phXMJ0SI-oQ7kNvwHE2Ep5&_nc_oc=Adp2S82-P8dW2lLOz6_5ePQpzuFYljY4ydlSpMXK8TDO6u-y62MdgS5IxBmSMKbc_hw&_nc_zt=23&_nc_ht=scontent-cph2-1.xx&_nc_gid=0dhy1vRTMvoYGaIPuhjHSg&_nc_ss=7b2a8&oh=00_AQSVrBMADnDuzOa0mhcKymy5ibxRWNVcSUp0q2CDIxMbQA&oe=6B18354D',
+];
+
+function ski_photo_save(string $member, string $bytes): string
+{
+    if (strlen($bytes) < 200 || strlen($bytes) > 12000000) {
+        return 'Billedet er for stort eller tomt.';
+    }
+    $info = @getimagesizefromstring($bytes);
+    if (!$info || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP, IMAGETYPE_GIF], true)) {
+        return 'Filen er ikke et billede.';
+    }
+    $dir = UPLOAD_DIR . '/ski';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $name = preg_replace('/[^a-z0-9-]/', '', $member) . '-' . bin2hex(random_bytes(5)) . '.jpg';
+    $ok = false;
+    if (function_exists('imagecreatefromstring') && ($src = @imagecreatefromstring($bytes))) {
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $side = min($w, $h);
+        $out = imagecreatetruecolor(320, 320);
+        imagecopyresampled($out, $src, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), 320, 320, $side, $side);
+        $ok = imagejpeg($out, $dir . '/' . $name, 86);
+        imagedestroy($src);
+        imagedestroy($out);
+    }
+    if (!$ok) {
+        if ($info[2] !== IMAGETYPE_JPEG) {
+            return 'Billedet kunne ikke behandles.';
+        }
+        file_put_contents($dir . '/' . $name, $bytes);
+    }
+    $old = '';
+    ski_mutate('members', function (&$m) use ($member, $name, &$old) {
+        if (isset($m[$member])) {
+            $old = (string)($m[$member]['photo'] ?? '');
+            $m[$member]['photo'] = 'ski/' . $name;
+        }
+    });
+    if ($old !== '' && str_starts_with($old, 'ski/') && is_file(UPLOAD_DIR . '/' . $old)) {
+        @unlink(UPLOAD_DIR . '/' . $old);
+    }
+    return '';
+}
+
+function ski_photo_fetch(string $member, string $url): string
+{
+    if (!preg_match('~^https://~i', $url) || !function_exists('curl_init')) {
+        return 'Linket skal starte med https://';
+    }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_USERAGENT => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15', CURLOPT_PROTOCOLS => CURLPROTO_HTTPS]);
+    $body = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if (!is_string($body) || $code !== 200) {
+        return 'Billedet kunne ikke hentes (' . ($code ?: 'ingen forbindelse') . '). Linket er måske udløbet.';
+    }
+    return ski_photo_save($member, $body);
+}
+
+function ski_photo_seed(): void
+{
+    $done = load_json('ski/photo-seed');
+    if (($done['_t'] ?? 0) > time() - 600) {
+        return;
+    }
+    $done['_t'] = time();
+    save_json('ski/photo-seed', $done);
+    $members = ski_members();
+    $changed = false;
+    foreach (SKI_PHOTO_SEED as $prefix => $url) {
+        if (!empty($done[$prefix]) && ($done[$prefix]['ok'] || $done[$prefix]['tries'] >= 5)) {
+            continue;
+        }
+        $hit = null;
+        foreach ($members as $m) {
+            if (stripos($m['name'], $prefix) === 0) {
+                $hit = $m;
+                break;
+            }
+        }
+        if (!$hit || !empty($hit['photo'])) {
+            $done[$prefix] = ['ok' => (bool)$hit, 'tries' => ($done[$prefix]['tries'] ?? 0) + 1, 'msg' => ''];
+            $changed = true;
+            continue;
+        }
+        $err = ski_photo_fetch($hit['id'], $url);
+        $done[$prefix] = ['ok' => $err === '', 'tries' => ($done[$prefix]['tries'] ?? 0) + 1, 'msg' => $err];
+        $changed = true;
+    }
+    if ($changed) {
+        save_json('ski/photo-seed', $done);
+    }
 }

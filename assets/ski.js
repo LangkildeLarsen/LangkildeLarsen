@@ -161,3 +161,9 @@ document.addEventListener('click', e => {
     prompt('Kopiér linket', url);
   }
 });
+
+document.addEventListener('change', e => {
+  const input = e.target.closest('form[data-autosubmit] input[type="file"]');
+  if (!input || !input.files.length) return;
+  input.form.requestSubmit();
+});
