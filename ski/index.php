@@ -703,6 +703,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
   <aside class="sk-rail" aria-label="Menu" data-tabs>
     <a href="#" class="sk-rail-logo" data-tab-go="alle" aria-label="Overblik"><img src="../assets/ski/icon.svg" alt=""><span class="tip">Overblik</span></a>
     <nav class="sk-rail-nav">
+      <a href="#" data-tab-go="alle" aria-label="Overblik"><?= icon('home') ?><span class="tip">Overblik</span></a>
       <a href="#tracker" data-tab-go="ski" aria-label="Skitracker og rangliste"><?= icon('chart') ?><span class="tip">Skitracker</span></a>
       <a href="#min-liste" data-tab-go="lister" aria-label="Huskelister"><?= icon('check') ?><span class="tip">Huskelister</span></a>
       <a href="#udgifter" data-tab-go="penge" aria-label="Hvem skylder hvem"><?= icon('wallet') ?><span class="tip">Hvem skylder hvem</span></a>
