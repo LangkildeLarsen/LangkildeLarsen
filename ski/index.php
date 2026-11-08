@@ -62,7 +62,7 @@ if ($action === 'join' || $action === 'login') {
             $error = 'Invitationslinket virker ikke længere. Bed om et nyt.';
         } else {
             ski_seed_travellers();
-            $res = ski_join((string)($_POST['name'] ?? ''), $personal ? $personal['email'] : (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''), $personal ? 'p-' . $personal['key'] : '');
+            $res = ski_join((string)($_POST['name'] ?? ''), $personal && $personal['email'] !== '' ? $personal['email'] : (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''), $personal ? 'p-' . $personal['key'] : '');
             if (isset($res['error'])) {
                 $error = $res['error'];
             } else {
@@ -115,12 +115,12 @@ if (!$me) {
     <?php if ($personal): ?><input type="hidden" name="invite" value="<?= e($inviteToken) ?>"><?php else: ?><input type="hidden" name="join" value="<?= e($joinToken) ?>"><?php endif; ?>
     <label>Navn<input name="name" required autocomplete="name" maxlength="40" value="<?= e($_POST['name'] ?? ($personal['name'] ?? '')) ?>"></label>
   <?php endif; ?>
-  <?php if ($mode === 'join' && $personal): ?>
+  <?php if ($mode === 'join' && $personal && $personal['email'] !== ''): ?>
     <label>Mail<input type="email" value="<?= e($personal['email']) ?>" readonly></label>
   <?php else: ?>
     <label>Mail<input type="email" name="email" required autocomplete="username" value="<?= e($_POST['email'] ?? ($personal['email'] ?? '')) ?>"></label>
   <?php endif; ?>
-  <label>Adgangskode<input type="password" name="password" required <?= $mode === 'join' && $personal ? 'autofocus' : '' ?> minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"></label>
+  <label>Adgangskode<input type="password" name="password" required minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"></label>
   <button class="btn"><?= $mode === 'join' ? 'Opret og kom med' : 'Log ind' ?></button>
   <?php if ($mode === 'join'): ?><a href="./" class="muted small">Har du allerede en adgang? Log ind</a><?php endif; ?>
 </form>
@@ -147,19 +147,6 @@ if ($action !== '') {
         ski_cookie('', time() - 3600);
         unset($_SESSION['ski_uid']);
         redirect('./');
-    }
-
-    if ($action === 'invite_send' && $isOwner) {
-        $name = trim((string)($_POST['name'] ?? ''));
-        $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
-        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['ski_flash'] = 'Skriv en gyldig mail til ' . ($name ?: 'personen') . '.';
-        } else {
-            $inv = ski_invite_person($name, $email);
-            $ok = ski_invite_mail($name, $email, $inv['url'], first_name(['name' => $me['name'], 'email' => $me['email']]));
-            $_SESSION['ski_flash'] = $ok ? 'Invitation sendt til ' . $email . '.' : 'Mailen kunne ikke sendes fra serveren. Kopiér linket ud for ' . explode(' ', $name)[0] . ' og send det selv.';
-        }
-        ski_redirect('inviter');
     }
 
     if ($action === 'invite_new' && $isOwner) {
@@ -424,13 +411,15 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <?php if ($flash): ?><p class="sk-flash<?= str_contains($flash, 'kunne ikke') || str_starts_with($flash, 'Skriv') ? ' err' : '' ?>"><?= e($flash) ?></p><?php endif; ?>
           <p class="sk-inv-h">Invitér de rejsende</p>
           <ul class="sk-inv">
-            <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $inv = $invites[ski_slug($t['name'])] ?? null; ?>
+            <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $joined = $tm && empty($tm['pending']); $inv = $joined ? null : ski_invite_for($t['name']); $first = explode(' ', $t['name'])[0]; ?>
               <li>
                 <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
-                <span class="sk-who"><?= e($t['name']) ?><small><?= $tm && empty($tm['pending']) ? 'Er med i appen' : ($inv ? 'Inviteret ' . e(dk_date($inv['sent'])) . ' · ' . e($inv['email']) : 'Ikke inviteret endnu') ?></small></span>
-                <?php if (!$tm || !empty($tm['pending'])): ?>
-                  <form method="post" data-ajax class="sk-inv-f"><?= csrf_field() ?><input type="hidden" name="action" value="invite_send"><input type="hidden" name="name" value="<?= e($t['name']) ?>"><input type="email" name="email" placeholder="Mail" value="<?= e($inv['email'] ?? '') ?>" required aria-label="Mail til <?= e($t['name']) ?>"><button class="btn small"><?= $inv ? 'Send igen' : 'Send' ?></button></form>
-                  <?php if ($inv && !empty($inv['token'])): ?><button type="button" class="sk-x" data-copy-text="<?= e(ski_base_url() . '?invite=' . $inv['token']) ?>" aria-label="Kopiér link" title="Kopiér personligt link"><?= icon('link') ?></button><?php endif; ?>
+                <span class="sk-who"><?= e($t['name']) ?><small><?= $joined ? 'Er med i appen' : 'Personligt link · ikke oprettet endnu' ?></small></span>
+                <?php if (!$joined): ?>
+                  <div class="sk-inv-btns">
+                    <button type="button" class="btn ghost small" data-copy-text="<?= e($inv['url']) ?>"><?= icon('link') ?> Kopiér link</button>
+                    <button type="button" class="btn small" data-share="<?= e($inv['url']) ?>" data-share-text="<?= e('Hej ' . $first . '! Her er appen til skiferien i Mayrhofen. Opret dig og gem den på hjemmeskærmen:') ?>">Del</button>
+                  </div>
                 <?php endif; ?>
               </li>
             <?php endforeach; ?>

@@ -454,38 +454,20 @@ function ski_invite_find(string $token): ?array
     return null;
 }
 
-function ski_invite_person(string $name, string $email): array
+function ski_invite_for(string $name): array
 {
-    $email = mb_strtolower(trim($email));
-    $token = bin2hex(random_bytes(16));
     $key = ski_slug($name);
-    ski_mutate('invites', function (&$l) use ($key, $name, $email, $token) {
-        $l[$key] = ['key' => $key, 'name' => $name, 'email' => $email, 'hash' => hash('sha256', $token), 'token' => $token, 'sent' => date('c'), 'used' => $l[$key]['used'] ?? ''];
-    });
-    return ['token' => $token, 'url' => ski_base_url() . '?invite=' . $token];
-}
-
-function ski_invite_mail(string $name, string $email, string $url, string $from): bool
-{
-    $first = explode(' ', trim($name))[0];
-    $subject = 'Du er inviteret med på skiferie i Mayrhofen';
-    $body = "Hej $first\n\n"
-        . "$from har lavet en lille app til skiferien i Mayrhofen 25. dec. – 2. jan. Den har nedtælling, program, sne, webcams, skitracker og huskelister.\n\n"
-        . "Opret dig her:\n$url\n\n"
-        . "Sådan gemmer du den på din iPhone:\n"
-        . "1. Åbn linket i Safari\n"
-        . "2. Skriv dit navn og vælg en adgangskode\n"
-        . "3. Tryk på Del-knappen (firkanten med pilen op) og vælg \"Føj til hjemmeskærm\"\n\n"
-        . "Så ligger appen som et ikon på din skærm, og du er logget ind, når du åbner den.\n\n"
-        . "Vi ses på pisten\n$from\n";
-    $headers = implode("\r\n", [
-        'From: =?UTF-8?B?' . base64_encode('Skiferie Mayrhofen') . '?= <emil@langkildelarsen.dk>',
-        'Reply-To: emil@langkildelarsen.dk',
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
-    ]);
-    return @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $headers, '-femil@langkildelarsen.dk');
+    $inv = ski_invites()[$key] ?? null;
+    if (!$inv || empty($inv['token'])) {
+        $token = bin2hex(random_bytes(16));
+        ski_mutate('invites', function (&$l) use ($key, $name, $token) {
+            if (empty($l[$key]['token'])) {
+                $l[$key] = ['key' => $key, 'name' => $name, 'email' => '', 'hash' => hash('sha256', $token), 'token' => $token, 'sent' => date('c'), 'used' => ''];
+            }
+        });
+        $inv = ski_invites()[$key];
+    }
+    return $inv + ['url' => ski_base_url() . '?invite=' . $inv['token']];
 }
 
 function ski_app_token(string $id): string

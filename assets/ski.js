@@ -147,3 +147,17 @@ document.addEventListener('click', e => {
   a.textContent = amount + ' kr. kopieret';
   setTimeout(() => { a.textContent = 'Afregn'; }, 4000);
 });
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-share]');
+  if (!b) return;
+  const url = b.dataset.share;
+  const text = b.dataset.shareText || '';
+  if (navigator.share) {
+    navigator.share({ title: 'Skiferie Mayrhofen', text, url }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text + ' ' + url).then(() => { const t = b.textContent; b.textContent = 'Kopieret'; setTimeout(() => { b.textContent = t; }, 1600); });
+  } else {
+    prompt('Kopiér linket', url);
+  }
+});
