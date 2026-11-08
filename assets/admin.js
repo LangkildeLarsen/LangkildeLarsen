@@ -1376,9 +1376,9 @@ document.addEventListener('input', e => {
     if (!box.hasAttribute('data-trip-refresh')) return;
     box.dataset.busy = '1';
     fetch('index.php?ajax=trip_snow', { credentials: 'same-origin' })
-      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
       .then(html => { box.innerHTML = html; box.removeAttribute('data-trip-refresh'); })
-      .catch(() => {})
+      .catch(err => { box.innerHTML = '<div class="wx-empty"><p class="muted small">Snedata kunne ikke hentes lige nu.</p><p class="muted small">' + String(err && err.message || 'Netværksfejl').replace(/</g, '&lt;') + '</p></div>'; })
       .finally(() => { delete box.dataset.busy; });
   };
   setInterval(tick, 1000);

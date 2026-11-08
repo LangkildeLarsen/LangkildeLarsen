@@ -36,8 +36,32 @@ function trip_status(int $now = 0): array
 function trip_snow_fetch(array $params): ?array
 {
     $base = getenv('WEATHER_API_URL') ?: 'https://api.open-meteo.com/v1/forecast';
-    $j = weather_http($base . '?' . http_build_query($params));
-    return ($j && !empty($j['hourly']['time'])) ? $j : null;
+    $url = $base . '?' . http_build_query($params);
+    $body = false;
+    $code = 0;
+    $err = '';
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_USERAGENT => 'langkildelarsen-ski']);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+    } elseif (ini_get('allow_url_fopen')) {
+        $ctx = stream_context_create(['http' => ['timeout' => 10, 'ignore_errors' => true, 'header' => "User-Agent: langkildelarsen-ski\r\n"]]);
+        $body = @file_get_contents($url, false, $ctx);
+        $code = preg_match('~\s(\d{3})\s~', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0;
+        $err = $body === false ? 'file_get_contents fejlede' : '';
+    } else {
+        $err = 'Serveren har hverken curl eller allow_url_fopen';
+    }
+    $j = is_string($body) ? json_decode($body, true) : null;
+    if ($code === 200 && is_array($j) && !empty($j['hourly']['time'])) {
+        return $j;
+    }
+    $reason = is_array($j) && !empty($j['reason']) ? $j['reason'] : ($err ?: (is_string($body) ? mb_substr(trim(strip_tags($body)), 0, 160) : 'intet svar'));
+    save_json('trip-snow-error', ['t' => date('c'), 'code' => $code, 'msg' => $reason, 'elevation' => $params['elevation'] ?? null]);
+    return null;
 }
 
 function trip_snow(): ?array
@@ -128,7 +152,9 @@ function trip_day_label(string $date, string $today): string
 function trip_snow_html(?array $s): string
 {
     if (!$s) {
-        return '<div class="wx-empty"><p class="muted small">Snedata kunne ikke hentes lige nu.</p></div>';
+        $er = load_json('trip-snow-error');
+        $detail = $er ? 'Fejl ' . ($er['code'] ?: '–') . ': ' . $er['msg'] : '';
+        return '<div class="wx-empty"><p class="muted small">Snedata kunne ikke hentes lige nu.</p>' . ($detail ? '<p class="muted small" style="max-width: 320px; text-align: center; opacity: .7">' . e($detail) . '</p>' : '') . '</div>';
     }
     $h = '<div class="trip-spots">';
     foreach ($s['spots'] as $sp) {

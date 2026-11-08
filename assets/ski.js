@@ -24,9 +24,9 @@
   const snow = document.querySelector('[data-trip-refresh]');
   if (snow) {
     fetch('./?ajax=snow', { credentials: 'same-origin' })
-      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
       .then(html => { snow.innerHTML = html; snow.removeAttribute('data-trip-refresh'); })
-      .catch(() => { snow.innerHTML = '<div class="wx-empty"><p class="muted small">Snedata kunne ikke hentes lige nu.</p></div>'; });
+      .catch(err => { snow.innerHTML = '<div class="wx-empty"><p class="muted small">Snedata kunne ikke hentes lige nu.</p><p class="muted small">' + String(err && err.message || 'Netværksfejl').replace(/</g, '&lt;') + '</p></div>'; });
   }
 
   document.addEventListener('click', e => {
