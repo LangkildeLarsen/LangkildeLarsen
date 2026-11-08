@@ -257,3 +257,5 @@ html:has(body.sk), body.sk, body.sk-auth { background: #000; }
 .sk-pay-f input { width: 96px; padding-top: 8px; padding-bottom: 8px; font-size: 13px; text-align: right; }
 .sk-mp { background: #5a78ff; color: #fff; white-space: nowrap; }
 @media (max-width: 560px) { .sk-pay-f { flex-basis: 100%; justify-content: flex-end; } .sk-pay-f input { flex: 1; } }
+
+.sk-track, .sk-board { order: -1; }
