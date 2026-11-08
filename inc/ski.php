@@ -474,7 +474,7 @@ function ski_invite_for(string $name): array
         });
         $inv = ski_invites()[$key];
     }
-    return $inv + ['url' => ski_base_url() . '?invite=' . ski_slug(explode(' ', $name)[0]) . '-' . $inv['token']];
+    return $inv + ['url' => ski_base_url() . '?invite=' . ski_slug(ski_nick(['name' => $name])) . '-' . $inv['token']];
 }
 
 function ski_app_token(string $id): string

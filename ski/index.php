@@ -111,6 +111,20 @@ if (!$me) {
         }
     }
     $names = array_map(fn($x) => ski_nick($x), $others);
+    $picker = [];
+    if ($mode === 'join' && !$personal && empty($_GET['ny']) && $action === '') {
+        ski_seed_travellers();
+        $allMembers = ski_members();
+        foreach (SKI_BOOKING['travellers'] as $t) {
+            if ($t['role'] === 'Rejsebestiller') {
+                continue;
+            }
+            $tm = ski_traveller_member($t['name'], $allMembers);
+            $joinedT = $tm && empty($tm['pending']);
+            $picker[] = ['t' => $t, 'm' => $tm, 'joined' => $joinedT, 'url' => $joinedT ? './' : ski_invite_for($t['name'])['url']];
+        }
+        $others = [];
+    }
     $waitText = count($names) > 1 ? implode(', ', array_slice($names, 0, -1)) . ' og ' . end($names) . ' venter på dig' : ($names ? $names[0] . ' venter på dig' : '');
     $st = trip_status();
     $heroImg = 'https://images.contenthub.dev/390osprlshgj/450280868de9f7683c35a94ed4fb614b/mbb_mountopolis_winter_neu_2025_harakiri_1.jpg?fm=jpg&fl=progressive&fit=fill&q=60&w=1200';
@@ -132,7 +146,7 @@ if (!$me) {
   </div>
   <div class="sk-join-body">
     <?php if ($mode === 'join'): ?>
-      <h1><?= $nick ? 'Hej ' . e($nick) . '!' : 'Kom med til Mayrhofen!' ?></h1>
+      <h1><?= $nick ? 'Hej ' . e($nick) . '!' : ($picker ? 'Skiferie i Mayrhofen' : 'Kom med til Mayrhofen!') ?></h1>
       <p class="sk-join-lead">Glæd dig til Mayrhofen! Det bliver vildt. Ni dage i Zillertal med pister fra morgen til eftermiddag, après-ski, nytårsaften i bjergene og os fem samlet i samme bil derned.</p>
     <?php else: ?>
       <h1>Skiferie</h1>
@@ -153,7 +167,7 @@ if (!$me) {
         <p><?= e($waitText) ?></p>
       </div>
     <?php endif; ?>
-    <?php if ($mode === 'join'): ?>
+    <?php if ($mode === 'join' && !$picker): ?>
       <p class="sk-join-h">Opret dig og få</p>
       <ul class="sk-join-feat">
         <li><?= icon('snow') ?>Sneprognose og snedybde</li>
@@ -164,6 +178,19 @@ if (!$me) {
         <li><?= icon('chart') ?>Rangliste over topfart</li>
       </ul>
     <?php endif; ?>
+    <?php if ($picker): ?>
+      <p class="sk-join-h">Hvem er du?</p>
+      <ul class="sk-pickme">
+        <?php foreach ($picker as $pk): ?>
+          <li><a href="<?= e($pk['url']) ?>" class="<?= $pk['joined'] ? 'done' : '' ?>">
+            <?= $pk['m'] ? ski_avatar(array_merge($pk['m'], ['pending' => false]), 'lg') : '<span class="sk-av lg ghost">' . e(ski_initials(['name' => $pk['t']['name']])) . '</span>' ?>
+            <span class="sk-who"><?= e($pk['t']['nick'] ?? explode(' ', $pk['t']['name'])[0]) ?><small><?= e($pk['t']['name']) ?></small></span>
+            <span class="sk-pick-go"><?= $pk['joined'] ? 'Er med · log ind' : icon('arrow') ?></span>
+          </a></li>
+        <?php endforeach; ?>
+      </ul>
+      <a href="./?join=<?= e($joinToken) ?>&amp;ny=1" class="muted small sk-join-alt">Står du ikke på listen?</a>
+    <?php else: ?>
     <form method="post" class="sk-join-f" action="./<?= $qs ?>">
       <?= csrf_field() ?>
       <?php if ($error): ?><p class="alert error"><?= e($error) ?></p><?php endif; ?>
@@ -181,6 +208,7 @@ if (!$me) {
       <button class="btn"><?= $mode === 'join' ? 'Opret mig og kom med' : 'Log ind' ?></button>
       <?php if ($mode === 'join'): ?><a href="./" class="muted small sk-join-alt">Har du allerede en adgang? Log ind</a><?php endif; ?>
     </form>
+    <?php endif; ?>
   </div>
 </main>
 </body>
