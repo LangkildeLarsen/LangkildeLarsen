@@ -76,9 +76,21 @@ function ski_owner_from_cookie(): ?array
 function ski_ensure_owner(array $user): string
 {
     $id = 'o-' . user_slug($user['email']);
-    ski_mutate('members', function (&$m) use ($id, $user) {
+    $full = first_name($user);
+    foreach (SKI_BOOKING['travellers'] as $t) {
+        if ($t['role'] === 'Rejsebestiller') {
+            $full = $t['name'];
+        }
+    }
+    $members = ski_members();
+    if (isset($members[$id]) && $members[$id]['name'] !== first_name($user)) {
+        return $id;
+    }
+    ski_mutate('members', function (&$m) use ($id, $user, $full) {
         if (!isset($m[$id])) {
-            $m[$id] = ['id' => $id, 'name' => first_name($user), 'email' => $user['email'], 'role' => 'owner', 'hash' => '', 'tokens' => [], 'color' => ski_next_color($m), 'joined' => date('c')];
+            $m[$id] = ['id' => $id, 'name' => $full, 'email' => $user['email'], 'role' => 'owner', 'hash' => '', 'tokens' => [], 'color' => ski_next_color($m), 'joined' => date('c')];
+        } elseif ($m[$id]['name'] === first_name($user)) {
+            $m[$id]['name'] = $full;
         }
     });
     return $id;

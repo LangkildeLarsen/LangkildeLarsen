@@ -133,6 +133,10 @@ if (!$me) {
 
 $isOwner = $me['role'] === 'owner';
 $mid = $me['id'];
+if ($isOwner && !str_contains(trim($me['name']), ' ')) {
+    ski_ensure_owner(['email' => $me['email'], 'name' => $me['name']]);
+    $me = ski_members()[$mid] ?? $me;
+}
 ski_seed_travellers();
 ski_fix_early_expenses();
 ski_packing_fill($me);
