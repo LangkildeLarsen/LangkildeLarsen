@@ -189,7 +189,6 @@ if (!$me) {
           </a></li>
         <?php endforeach; ?>
       </ul>
-      <a href="./?join=<?= e($joinToken) ?>&amp;ny=1" class="muted small sk-join-alt">Står du ikke på listen?</a>
     <?php else: ?>
     <form method="post" class="sk-join-f" action="./<?= $qs ?>">
       <?= csrf_field() ?>
