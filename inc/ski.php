@@ -3,6 +3,7 @@
 const SKI_COLORS = ['#5b9dff', '#3ecf6e', '#ff7a2f', '#f2c230', '#c77dff', '#ff5d8f', '#2ec4b6', '#ff4d4d'];
 
 const SKI_CAMS = [
+    ['name' => 'Unterberg', 'url' => 'https://pano.mayrhofen.at/unterberg', 'embed' => true],
     ['name' => 'Penken', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=5635&c2=0&c1=0', 'embed' => true],
     ['name' => 'Ahorn', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=5636&c2=0&c1=0', 'embed' => true],
     ['name' => 'Paulerhof', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=5639&c2=0&c1=0', 'embed' => true],
@@ -11,7 +12,6 @@ const SKI_CAMS = [
     ['name' => 'Brindlingalm', 'url' => 'https://pano.mayrhofen.at/brindlingalm', 'embed' => true],
     ['name' => 'Ginzling', 'url' => 'https://pano.mayrhofen.at/ginzling', 'embed' => true],
     ['name' => 'Coolnest', 'url' => 'https://pano.mayrhofen.at/coolnest', 'embed' => true],
-    ['name' => 'Unterberg', 'url' => 'https://pano.mayrhofen.at/unterberg', 'embed' => true],
 ];
 
 const SKI_BOOKING = [
@@ -23,14 +23,15 @@ const SKI_BOOKING = [
     'included' => ['Liftkort Mayrhofen', 'Guideservice'],
     'travellers' => [
         ['name' => 'Emil Langkilde O. Larsen', 'role' => 'Rejsebestiller', 'price' => 6888, 'extra' => []],
-        ['name' => 'Jeppe Smedegaard', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
+        ['name' => 'Jeppe Smedegaard', 'role' => 'Rejsende', 'price' => 6888, 'extra' => [], 'gear' => 'snowboard'],
         ['name' => 'Gustav Langkilde O. Larsen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
         ['name' => 'Nikolaj Holm Iversen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
         ['name' => 'Nicolaj Baun Christensen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
     ],
 ];
 
-const SKI_SUGGEST = ['Ski eller snowboard', 'Skistøvler', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Solcreme og læbepomade', 'Pas og sygesikringskort', 'Liftkort', 'Oplader og powerbank'];
+const SKI_SUGGEST = ['Ski', 'Skistøvler', 'Skistave', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj'];
+const SKI_SUGGEST_BOARD = ['Snowboard', 'Snowboardstøvler', 'Hjelm', 'Skibriller', 'Skijakke', 'Skibukser', 'Skiundertøj', 'Skisokker', 'Handsker eller luffer', 'Halsedisse', 'Hue', 'Solcreme og læbepomade', 'Pas', 'Blåt sygesikringskort', 'Oplader og powerbank', 'Badetøj'];
 
 function ski_mutate(string $name, callable $fn)
 {
@@ -252,7 +253,7 @@ function ski_run_save(string $member, array $r): void
             'max' => max(0, min(160, round((float)($r['max'] ?? 0), 1))),
             'descent' => max(0, min(30000, (int)round((float)($r['descent'] ?? 0)))),
             'mins' => max(0, min(1440, (int)round((float)($r['mins'] ?? 0)))),
-            'src' => ($r['src'] ?? '') === 'gps' ? 'gps' : 'manual',
+            'src' => in_array($r['src'] ?? '', ['gps', 'strava'], true) ? $r['src'] : 'manual',
             'live' => !empty($r['live']),
             'updated' => date('c'),
         ];
@@ -576,4 +577,50 @@ function ski_seed_travellers(): void
         }
     });
     save_json('ski/seed-travellers', ['t' => date('c')]);
+}
+
+function ski_fix_early_expenses(): void
+{
+    if (load_json('ski/fix-split')) {
+        return;
+    }
+    $all = array_keys(ski_members());
+    ski_mutate('expenses', function (&$l) use ($all) {
+        foreach ($l as $id => $x) {
+            if (($x['type'] ?? 'expense') === 'expense' && count($x['split']) === 1 && $x['split'][0] === $x['by']) {
+                $l[$id]['split'] = $all;
+            }
+        }
+    });
+    save_json('ski/fix-split', ['t' => date('c')]);
+}
+
+function ski_suggestions(array $member): array
+{
+    $first = mb_strtolower(explode(' ', trim($member['name']))[0]);
+    foreach (SKI_BOOKING['travellers'] as $t) {
+        if (mb_strtolower(explode(' ', $t['name'])[0]) === $first && ($t['gear'] ?? 'ski') === 'snowboard') {
+            return SKI_SUGGEST_BOARD;
+        }
+    }
+    return SKI_SUGGEST;
+}
+
+function ski_packing_fill(array $member): void
+{
+    $id = $member['id'];
+    ski_packing_mutate($id, function (&$l) use ($member) {
+        if (!empty($l['_filled'])) {
+            return;
+        }
+        $have = array_map('mb_strtolower', array_column(array_filter($l, 'is_array'), 'text'));
+        $t = time();
+        foreach (ski_suggestions($member) as $i => $text) {
+            if (!in_array(mb_strtolower($text), $have, true)) {
+                $iid = ski_id();
+                $l[$iid] = ['id' => $iid, 'text' => $text, 'done' => false, 'created' => date('c', $t + $i)];
+            }
+        }
+        $l['_filled'] = date('c');
+    });
 }

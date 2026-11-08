@@ -66,6 +66,14 @@
       .finally(() => { busy = false; });
   };
 
+  window.skiRefresh = refresh;
+  if (document.querySelector('[data-tracker]')) {
+    fetch('./?ajax=strava', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j && j.changed) refresh(); })
+      .catch(() => {});
+  }
+
   document.addEventListener('submit', e => {
     const form = e.target.closest('form[data-ajax]');
     if (!form) return;
@@ -258,14 +266,14 @@ document.addEventListener('click', e => {
     document.body.dataset.tab = tab;
     nav.querySelectorAll('[data-tab-go]').forEach(a => a.classList.toggle('active', a.dataset.tabGo === tab));
     try { localStorage.setItem('ski-tab', tab); } catch (e) {}
-    if (scroll && mq.matches) scrollTo({ top: 0, behavior: 'instant' });
+    if (scroll) scrollTo({ top: 0, behavior: 'instant' });
   };
   let saved = null;
   try { saved = localStorage.getItem('ski-tab'); } catch (e) {}
   set(saved || document.body.dataset.tab, false);
   nav.addEventListener('click', e => {
     const a = e.target.closest('[data-tab-go]');
-    if (!a || !mq.matches) return;
+    if (!a) return;
     e.preventDefault();
     set(a.dataset.tabGo, true);
   });

@@ -332,3 +332,64 @@ body:not(.sk-before) .sk-hero .sk-crew { margin-top: 0; }
 .sk-pay { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .sk-pay .sk-mp { text-decoration: none; }
 .sk-av.pending { background: var(--card-3); }
+
+.sk-track .sk-stats { margin-bottom: 14px; }
+.sk-strava { display: grid; gap: 10px; }
+.sk-strava p { margin: 0; }
+.sk-strava-btn { padding: 15px; background: #fc4c02; color: #fff; text-decoration: none; }
+.sk-strava-on { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--card-2); box-shadow: var(--inset); }
+.sk-strava-on form { margin: 0; }
+.sk-strava-dot { width: 10px; height: 10px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 10px rgba(252, 76, 2, .6); flex: none; }
+.sk-strava-setup { display: grid; gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--card-2); box-shadow: var(--inset); }
+.sk-strava-setup ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.sk-strava-setup a { color: var(--ink); }
+.sk-strava-setup code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--card-3); color: var(--ink); }
+.sk-strava strong { color: var(--ink); }
+.sk-powered { color: var(--faint); font-size: 11px; letter-spacing: .02em; }
+.sk-web .sk-web-in { display: grid; gap: 12px; }
+.sk-web-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sk-web .sk-speed { margin: 0; font-size: 56px; }
+.sk-track .sk-manual { margin-top: 12px; }
+
+.sk-exps li { flex-wrap: wrap; }
+.sk-exp-edit { display: contents; }
+.sk-exp-edit summary { list-style: none; }
+.sk-exp-edit summary::-webkit-details-marker { display: none; }
+.sk-exp-edit[open] summary { background: var(--card-3); color: var(--ink); }
+.sk-exp-edit-f { order: 10; flex-basis: 100%; display: grid; gap: 10px; padding: 4px 0 6px 46px; }
+.sk-exp-edit-f .btn { justify-self: start; }
+
+body.sk { padding-bottom: calc(env(safe-area-inset-bottom) + 110px); }
+body.sk[data-tab="ski"] .sk-grid > [data-tab]:not([data-tab="ski"]),
+body.sk[data-tab="lister"] .sk-grid > [data-tab]:not([data-tab="lister"]),
+body.sk[data-tab="penge"] .sk-grid > [data-tab]:not([data-tab="penge"]),
+body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { display: none; }
+.sk-tabs {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 4px;
+  padding: 7px;
+  border-radius: 999px;
+  background: rgba(18, 18, 19, .86);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: var(--inset), 0 20px 50px rgba(0, 0, 0, .6);
+}
+.sk-tabs a { display: grid; place-items: center; align-content: center; gap: 1px; width: 64px; height: 50px; border-radius: 999px; color: var(--muted); text-decoration: none; transition: background .25s ease, color .25s ease; }
+.sk-tabs a .ic { width: 21px; height: 21px; }
+.sk-tabs a span { font-size: 10px; line-height: 1; }
+.sk-tabs a:hover { color: var(--ink); }
+.sk-tabs a.active { background: #fff; color: #000; }
+@media (min-width: 901px) {
+  .sk-tabs a { width: auto; height: 46px; padding: 0 18px; grid-auto-flow: column; gap: 8px; }
+  .sk-tabs a span { font-size: 14px; }
+  .sk-tabs a .ic { width: 19px; height: 19px; }
+}
+
+@media (min-width: 801px) {
+  .sk-before .sk-hero-img { top: 14px; right: 14px; bottom: 14px; width: calc(46% - 14px); border-radius: 22px; -webkit-mask-image: none; mask-image: none; }
+}
