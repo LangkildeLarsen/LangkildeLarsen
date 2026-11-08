@@ -176,3 +176,31 @@ body.sk { padding: 24px; background: radial-gradient(1200px 700px at 50% -10%, #
   .sk-day-h span { margin-right: 0; }
   .sk-day-tag { width: 100%; margin-top: -4px; }
 }
+
+.sk-install { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 14px; padding: 16px 16px 16px 18px; border-radius: 24px; background: linear-gradient(135deg, rgba(79, 142, 245, .22), rgba(22, 63, 147, .22)); box-shadow: var(--inset), inset 0 0 0 1px rgba(111, 168, 255, .25); }
+.sk-install[hidden] { display: none; }
+.sk-install img { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+.sk-install > div { flex: 1; min-width: 0; }
+.sk-install p { margin: 0; }
+.sk-install-t { font-size: 15px; margin-bottom: 3px !important; }
+.sk-install strong { color: var(--ink); }
+.sk-share { display: inline-grid; place-items: center; width: 22px; height: 22px; vertical-align: -6px; border-radius: 6px; background: rgba(255, 255, 255, .12); color: #6fa8ff; }
+.sk-share svg { width: 15px; height: 15px; }
+.sk-auth-logo { width: 72px; height: 72px; border-radius: 22%; margin-bottom: 4px; box-shadow: 0 10px 30px rgba(31, 86, 196, .35); }
+.sk-brand-ic { background: url(ski/icon-180.png) center / cover; color: transparent; border-radius: 13px; }
+.sk-brand-ic .ic { display: none; }
+body.sk { padding-top: max(24px, env(safe-area-inset-top)); }
+
+.sk-flash { margin: 0; padding: 10px 14px; border-radius: 14px; background: rgba(62, 207, 110, .12); color: var(--green); font-size: 13px; }
+.sk-inv-h { font-size: 14px; color: var(--soft); }
+.sk-inv { list-style: none; margin: 0; padding: 0; display: grid; }
+.sk-inv li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.sk-inv li:last-child { border-bottom: 0; }
+.sk-inv-f { display: flex; gap: 6px; margin: 0; flex: 1 1 260px; max-width: 360px; }
+.sk-inv-f input { flex: 1; min-width: 0; padding-top: 8px; padding-bottom: 8px; font-size: 13px; }
+.sk-x.copied { background: rgba(62, 207, 110, .16); color: var(--green); }
+@media (max-width: 560px) { .sk-inv-f { max-width: none; flex-basis: 100%; } }
+
+.sk-cam-frame { min-height: 340px; }
+@media (max-width: 800px) { .sk-cam-frame { aspect-ratio: auto; height: 420px; } }
+.sk-flash.err { background: rgba(255, 77, 77, .12); color: var(--red); }

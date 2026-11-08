@@ -232,3 +232,26 @@
   render();
   if (st.active) start();
 })();
+
+(() => {
+  const box = document.querySelector('[data-install]');
+  if (!box) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  let closed = false;
+  try { closed = localStorage.getItem('ski-install-x') === '1'; } catch (e) {}
+  if (ios && !standalone && (!closed || box.hasAttribute('data-welcome'))) box.hidden = false;
+  box.querySelector('[data-install-x]').addEventListener('click', () => {
+    box.hidden = true;
+    try { localStorage.setItem('ski-install-x', '1'); } catch (e) {}
+  });
+})();
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-copy-text]');
+  if (!b) return;
+  const t = b.dataset.copyText;
+  const ok = () => { b.classList.add('copied'); setTimeout(() => b.classList.remove('copied'), 1600); };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok).catch(() => prompt('Kopiér linket', t));
+  else prompt('Kopiér linket', t);
+});

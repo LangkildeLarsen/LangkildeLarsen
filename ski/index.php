@@ -9,6 +9,8 @@ header('X-Robots-Tag: noindex');
 $action = (string)($_POST['action'] ?? '');
 $isAjax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
 $joinToken = (string)($_GET['join'] ?? $_POST['join'] ?? '');
+$inviteToken = (string)($_GET['invite'] ?? $_POST['invite'] ?? '');
+$personal = ski_invite_find($inviteToken);
 $error = '';
 
 function ski_redirect(string $hash = ''): void
@@ -22,18 +24,56 @@ function ski_redirect(string $hash = ''): void
     redirect('./' . ($hash ? '#' . $hash : ''));
 }
 
+function ski_head(): string
+{
+    $root = dirname(__DIR__);
+    return '<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050505">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skiferie">
+<title>Skiferie · Mayrhofen</title>
+<link rel="manifest" href="manifest.php?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ski/icon-32.png">
+<link rel="apple-touch-icon" href="../assets/ski/icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/admin.css?v=' . filemtime($root . '/assets/admin.css') . '">
+<link rel="stylesheet" href="../assets/ski.css?v=' . filemtime($root . '/assets/ski.css') . '">';
+}
+
+if (isset($_GET['app'])) {
+    $id = ski_app_login((string)$_GET['app']);
+    if ($id) {
+        session_regenerate_id(true);
+        $_SESSION['ski_uid'] = $id;
+        ski_remember($id);
+    }
+    redirect('./');
+}
+
 if ($action === 'join' || $action === 'login') {
     verify_csrf();
     if ($action === 'join') {
-        if (!ski_invite_valid($joinToken)) {
+        if (!$personal && !ski_invite_valid($joinToken)) {
             $error = 'Invitationslinket virker ikke længere. Bed om et nyt.';
         } else {
-            $res = ski_join((string)($_POST['name'] ?? ''), (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''));
+            $res = ski_join((string)($_POST['name'] ?? ''), $personal ? $personal['email'] : (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''));
             if (isset($res['error'])) {
                 $error = $res['error'];
             } else {
+                if ($personal) {
+                    ski_mutate('invites', function (&$l) use ($personal, $res) {
+                        if (isset($l[$personal['key']])) {
+                            $l[$personal['key']]['used'] = $res['id'];
+                        }
+                    });
+                }
                 session_regenerate_id(true);
                 $_SESSION['ski_uid'] = $res['id'];
+                $_SESSION['ski_welcome'] = true;
                 ski_remember($res['id']);
                 redirect('./');
             }
@@ -54,34 +94,31 @@ if ($action === 'join' || $action === 'login') {
 $me = ski_current();
 
 if (!$me) {
-    $mode = ski_invite_valid($joinToken) ? 'join' : 'login';
+    $mode = ($personal && empty($personal['used'])) || ski_invite_valid($joinToken) ? 'join' : 'login';
+    $qs = $mode === 'join' ? ($personal ? '?invite=' . e($inviteToken) : '?join=' . e($joinToken)) : '';
     ?><!doctype html>
 <html lang="da">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex">
-<meta name="theme-color" content="#050505">
-<title>Skiferie · Mayrhofen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
-<link rel="stylesheet" href="../assets/ski.css?v=<?= filemtime(dirname(__DIR__) . '/assets/ski.css') ?>">
+<?= ski_head() ?>
 </head>
 <body class="auth sk-auth">
-<form method="post" class="auth-box" action="./<?= $mode === 'join' ? '?join=' . e($joinToken) : '' ?>">
+<form method="post" class="auth-box" action="./<?= $qs ?>">
   <?= csrf_field() ?>
-  <span class="sk-auth-ic"><?= icon('snow') ?></span>
-  <h1><?= $mode === 'join' ? 'Kom med til Mayrhofen' : 'Skiferie' ?></h1>
-  <p class="muted"><?= $mode === 'join' ? 'Du er inviteret til skiferien 25. dec. – 2. jan. Opret dig, så får du nedtælling, sne, skitracker og huskelister.' : 'Log ind med den mail og adgangskode, du oprettede dig med.' ?></p>
+  <img src="../assets/ski/icon-180.png" alt="" class="sk-auth-logo">
+  <h1><?= $mode === 'join' ? ($personal ? 'Hej ' . e(explode(' ', $personal['name'])[0]) : 'Kom med til Mayrhofen') : 'Skiferie' ?></h1>
+  <p class="muted"><?= $mode === 'join' ? 'Du er inviteret med på skiferien i Mayrhofen 25. dec. – 2. jan. Vælg en adgangskode, så er du med.' : ($personal ? 'Du er allerede oprettet. Log ind med din mail og adgangskode.' : 'Log ind med den mail og adgangskode, du oprettede dig med.') ?></p>
   <?php if ($error): ?><p class="alert error"><?= e($error) ?></p><?php endif; ?>
   <input type="hidden" name="action" value="<?= $mode ?>">
   <?php if ($mode === 'join'): ?>
-    <input type="hidden" name="join" value="<?= e($joinToken) ?>">
-    <label>Navn<input name="name" required autofocus autocomplete="given-name" maxlength="40" value="<?= e($_POST['name'] ?? '') ?>"></label>
+    <?php if ($personal): ?><input type="hidden" name="invite" value="<?= e($inviteToken) ?>"><?php else: ?><input type="hidden" name="join" value="<?= e($joinToken) ?>"><?php endif; ?>
+    <label>Navn<input name="name" required autocomplete="name" maxlength="40" value="<?= e($_POST['name'] ?? ($personal['name'] ?? '')) ?>"></label>
   <?php endif; ?>
-  <label>Mail<input type="email" name="email" required <?= $mode === 'login' ? 'autofocus' : '' ?> autocomplete="username" value="<?= e($_POST['email'] ?? '') ?>"></label>
-  <label>Adgangskode<input type="password" name="password" required minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"></label>
+  <?php if ($mode === 'join' && $personal): ?>
+    <label>Mail<input type="email" value="<?= e($personal['email']) ?>" readonly></label>
+  <?php else: ?>
+    <label>Mail<input type="email" name="email" required autocomplete="username" value="<?= e($_POST['email'] ?? ($personal['email'] ?? '')) ?>"></label>
+  <?php endif; ?>
+  <label>Adgangskode<input type="password" name="password" required <?= $mode === 'join' && $personal ? 'autofocus' : '' ?> minlength="<?= $mode === 'join' ? 8 : 1 ?>" autocomplete="<?= $mode === 'join' ? 'new-password' : 'current-password' ?>"></label>
   <button class="btn"><?= $mode === 'join' ? 'Opret og kom med' : 'Log ind' ?></button>
   <?php if ($mode === 'join'): ?><a href="./" class="muted small">Har du allerede en adgang? Log ind</a><?php endif; ?>
 </form>
@@ -101,6 +138,19 @@ if ($action !== '') {
         ski_cookie('', time() - 3600);
         unset($_SESSION['ski_uid']);
         redirect('./');
+    }
+
+    if ($action === 'invite_send' && $isOwner) {
+        $name = trim((string)($_POST['name'] ?? ''));
+        $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['ski_flash'] = 'Skriv en gyldig mail til ' . ($name ?: 'personen') . '.';
+        } else {
+            $inv = ski_invite_person($name, $email);
+            $ok = ski_invite_mail($name, $email, $inv['url'], first_name(['name' => $me['name'], 'email' => $me['email']]));
+            $_SESSION['ski_flash'] = $ok ? 'Invitation sendt til ' . $email . '.' : 'Mailen kunne ikke sendes fra serveren. Kopiér linket ud for ' . explode(' ', $name)[0] . ' og send det selv.';
+        }
+        ski_redirect('inviter');
     }
 
     if ($action === 'invite_new' && $isOwner) {
@@ -246,25 +296,20 @@ foreach ($plan as $x) {
 }
 $st = trip_status();
 $range = date('j', $st['start']) . '. dec. – ' . date('j', $st['end']) . '. jan.';
-$inviteToken = $isOwner ? ski_invite_token() : '';
+$groupToken = $isOwner ? ski_invite_token() : '';
 $snowCache = load_json('trip-snow-cache');
 $snowFresh = ($snowCache['t'] ?? 0) > time() - 3600;
 $myTotal = array_values(array_filter($board, fn($r) => $r['m']['id'] === $mid))[0] ?? null;
+$invites = $isOwner ? ski_invites() : [];
+$flash = $_SESSION['ski_flash'] ?? '';
+unset($_SESSION['ski_flash']);
+$welcome = !empty($_SESSION['ski_welcome']);
+unset($_SESSION['ski_welcome']);
 $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 ?><!doctype html>
 <html lang="da">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex">
-<meta name="theme-color" content="#050505">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Skiferie · Mayrhofen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
-<link rel="stylesheet" href="../assets/ski.css?v=<?= filemtime(dirname(__DIR__) . '/assets/ski.css') ?>">
+<?= ski_head() ?>
 <script src="../assets/ski.js?v=<?= filemtime(dirname(__DIR__) . '/assets/ski.js') ?>" defer></script>
 </head>
 <body class="sk" data-csrf="<?= e(csrf_token()) ?>">
@@ -277,6 +322,15 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="logout"><button class="round" aria-label="Log ud" title="Log ud"><?= icon('logout') ?></button></form>
     </div>
   </header>
+
+  <div class="sk-install" data-install<?= $welcome ? ' data-welcome' : '' ?> hidden>
+    <img src="../assets/ski/icon-180.png" alt="">
+    <div>
+      <p class="sk-install-t"><?= $welcome ? 'Velkommen med, ' . e(explode(' ', $me['name'])[0]) . '! Gem nu appen på hjemmeskærmen' : 'Gem Skiferie på hjemmeskærmen' ?></p>
+      <p class="muted small">Tryk på <span class="sk-share" aria-label="Del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M7 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg></span> nederst i Safari og vælg <strong>Føj til hjemmeskærm</strong>. Så åbner appen direkte, uden at du skal logge ind igen.</p>
+    </div>
+    <button type="button" class="sk-x" data-install-x aria-label="Luk"><?= icon('cross') ?></button>
+  </div>
 
   <main class="sk-grid">
     <section class="card sk-hero">
@@ -298,9 +352,23 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <span class="muted small"><?= count($members) ?> med på turen</span>
       </div>
       <?php if ($isOwner): ?>
-        <div class="sk-invite" id="inviter">
-          <?php if ($inviteToken !== ''): ?>
-            <div class="sk-link"><input readonly value="<?= e(ski_base_url() . '?join=' . $inviteToken) ?>" data-copy-src aria-label="Invitationslink"><button type="button" class="btn small" data-copy><?= icon('link') ?> Kopiér</button></div>
+        <div class="sk-invite" id="inviter" data-live="invite">
+          <?php if ($flash): ?><p class="sk-flash<?= str_contains($flash, 'kunne ikke') || str_starts_with($flash, 'Skriv') ? ' err' : '' ?>"><?= e($flash) ?></p><?php endif; ?>
+          <p class="sk-inv-h">Invitér de rejsende</p>
+          <ul class="sk-inv">
+            <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $inv = $invites[ski_slug($t['name'])] ?? null; ?>
+              <li>
+                <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
+                <span class="sk-who"><?= e($t['name']) ?><small><?= $tm ? 'Er med i appen' : ($inv ? 'Inviteret ' . e(dk_date($inv['sent'])) . ' · ' . e($inv['email']) : 'Ikke inviteret endnu') ?></small></span>
+                <?php if (!$tm): ?>
+                  <form method="post" data-ajax class="sk-inv-f"><?= csrf_field() ?><input type="hidden" name="action" value="invite_send"><input type="hidden" name="name" value="<?= e($t['name']) ?>"><input type="email" name="email" placeholder="Mail" value="<?= e($inv['email'] ?? '') ?>" required aria-label="Mail til <?= e($t['name']) ?>"><button class="btn small"><?= $inv ? 'Send igen' : 'Send' ?></button></form>
+                  <?php if ($inv && !empty($inv['token'])): ?><button type="button" class="sk-x" data-copy-text="<?= e(ski_base_url() . '?invite=' . $inv['token']) ?>" aria-label="Kopiér link" title="Kopiér personligt link"><?= icon('link') ?></button><?php endif; ?>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+          <?php if ($groupToken !== ''): ?>
+            <div class="sk-link"><input readonly value="<?= e(ski_base_url() . '?join=' . $groupToken) ?>" data-copy-src aria-label="Invitationslink"><button type="button" class="btn small" data-copy><?= icon('link') ?> Kopiér</button></div>
             <p class="muted small">Send linket til dem, der skal med. De opretter sig selv og ser kun skiferien.</p>
           <?php endif; ?>
           <details class="sk-manage">
@@ -312,7 +380,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
                 </li>
               <?php endforeach; ?>
             </ul>
-            <form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="invite_new"><button class="btn ghost small"><?= $inviteToken !== '' ? 'Lav nyt link (det gamle stopper)' : 'Lav invitationslink' ?></button></form>
+            <form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="invite_new"><button class="btn ghost small"><?= $groupToken !== '' ? 'Lav nyt link (det gamle stopper)' : 'Lav invitationslink' ?></button></form>
           </details>
         </div>
       <?php endif; ?>

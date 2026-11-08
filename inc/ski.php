@@ -7,11 +7,11 @@ const SKI_CAMS = [
     ['name' => 'Ahorn', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=5636&c2=0&c1=0', 'embed' => true],
     ['name' => 'Paulerhof', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=5639&c2=0&c1=0', 'embed' => true],
     ['name' => 'Flyingcam', 'url' => 'https://webtv.feratel.com/webtv/?design=v5&cam=75635&c2=0&c1=0', 'embed' => true],
-    ['name' => 'Zimmereben', 'url' => 'https://pano.mayrhofen.at/zimmereben', 'embed' => false],
-    ['name' => 'Brindlingalm', 'url' => 'https://pano.mayrhofen.at/brindlingalm', 'embed' => false],
-    ['name' => 'Ginzling', 'url' => 'https://pano.mayrhofen.at/ginzling', 'embed' => false],
-    ['name' => 'Coolnest', 'url' => 'https://pano.mayrhofen.at/coolnest', 'embed' => false],
-    ['name' => 'Unterberg', 'url' => 'https://pano.mayrhofen.at/unterberg', 'embed' => false],
+    ['name' => 'Zimmereben', 'url' => 'https://pano.mayrhofen.at/zimmereben', 'embed' => true],
+    ['name' => 'Brindlingalm', 'url' => 'https://pano.mayrhofen.at/brindlingalm', 'embed' => true],
+    ['name' => 'Ginzling', 'url' => 'https://pano.mayrhofen.at/ginzling', 'embed' => true],
+    ['name' => 'Coolnest', 'url' => 'https://pano.mayrhofen.at/coolnest', 'embed' => true],
+    ['name' => 'Unterberg', 'url' => 'https://pano.mayrhofen.at/unterberg', 'embed' => true],
 ];
 
 const SKI_BOOKING = [
@@ -364,4 +364,88 @@ function ski_traveller_member(string $name, array $members): ?array
 function ski_kr(float $v): string
 {
     return number_format($v, 0, ',', '.') . ' kr.';
+}
+
+function ski_slug(string $s): string
+{
+    $s = strtr(mb_strtolower($s), ['æ' => 'ae', 'ø' => 'oe', 'å' => 'aa', 'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue']);
+    return trim(preg_replace('/[^a-z0-9]+/', '-', $s), '-');
+}
+
+function ski_invites(): array
+{
+    return load_json('ski/invites');
+}
+
+function ski_invite_find(string $token): ?array
+{
+    if ($token === '') {
+        return null;
+    }
+    $h = hash('sha256', $token);
+    foreach (ski_invites() as $inv) {
+        if (hash_equals($inv['hash'], $h)) {
+            return $inv;
+        }
+    }
+    return null;
+}
+
+function ski_invite_person(string $name, string $email): array
+{
+    $email = mb_strtolower(trim($email));
+    $token = bin2hex(random_bytes(16));
+    $key = ski_slug($name);
+    ski_mutate('invites', function (&$l) use ($key, $name, $email, $token) {
+        $l[$key] = ['key' => $key, 'name' => $name, 'email' => $email, 'hash' => hash('sha256', $token), 'token' => $token, 'sent' => date('c'), 'used' => $l[$key]['used'] ?? ''];
+    });
+    return ['token' => $token, 'url' => ski_base_url() . '?invite=' . $token];
+}
+
+function ski_invite_mail(string $name, string $email, string $url, string $from): bool
+{
+    $first = explode(' ', trim($name))[0];
+    $subject = 'Du er inviteret med på skiferie i Mayrhofen';
+    $body = "Hej $first\n\n"
+        . "$from har lavet en lille app til skiferien i Mayrhofen 25. dec. – 2. jan. Den har nedtælling, program, sne, webcams, skitracker og huskelister.\n\n"
+        . "Opret dig her:\n$url\n\n"
+        . "Sådan gemmer du den på din iPhone:\n"
+        . "1. Åbn linket i Safari\n"
+        . "2. Skriv dit navn og vælg en adgangskode\n"
+        . "3. Tryk på Del-knappen (firkanten med pilen op) og vælg \"Føj til hjemmeskærm\"\n\n"
+        . "Så ligger appen som et ikon på din skærm, og du er logget ind, når du åbner den.\n\n"
+        . "Vi ses på pisten\n$from\n";
+    $headers = implode("\r\n", [
+        'From: =?UTF-8?B?' . base64_encode('Skiferie Mayrhofen') . '?= <emil@langkildelarsen.dk>',
+        'Reply-To: emil@langkildelarsen.dk',
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+    ]);
+    return @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $headers, '-femil@langkildelarsen.dk');
+}
+
+function ski_app_token(string $id): string
+{
+    $members = ski_members();
+    if (!empty($members[$id]['app'])) {
+        return $members[$id]['app'];
+    }
+    $token = bin2hex(random_bytes(20));
+    ski_mutate('members', function (&$m) use ($id, $token) {
+        if (isset($m[$id]) && empty($m[$id]['app'])) {
+            $m[$id]['app'] = $token;
+        }
+    });
+    return ski_members()[$id]['app'] ?? $token;
+}
+
+function ski_app_login(string $raw): ?string
+{
+    if (!str_contains($raw, '.')) {
+        return null;
+    }
+    [$id, $token] = explode('.', $raw, 2);
+    $m = ski_members()[$id] ?? null;
+    return $m && !empty($m['app']) && hash_equals($m['app'], $token) ? $id : null;
 }
