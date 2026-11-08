@@ -25,7 +25,7 @@ const SKI_BOOKING = [
         ['name' => 'Emil Langkilde O. Larsen', 'role' => 'Rejsebestiller', 'price' => 6888, 'extra' => []],
         ['name' => 'Jeppe Smedegaard', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
         ['name' => 'Gustav Langkilde O. Larsen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
-        ['name' => 'Nikolaj Holm Iversen', 'role' => 'Rejsende', 'price' => 7326, 'extra' => ['Udendørsparkering, lør–ons', 'Udendørsparkering, ons–lør']],
+        ['name' => 'Nikolaj Holm Iversen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
         ['name' => 'Nicolaj Baun Christensen', 'role' => 'Rejsende', 'price' => 6888, 'extra' => []],
     ],
 ];
@@ -337,7 +337,16 @@ function ski_plan(): array
             return $p;
         });
     }
-    unset($plan['_seeded'], $plan['_seeded2']);
+    if (!isset($plan['_seeded3'])) {
+        $plan = ski_mutate('plan', function (&$p) {
+            if (!isset($p['_seeded3'])) {
+                $p['_seeded3'] = date('c');
+                $p['checkout'] = ['id' => 'checkout', 'date' => '2027-01-02', 'time' => '10:00', 'title' => 'Check-ud senest kl. 10:00', 'note' => 'Værelset skal være tømt, inden vi kører hjem.', 'by' => '', 'created' => $p['checkout']['created'] ?? date('c')];
+            }
+            return $p;
+        });
+    }
+    unset($plan['_seeded'], $plan['_seeded2'], $plan['_seeded3']);
     uasort($plan, fn($a, $b) => strcmp($a['date'] . ($a['time'] ?: '99'), $b['date'] . ($b['time'] ?: '99')));
     return $plan;
 }
