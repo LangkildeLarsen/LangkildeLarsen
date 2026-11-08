@@ -434,3 +434,4 @@ body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { disp
 .sk-top-speed small { font-size: 18px; letter-spacing: 0; color: var(--muted); }
 .sk-top-sub { margin: 8px 0 0; }
 .sk-val-big { font-size: 20px; letter-spacing: -.02em; min-width: 76px; }
+.sk-app { max-width: none; }
