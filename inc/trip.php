@@ -31,6 +31,13 @@ function trip_status(int $now = 0): array
     return ['phase' => 'after', 'start' => $start, 'end' => $end, 'nights' => $days - 1];
 }
 
+function trip_snow_fetch(array $params): ?array
+{
+    $base = getenv('WEATHER_API_URL') ?: 'https://api.open-meteo.com/v1/forecast';
+    $j = weather_http($base . '?' . http_build_query($params));
+    return ($j && !empty($j['hourly']['time'])) ? $j : null;
+}
+
 function trip_snow(): ?array
 {
     $key = 'trip-snow-cache';
@@ -38,37 +45,55 @@ function trip_snow(): ?array
     if (($cache['t'] ?? 0) > time() - 3600 && !empty($cache['d'])) {
         return $cache['d'];
     }
-    $base = getenv('WEATHER_API_URL') ?: 'https://api.open-meteo.com/v1/forecast';
+    $tz = new DateTimeZone('Europe/Vienna');
+    $nowHour = (new DateTime('now', $tz))->format('Y-m-d\\TH:00');
+    $today = (new DateTime('now', $tz))->format('Y-m-d');
     $spots = [];
     $days = [];
-    foreach (TRIP['spots'] as $i => $s) {
-        $j = weather_http($base . '?' . http_build_query([
+    foreach (TRIP['spots'] as $s) {
+        $params = [
             'latitude' => TRIP['lat'],
             'longitude' => TRIP['lon'],
-            'elevation' => $s['elevation'],
-            'current' => 'snow_depth,temperature_2m,snowfall',
-            'daily' => 'snowfall_sum,temperature_2m_max,temperature_2m_min',
+            'hourly' => 'snow_depth,snowfall,temperature_2m',
+            'daily' => 'snowfall_sum',
             'past_days' => 7,
             'forecast_days' => 7,
             'timezone' => 'Europe/Vienna',
-        ]));
-        if (!$j || !isset($j['current'])) {
-            return $cache['d'] ?? null;
+        ];
+        $j = trip_snow_fetch($params + ['elevation' => $s['elevation']]) ?? trip_snow_fetch($params);
+        if (!$j) {
+            continue;
+        }
+        $hr = $j['hourly'];
+        $idx = array_search($nowHour, $hr['time'], true);
+        if ($idx === false) {
+            $idx = 0;
+            foreach ($hr['time'] as $i => $t) {
+                if ($t <= $nowHour) {
+                    $idx = $i;
+                }
+            }
+        }
+        $depth = null;
+        for ($i = $idx; $i >= 0 && $depth === null; $i--) {
+            $depth = $hr['snow_depth'][$i] ?? null;
         }
         $spots[] = [
             'label' => $s['label'],
             'elevation' => $s['elevation'],
-            'depth' => (int)round(((float)($j['current']['snow_depth'] ?? 0)) * 100),
-            'temp' => (int)round((float)($j['current']['temperature_2m'] ?? 0)),
-            'falling' => (float)($j['current']['snowfall'] ?? 0) > 0,
+            'depth' => (int)round(((float)$depth) * 100),
+            'temp' => (int)round((float)($hr['temperature_2m'][$idx] ?? 0)),
+            'falling' => (float)($hr['snowfall'][$idx] ?? 0) > 0,
         ];
-        if ($i === 0) {
+        if (!$days) {
             foreach ($j['daily']['time'] ?? [] as $k => $t) {
                 $days[] = ['d' => $t, 'cm' => round((float)($j['daily']['snowfall_sum'][$k] ?? 0), 1)];
             }
         }
     }
-    $today = (new DateTime('now', new DateTimeZone('Europe/Vienna')))->format('Y-m-d');
+    if (!$spots) {
+        return $cache['d'] ?? null;
+    }
     $past = array_values(array_filter($days, fn($d) => $d['d'] < $today));
     $future = array_values(array_filter($days, fn($d) => $d['d'] >= $today));
     $last = null;
@@ -108,7 +133,7 @@ function trip_snow_html(?array $s): string
         $h .= '<div class="trip-spot"><span class="trip-spot-l">' . e($sp['label']) . ' <small>' . number_format($sp['elevation'], 0, ',', '.') . ' m</small></span><span class="trip-spot-v">' . $sp['depth'] . '<small> cm</small></span><span class="trip-spot-s">' . ($sp['depth'] > 0 ? 'snedybde' : 'ingen sne') . ' · ' . $sp['temp'] . '°' . ($sp['falling'] ? ' · sner nu' : '') . '</span></div>';
     }
     $h .= '</div>';
-    $max = max(1, ...array_map(fn($d) => $d['cm'], $s['days']));
+    $max = max(1, ...array_map(fn($d) => $d['cm'], $s['days'] ?: [['cm' => 0]]));
     $dn = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
     $h .= '<div class="trip-bars" style="--n: ' . count($s['days']) . '">';
     foreach ($s['days'] as $d) {
