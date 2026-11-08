@@ -3,7 +3,6 @@ require dirname(__DIR__) . '/inc/bootstrap.php';
 require dirname(__DIR__) . '/inc/weather.php';
 require dirname(__DIR__) . '/inc/trip.php';
 require dirname(__DIR__) . '/inc/ski.php';
-require dirname(__DIR__) . '/inc/strava.php';
 
 header('X-Robots-Tag: noindex');
 
@@ -178,28 +177,6 @@ if ($action !== '') {
         ski_redirect('inviter');
     }
 
-    if ($action === 'strava_cfg' && $isOwner) {
-        $id = preg_replace('/\D/', '', (string)($_POST['client_id'] ?? ''));
-        $secret = preg_replace('/[^a-f0-9]/i', '', (string)($_POST['client_secret'] ?? ''));
-        if ($id !== '' && $secret !== '') {
-            save_json('ski/strava', ['client_id' => $id, 'client_secret' => $secret, 'saved' => date('c')]);
-            $_SESSION['ski_flash_strava'] = 'Strava er sat op. Forbind nu din egen konto.';
-        } else {
-            $_SESSION['ski_flash_strava'] = 'Udfyld både Client ID og Client Secret.';
-        }
-        ski_redirect('tracker');
-    }
-
-    if ($action === 'strava_off') {
-        strava_disconnect($mid);
-        ski_redirect('tracker');
-    }
-
-    if ($action === 'strava_sync') {
-        strava_sync_member($mid);
-        ski_redirect('tracker');
-    }
-
     if ($action === 'run_save') {
         ski_run_save($mid, $_POST);
         ski_redirect('tracker');
@@ -359,15 +336,6 @@ if ($action !== '') {
     ski_redirect();
 }
 
-if (($_GET['ajax'] ?? '') === 'strava') {
-    header('Content-Type: application/json; charset=utf-8');
-    header('Cache-Control: no-store');
-    $before = md5(json_encode(ski_runs()));
-    strava_sync_all();
-    echo json_encode(['changed' => $before !== md5(json_encode(ski_runs()))]);
-    exit;
-}
-
 if (($_GET['ajax'] ?? '') === 'snow') {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store');
@@ -398,13 +366,9 @@ $flash = $_SESSION['ski_flash'] ?? '';
 unset($_SESSION['ski_flash']);
 $welcome = !empty($_SESSION['ski_welcome']);
 unset($_SESSION['ski_welcome']);
-$stravaReady = strava_ready();
-$myStrava = strava_tokens()[$mid] ?? null;
-$stravaFlash = $_SESSION['ski_flash_strava'] ?? '';
-unset($_SESSION['ski_flash_strava']);
 $today = date('Y-m-d');
 $todayRuns = array_filter($runs, fn($r) => $r['member'] === $mid && $r['date'] === $today);
-$myToday = ['km' => array_sum(array_column($todayRuns, 'km')), 'max' => $todayRuns ? max(array_column($todayRuns, 'max')) : 0, 'descent' => array_sum(array_column($todayRuns, 'descent')), 'mins' => array_sum(array_column($todayRuns, 'mins'))];
+$myToday = ['runs' => array_sum(array_column($todayRuns, 'runs')), 'km' => array_sum(array_column($todayRuns, 'km')), 'max' => $todayRuns ? max(array_column($todayRuns, 'max')) : 0, 'descent' => array_sum(array_column($todayRuns, 'descent')), 'mins' => array_sum(array_column($todayRuns, 'mins'))];
 $expenses = ski_expenses();
 $money = ski_balances($expenses, $members);
 $myBal = $money['bal'][$mid] ?? 0;
@@ -571,72 +535,27 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <p class="muted small sk-cam-note">Vises kameraet ikke? <a href="<?= e(SKI_CAMS[0]['url']) ?>" target="_blank" rel="noopener" data-cam-open>Åbn <?= e(SKI_CAMS[0]['name']) ?> i nyt vindue</a></p>
     </section>
 
-    <section class="card sk-track" data-tab="ski" id="tracker" data-tracker data-strava="<?= $stravaReady && $myStrava ? '1' : '' ?>">
+    <section class="card sk-track" data-tab="ski" id="tracker" data-live="track">
       <div class="card-head"><h2>Skitracker</h2><span class="drop">I dag</span></div>
-      <div class="sk-stats" data-live="today">
+      <div class="sk-stats">
         <div><span><?= ski_km($myToday['km']) ?></span><small>Km på ski</small></div>
         <div><span><?= ski_km($myToday['max']) ?></span><small>Topfart km/t</small></div>
         <div><span><?= number_format($myToday['descent'], 0, ',', '.') ?></span><small>Højdemeter</small></div>
-        <div><span><?= intdiv((int)$myToday['mins'], 60) ?>:<?= str_pad((string)((int)$myToday['mins'] % 60), 2, '0', STR_PAD_LEFT) ?></span><small>Tid</small></div>
+        <div><span><?= (int)$myToday['runs'] ?></span><small>Ture</small></div>
       </div>
-
-      <div class="sk-strava" data-live="strava">
-        <?php if ($stravaFlash): ?><p class="sk-flash"><?= e($stravaFlash) ?></p><?php endif; ?>
-        <?php if ($stravaReady && $myStrava): ?>
-          <div class="sk-strava-on">
-            <span class="sk-strava-dot"></span>
-            <span class="sk-who">Forbundet med Strava<?= $myStrava['name'] !== '' ? ' som ' . e($myStrava['name']) : '' ?><small><?= $myStrava['synced'] ? 'Senest hentet ' . e(date('Y-m-d', strtotime($myStrava['synced'])) === date('Y-m-d') ? 'i dag' : ski_date(date('Y-m-d', strtotime($myStrava['synced'])))) . ' kl. ' . e(date('H:i', strtotime($myStrava['synced']))) : 'Henter dine ture…' ?></small></span>
-            <form method="post" data-ajax><?= csrf_field() ?><input type="hidden" name="action" value="strava_sync"><button class="btn ghost small">Hent nu</button></form>
-          </div>
-          <?php if (!empty($myStrava['error'])): ?><p class="sk-flash err"><?= e($myStrava['error']) ?></p><?php endif; ?>
-          <p class="muted small sk-hint">Start en tur i Strava-appen og vælg <strong>Alpint skiløb</strong> eller <strong>Snowboard</strong>. Du kan låse skærmen hele dagen. Når du gemmer turen i Strava, kommer km, topfart og højdemeter herind og på ranglisten. Ture tæller fra 25. dec.</p>
-          <details class="sk-manual"><summary class="muted small">Afbryd Strava</summary><form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="strava_off"><button class="btn ghost small danger">Afbryd forbindelsen</button></form></details>
-        <?php elseif ($stravaReady): ?>
-          <a class="btn block sk-strava-btn" href="strava.php?connect=1">Forbind med Strava</a>
-          <p class="muted small sk-hint">Strava tracker med låst skærm. Hent den gratis Strava-app, forbind den her én gang, og vælg <strong>Alpint skiløb</strong>, når du starter en tur. Turene kommer automatisk på ranglisten, når du gemmer dem.</p>
-        <?php elseif ($isOwner): ?>
-          <div class="sk-strava-setup">
-            <p class="sk-inv-h">Sæt Strava op (kun dig, én gang)</p>
-            <ol class="muted small">
-              <li>Gå til <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">strava.com/settings/api</a> og log ind.</li>
-              <li>Opret en app: navn "Skiferie", kategori "Other", website <code>https://langkildelarsen.dk</code>.</li>
-              <li>Skriv <code>langkildelarsen.dk</code> under <strong>Authorization Callback Domain</strong>.</li>
-              <li>Kopiér Client ID og Client Secret herind.</li>
-            </ol>
-            <form method="post" data-ajax class="sk-manual-f"><?= csrf_field() ?><input type="hidden" name="action" value="strava_cfg"><label>Client ID<input name="client_id" inputmode="numeric" required></label><label>Client Secret<input name="client_secret" required autocomplete="off"></label><button class="btn small">Gem</button></form>
-          </div>
-        <?php else: ?>
-          <p class="muted small">Strava-koblingen er ikke sat op endnu. Emil sætter den op.</p>
-        <?php endif; ?>
-        <p class="sk-powered">Powered by Strava</p>
-      </div>
-
-      <details class="sk-manual sk-web">
-        <summary class="muted small">Track i browseren i stedet (skærmen skal være tændt)</summary>
-        <div class="sk-web-in">
-          <div class="sk-web-h"><div class="sk-speed"><span data-t-speed>0</span><small> km/t</small></div><span class="sk-gps" data-gps>GPS slukket</span></div>
-          <div class="sk-stats">
-            <div><span data-t-max>0</span><small>Topfart km/t</small></div>
-            <div><span data-t-km>0,0</span><small>Km på ski</small></div>
-            <div><span data-t-desc>0</span><small>Højdemeter ned</small></div>
-            <div><span data-t-time>0:00</span><small>Tid</small></div>
-          </div>
-          <button type="button" class="btn block sk-go" data-t-toggle><?= icon('play') ?><span>Start tracking</span></button>
-          <p class="muted small sk-hint">Virker kun, mens appen er åben og skærmen tændt. iPhone stopper GPS'en, når skærmen låses.</p>
-        </div>
-      </details>
-      <details class="sk-manual">
-        <summary class="muted small">Tilføj en dag manuelt</summary>
-        <form method="post" data-ajax class="sk-manual-f">
-          <?= csrf_field() ?>
-          <input type="hidden" name="action" value="run_save">
-          <label>Dato<input type="date" name="date" value="<?= e(date('Y-m-d')) ?>"></label>
-          <label>Km<input type="number" name="km" step="0.1" min="0" inputmode="decimal" required></label>
-          <label>Topfart km/t<input type="number" name="max" step="0.1" min="0" inputmode="decimal"></label>
-          <label>Højdemeter ned<input type="number" name="descent" step="1" min="0" inputmode="numeric"></label>
-          <button class="btn small">Gem</button>
-        </form>
-      </details>
+      <p class="muted small sk-hint">Track hele dagen i den gratis <strong>Slopes</strong>-app. Den virker med låst skærm. Om aftenen skriver du dagens tal fra Slopes ind her, så kommer de på ranglisten. Gemmer du igen samme dag, bliver tallene opdateret.</p>
+      <form method="post" data-ajax class="sk-day-f">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="run_save">
+        <input type="hidden" name="src" value="slopes">
+        <label class="wide">Dag<input type="date" name="date" value="<?= e(date('Y-m-d')) ?>"></label>
+        <label>Distance (km)<input name="km" inputmode="decimal" required placeholder="0,0"></label>
+        <label>Topfart (km/t)<input name="max" inputmode="decimal" placeholder="0,0"></label>
+        <label>Højdemeter<input name="descent" inputmode="numeric" placeholder="0"></label>
+        <label>Antal ture<input name="runs" inputmode="numeric" placeholder="0"></label>
+        <label class="wide">Tid på ski (t:mm)<input name="time" inputmode="numeric" placeholder="5:30"></label>
+        <button class="btn wide">Gem dagens tal</button>
+      </form>
     </section>
 
     <section class="card sk-board" data-tab="ski" id="rangliste" data-live="board">
@@ -646,7 +565,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
           <li class="<?= $r['m']['id'] === $mid ? 'is-me' : '' ?>">
             <span class="sk-pos"><?= $i + 1 ?></span>
             <?= ski_avatar($r['m']) ?>
-            <span class="sk-who"><?= e($r['m']['name']) ?><?php if ($r['live']): ?><i class="sk-live">på ski nu</i><?php endif; ?><small><?= count($r['days']) ?> <?= count($r['days']) === 1 ? 'dag' : 'dage' ?> · <?= number_format($r['descent'], 0, ',', '.') ?> hm</small></span>
+            <span class="sk-who"><?= e($r['m']['name']) ?><?php if ($r['live']): ?><i class="sk-live">på ski nu</i><?php endif; ?><small><?= count($r['days']) ?> <?= count($r['days']) === 1 ? 'dag' : 'dage' ?> · <?= (int)($r['runs'] ?? 0) ?> ture · <?= number_format($r['descent'], 0, ',', '.') ?> hm</small></span>
             <span class="sk-val"><?= ski_km($r['km']) ?><small>km</small></span>
             <span class="sk-val"><?= ski_km($r['max']) ?><small>km/t</small></span>
           </li>
@@ -656,7 +575,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <h3 class="sk-h3">Seneste ture</h3>
         <ul class="sk-runs">
           <?php foreach (array_slice($runs, 0, 12) as $r): $m = $members[$r['member']] ?? null; if (!$m) continue; ?>
-            <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['km']) ?> km · <?= ski_km($r['max']) ?> km/t</span>
+            <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'slopes' => 'Slopes', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['km']) ?> km · <?= ski_km($r['max']) ?> km/t</span>
               <?php if ($r['member'] === $mid || $isOwner): ?><form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="run_delete"><input type="hidden" name="id" value="<?= e($r['id']) ?>"><button class="sk-x" aria-label="Slet tur"><?= icon('cross') ?></button></form><?php endif; ?>
             </li>
           <?php endforeach; ?>

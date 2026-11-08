@@ -252,6 +252,22 @@ function ski_runs(): array
 
 function ski_run_save(string $member, array $r): void
 {
+    $num = fn($v) => is_string($v) ? ski_parse_amount($v) : (float)$v;
+    foreach (['km', 'max', 'descent'] as $k) {
+        if (isset($r[$k])) {
+            $r[$k] = $num($r[$k]);
+        }
+    }
+    if (isset($r['time']) && preg_match('/^(\d{1,2})[:.,](\d{1,2})$/', trim((string)$r['time']), $tm)) {
+        $r['mins'] = (int)$tm[1] * 60 + (int)$tm[2];
+    } elseif (isset($r['time']) && is_numeric(trim((string)$r['time']))) {
+        $r['mins'] = (float)$r['time'] * 60;
+    }
+    $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($r['date'] ?? '')) ? $r['date'] : date('Y-m-d');
+    if (($r['src'] ?? '') === 'slopes') {
+        $r['id'] = 'd-' . preg_replace('/[^a-z0-9]/', '', $member) . '-' . $date;
+        $r['date'] = $date;
+    }
     $id = preg_replace('/[^a-z0-9-]/', '', (string)($r['id'] ?? '')) ?: ski_id();
     ski_mutate('runs', function (&$runs) use ($id, $member, $r) {
         if (isset($runs[$id]) && $runs[$id]['member'] !== $member) {
@@ -265,7 +281,8 @@ function ski_run_save(string $member, array $r): void
             'max' => max(0, min(160, round((float)($r['max'] ?? 0), 1))),
             'descent' => max(0, min(30000, (int)round((float)($r['descent'] ?? 0)))),
             'mins' => max(0, min(1440, (int)round((float)($r['mins'] ?? 0)))),
-            'src' => in_array($r['src'] ?? '', ['gps', 'strava'], true) ? $r['src'] : 'manual',
+            'runs' => max(0, min(500, (int)($r['runs'] ?? 0))),
+            'src' => in_array($r['src'] ?? '', ['gps', 'strava', 'slopes'], true) ? $r['src'] : 'manual',
             'live' => !empty($r['live']),
             'updated' => date('c'),
         ];
@@ -285,7 +302,7 @@ function ski_board(array $members, array $runs): array
 {
     $rows = [];
     foreach ($members as $m) {
-        $rows[$m['id']] = ['m' => $m, 'km' => 0.0, 'max' => 0.0, 'descent' => 0, 'days' => [], 'live' => false];
+        $rows[$m['id']] = ['m' => $m, 'km' => 0.0, 'max' => 0.0, 'descent' => 0, 'runs' => 0, 'days' => [], 'live' => false];
     }
     foreach ($runs as $r) {
         if (!isset($rows[$r['member']])) {
@@ -295,6 +312,7 @@ function ski_board(array $members, array $runs): array
         $row['km'] += $r['km'];
         $row['max'] = max($row['max'], $r['max']);
         $row['descent'] += $r['descent'];
+        $row['runs'] += (int)($r['runs'] ?? 0);
         $row['days'][$r['date']] = true;
         if (!empty($r['live']) && strtotime($r['updated']) > time() - 300) {
             $row['live'] = true;

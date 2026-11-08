@@ -425,3 +425,7 @@ body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { disp
 .sk-rail-logo, .sk-rail-logo img, .sk-rail-nav a, .sk-rail-out button { border-radius: 50%; }
 @media (max-width: 900px) { .sk-rail-nav a { width: 50px; height: 50px; border-radius: 50%; } }
 .sk-rail { border-radius: 999px; }
+
+.sk-day-f { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.sk-day-f .wide { grid-column: span 2; }
+.sk-track .sk-hint strong { color: var(--ink); }
