@@ -537,51 +537,42 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 
     <section class="card sk-track" data-tab="ski" id="tracker" data-live="track">
       <div class="card-head"><h2>Skitracker</h2><span class="drop">I dag</span></div>
-      <div class="sk-stats">
-        <div><span><?= ski_km($myToday['km']) ?></span><small>Km på ski</small></div>
-        <div><span><?= ski_km($myToday['max']) ?></span><small>Topfart km/t</small></div>
-        <div><span><?= number_format($myToday['descent'], 0, ',', '.') ?></span><small>Højdemeter</small></div>
-        <div><span><?= (int)$myToday['runs'] ?></span><small>Ture</small></div>
-      </div>
-      <p class="muted small sk-hint">Track hele dagen i den gratis <strong>Slopes</strong>-app. Den virker med låst skærm. Om aftenen skriver du dagens tal fra Slopes ind her, så kommer de på ranglisten. Gemmer du igen samme dag, bliver tallene opdateret.</p>
+      <div class="sk-top-speed"><span><?= ski_km($myToday['max']) ?></span><small> km/t</small></div>
+      <p class="muted small sk-top-sub">Din topfart i dag<?= $myTotal && $myTotal['max'] > 0 ? ' · bedste på turen ' . ski_km($myTotal['max']) . ' km/t' : '' ?></p>
+      <p class="muted small sk-hint">Track hele dagen i den gratis <strong>Slopes</strong>-app. Den virker med låst skærm. Skriv din topfart fra Slopes ind her, så kommer den på ranglisten. Gemmer du igen samme dag, bliver den opdateret.</p>
       <form method="post" data-ajax class="sk-day-f">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="run_save">
         <input type="hidden" name="src" value="slopes">
-        <label class="wide">Dag<input type="date" name="date" value="<?= e(date('Y-m-d')) ?>"></label>
-        <label>Distance (km)<input name="km" inputmode="decimal" required placeholder="0,0"></label>
-        <label>Topfart (km/t)<input name="max" inputmode="decimal" placeholder="0,0"></label>
-        <label>Højdemeter<input name="descent" inputmode="numeric" placeholder="0"></label>
-        <label>Antal ture<input name="runs" inputmode="numeric" placeholder="0"></label>
-        <label class="wide">Tid på ski (t:mm)<input name="time" inputmode="numeric" placeholder="5:30"></label>
-        <button class="btn wide">Gem dagens tal</button>
+        <label>Dag<input type="date" name="date" value="<?= e(date('Y-m-d')) ?>"></label>
+        <label>Topfart (km/t)<input name="max" inputmode="decimal" required placeholder="0,0"></label>
+        <button class="btn wide">Gem topfart</button>
       </form>
     </section>
 
     <section class="card sk-board" data-tab="ski" id="rangliste" data-live="board">
-      <div class="card-head"><h2>Rangliste</h2><span class="drop"><?= $myTotal ? ski_km($myTotal['km']) . ' km for dig' : '' ?></span></div>
+      <div class="card-head"><h2>Rangliste</h2><span class="drop">Topfart</span></div>
       <ol class="sk-rank">
         <?php foreach ($board as $i => $r): ?>
           <li class="<?= $r['m']['id'] === $mid ? 'is-me' : '' ?>">
             <span class="sk-pos"><?= $i + 1 ?></span>
             <?= ski_avatar($r['m']) ?>
-            <span class="sk-who"><?= e($r['m']['name']) ?><?php if ($r['live']): ?><i class="sk-live">på ski nu</i><?php endif; ?><small><?= count($r['days']) ?> <?= count($r['days']) === 1 ? 'dag' : 'dage' ?> · <?= (int)($r['runs'] ?? 0) ?> ture · <?= number_format($r['descent'], 0, ',', '.') ?> hm</small></span>
-            <span class="sk-val"><?= ski_km($r['km']) ?><small>km</small></span>
-            <span class="sk-val"><?= ski_km($r['max']) ?><small>km/t</small></span>
+            <span class="sk-who"><?= e($r['m']['name']) ?><small><?= count($r['days']) ? count($r['days']) . ' ' . (count($r['days']) === 1 ? 'dag' : 'dage') . ' registreret' : 'Ingen fart endnu' ?></small></span>
+            <span class="sk-val sk-val-big"><?= ski_km($r['max']) ?><small>km/t</small></span>
           </li>
         <?php endforeach; ?>
       </ol>
       <?php if ($runs): ?>
-        <h3 class="sk-h3">Seneste ture</h3>
+        <h3 class="sk-h3">Seneste registreringer</h3>
         <ul class="sk-runs">
           <?php foreach (array_slice($runs, 0, 12) as $r): $m = $members[$r['member']] ?? null; if (!$m) continue; ?>
-            <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'slopes' => 'Slopes', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['km']) ?> km · <?= ski_km($r['max']) ?> km/t</span>
+            <li><?= ski_avatar($m) ?><span><?= e($m['name']) ?><small><?= e(ski_date($r['date'])) ?> · <?= ['gps' => 'GPS', 'strava' => 'Strava', 'slopes' => 'Slopes', 'manual' => 'manuelt'][$r['src']] ?? 'manuelt' ?></small></span><span class="sk-run-v"><?= ski_km($r['max']) ?> km/t</span>
               <?php if ($r['member'] === $mid || $isOwner): ?><form method="post" data-ajax data-confirm><?= csrf_field() ?><input type="hidden" name="action" value="run_delete"><input type="hidden" name="id" value="<?= e($r['id']) ?>"><button class="sk-x" aria-label="Slet tur"><?= icon('cross') ?></button></form><?php endif; ?>
             </li>
           <?php endforeach; ?>
         </ul>
       <?php else: ?>
-        <p class="muted small">Ingen ture endnu. Start trackeren, når I står på pisten.</p>
+        <p class="muted small">Ingen topfart endnu. Skriv den ind fra Slopes efter en skidag.</p>
       <?php endif; ?>
     </section>
 

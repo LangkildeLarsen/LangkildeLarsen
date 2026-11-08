@@ -320,7 +320,7 @@ function ski_board(array $members, array $runs): array
         unset($row);
     }
     $rows = array_values($rows);
-    usort($rows, fn($a, $b) => $b['km'] <=> $a['km'] ?: $b['max'] <=> $a['max']);
+    usort($rows, fn($a, $b) => $b['max'] <=> $a['max'] ?: strcmp($a['m']['name'], $b['m']['name']));
     return $rows;
 }
 

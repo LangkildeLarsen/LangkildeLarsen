@@ -429,3 +429,8 @@ body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { disp
 .sk-day-f { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .sk-day-f .wide { grid-column: span 2; }
 .sk-track .sk-hint strong { color: var(--ink); }
+
+.sk-top-speed { font-size: 84px; line-height: .95; letter-spacing: -.05em; margin: 4px 0 0; }
+.sk-top-speed small { font-size: 18px; letter-spacing: 0; color: var(--muted); }
+.sk-top-sub { margin: 8px 0 0; }
+.sk-val-big { font-size: 20px; letter-spacing: -.02em; min-width: 76px; }
