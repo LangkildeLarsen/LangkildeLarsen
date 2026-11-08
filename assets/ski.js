@@ -259,19 +259,15 @@ document.addEventListener('click', e => {
 (() => {
   const nav = document.querySelector('[data-tabs]');
   if (!nav) return;
-  const mq = matchMedia('(max-width: 900px)');
-  const valid = ['ski', 'lister', 'penge', 'rejsen'];
+  const valid = ['alle', 'ski', 'lister', 'penge', 'rejsen'];
   const set = (tab, scroll) => {
-    if (!valid.includes(tab)) return;
+    if (!valid.includes(tab)) tab = 'alle';
     document.body.dataset.tab = tab;
-    nav.querySelectorAll('[data-tab-go]').forEach(a => a.classList.toggle('active', a.dataset.tabGo === tab));
-    try { localStorage.setItem('ski-tab', tab); } catch (e) {}
+    document.querySelectorAll('[data-tab-go]').forEach(a => a.classList.toggle('active', a.dataset.tabGo === tab));
     if (scroll) scrollTo({ top: 0, behavior: 'instant' });
   };
-  let saved = null;
-  try { saved = localStorage.getItem('ski-tab'); } catch (e) {}
-  set(saved || document.body.dataset.tab, false);
-  nav.addEventListener('click', e => {
+  set('alle', false);
+  document.addEventListener('click', e => {
     const a = e.target.closest('[data-tab-go]');
     if (!a) return;
     e.preventDefault();

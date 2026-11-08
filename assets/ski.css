@@ -393,3 +393,31 @@ body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { disp
 @media (min-width: 801px) {
   .sk-before .sk-hero-img { top: 14px; right: 14px; bottom: 14px; width: calc(46% - 14px); border-radius: 22px; -webkit-mask-image: none; mask-image: none; }
 }
+
+.sk-rail { position: fixed; z-index: 40; left: 24px; top: 24px; bottom: 24px; width: 92px; display: flex; flex-direction: column; align-items: center; padding: 16px 0; border-radius: 40px; background: var(--card); box-shadow: var(--inset); }
+.sk-rail-logo { position: relative; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 20px; transition: background .2s ease; }
+.sk-rail-logo img { width: 52px; height: 52px; border-radius: 16px; }
+.sk-rail-nav { display: grid; gap: 10px; margin: auto 0; }
+.sk-rail-nav a, .sk-rail-out button { position: relative; display: grid; place-items: center; width: 60px; height: 60px; border: 0; border-radius: 20px; background: none; color: var(--muted); text-decoration: none; cursor: pointer; transition: color .2s ease, background .2s ease; }
+.sk-rail-nav a:hover, .sk-rail-out button:hover { color: var(--ink); background: var(--card-3); }
+.sk-rail-nav a.active { background: #fff; color: #000; box-shadow: 0 10px 30px rgba(255, 255, 255, .12); }
+.sk-rail .ic { width: 22px; height: 22px; }
+.sk-rail-out { margin: 10px 0 0; }
+.sk-rail a:hover .tip, .sk-rail button:hover .tip, .sk-rail a:focus-visible .tip { opacity: 1; transform: translate(0, -50%); }
+.sk-brand { color: var(--ink); text-decoration: none; }
+
+@media (min-width: 901px) {
+  body.sk { padding-left: 130px; padding-bottom: 24px; }
+  .sk-brand-ic { display: none; }
+  .sk-top-r form { display: none; }
+}
+@media (max-width: 900px) {
+  .sk-rail { top: auto; left: 50%; right: auto; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: auto; height: auto; flex-direction: row; padding: 7px; border-radius: 999px; background: rgba(18, 18, 19, .86); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--inset), 0 20px 50px rgba(0, 0, 0, .6); }
+  .sk-rail-logo, .sk-rail-out, .sk-rail .tip { display: none; }
+  .sk-rail-nav { display: flex; gap: 4px; margin: 0; }
+  .sk-rail-nav a { width: 58px; height: 50px; border-radius: 999px; }
+  .sk-rail-nav a.active { box-shadow: none; }
+}
+@media (max-width: 900px) and (display-mode: standalone) {
+  .sk-rail { bottom: max(6px, calc(env(safe-area-inset-bottom) - 14px)); }
+}
