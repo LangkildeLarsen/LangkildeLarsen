@@ -210,6 +210,10 @@ function ski_login(string $email, string $password): ?string
             return $m['id'];
         }
     }
+    $u = users_all()[$email] ?? null;
+    if ($u && is_owner($u) && !empty($u['hash']) && password_verify($password, $u['hash'])) {
+        return ski_ensure_owner($u);
+    }
     return null;
 }
 
