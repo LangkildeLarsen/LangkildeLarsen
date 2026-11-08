@@ -355,7 +355,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 <script src="../assets/snow.js?v=<?= filemtime(dirname(__DIR__) . '/assets/snow.js') ?>" defer></script>
 <script src="../assets/ski.js?v=<?= filemtime(dirname(__DIR__) . '/assets/ski.js') ?>" defer></script>
 </head>
-<body class="sk sk-<?= $st['phase'] ?>" data-csrf="<?= e(csrf_token()) ?>">
+<body class="sk sk-<?= $st['phase'] ?>" data-tab="<?= $st['phase'] === 'before' ? 'rejsen' : 'ski' ?>" data-csrf="<?= e(csrf_token()) ?>">
 <div class="sk-app">
   <header class="sk-top">
     <div class="sk-brand"><span class="sk-brand-ic"><?= icon('snow') ?></span><span>Skiferie</span></div>
@@ -375,7 +375,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
   </div>
 
   <main class="sk-grid">
-    <section class="card sk-hero">
+    <section class="card sk-hero" data-tab="rejsen">
       <p class="sk-eyebrow"><span class="dot"></span>Mayrhofen, Østrig · <?= e($range) ?></p>
       <div class="trip-count" data-trip-start="<?= $st['start'] ?>">
         <?php if ($st['phase'] === 'before'): ?>
@@ -428,12 +428,12 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <?php endif; ?>
     </section>
 
-    <section class="card sk-snow">
+    <section class="card sk-snow" data-tab="rejsen">
       <div class="card-head"><h2>Sne</h2><span class="pill-link">Mayrhofen</span></div>
       <?= trip_snow_box() ?>
     </section>
 
-    <section class="card sk-plan" id="program" data-live="plan">
+    <section class="card sk-plan" data-tab="rejsen" id="program" data-live="plan">
       <div class="card-head"><h2>Overblik</h2><span class="drop"><?= count($tripDays) ?> dage · <?= count($tripDays) - 1 ?> nætter · <?= count(SKI_BOOKING['travellers']) ?> personer</span></div>
       <ol class="sk-days">
         <?php foreach ($tripDays as $i => $d): $evs = $planByDay[$d] ?? []; $wd = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'][(int)date('N', strtotime($d)) - 1]; ?>
@@ -465,7 +465,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       </details>
     </section>
 
-    <section class="card sk-book" id="rejsen" data-live="book">
+    <section class="card sk-book" data-tab="rejsen" id="rejsen" data-live="book">
       <div class="card-head"><h2>Rejsen</h2><span class="drop"><?= count(SKI_BOOKING['travellers']) ?> rejsende</span></div>
       <div class="sk-hotel">
         <span class="sk-hotel-ic"><?= icon('home') ?></span>
@@ -492,7 +492,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <p class="sk-total"><span class="muted">I alt</span><span><?= ski_kr(array_sum(array_column(SKI_BOOKING['travellers'], 'price'))) ?></span></p>
     </section>
 
-    <section class="card sk-cams" id="webcams">
+    <section class="card sk-cams" data-tab="rejsen" id="webcams">
       <div class="card-head"><h2>Webcams</h2><a class="pill-link" href="https://www.mayrhofen.at/en/livecams" target="_blank" rel="noopener">mayrhofen.at</a></div>
       <div class="sk-cam-tabs" role="tablist">
         <?php foreach (SKI_CAMS as $i => $c): ?>
@@ -509,7 +509,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <p class="muted small sk-cam-note">Vises kameraet ikke? <a href="<?= e(SKI_CAMS[0]['url']) ?>" target="_blank" rel="noopener" data-cam-open>Åbn <?= e(SKI_CAMS[0]['name']) ?> i nyt vindue</a></p>
     </section>
 
-    <section class="card sk-track" id="tracker" data-tracker>
+    <section class="card sk-track" data-tab="ski" id="tracker" data-tracker>
       <div class="card-head"><h2>Skitracker</h2><span class="sk-gps" data-gps>GPS slukket</span></div>
       <div class="sk-speed"><span data-t-speed>0</span><small> km/t</small></div>
       <div class="sk-stats">
@@ -534,7 +534,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       </details>
     </section>
 
-    <section class="card sk-board" id="rangliste" data-live="board">
+    <section class="card sk-board" data-tab="ski" id="rangliste" data-live="board">
       <div class="card-head"><h2>Rangliste</h2><span class="drop"><?= $myTotal ? ski_km($myTotal['km']) . ' km for dig' : '' ?></span></div>
       <ol class="sk-rank">
         <?php foreach ($board as $i => $r): ?>
@@ -561,7 +561,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <?php endif; ?>
     </section>
 
-    <section class="card sk-exp" id="udgifter" data-live="exp">
+    <section class="card sk-exp" data-tab="penge" id="udgifter" data-live="exp">
       <div class="card-head"><h2>Udgifter</h2><span class="drop"><?= ski_money($money['total']) ?> i alt</span></div>
       <div class="sk-exp-grid">
         <div>
@@ -630,7 +630,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       </div>
     </section>
 
-    <section class="card sk-list" id="min-liste" data-live="mine">
+    <section class="card sk-list" data-tab="lister" id="min-liste" data-live="mine">
       <div class="card-head"><h2>Min huskeliste</h2><span class="drop"><?= $mineDone ?> af <?= count($mine) ?> pakket</span></div>
       <p class="muted small sk-list-note">Kun du kan se den her liste.</p>
       <ul class="sk-items">
@@ -648,7 +648,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <?php endif; ?>
     </section>
 
-    <section class="card sk-list" id="faelles" data-live="shared">
+    <section class="card sk-list" data-tab="lister" id="faelles" data-live="shared">
       <div class="card-head"><h2>Fælles huskeliste</h2><span class="drop"><?= count($shared) ?> ting</span></div>
       <p class="muted small sk-list-note">Alle kan se og tilføje. Sæt flueben, når du har tingen med.</p>
       <ul class="sk-items">
@@ -664,6 +664,12 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       <form method="post" data-ajax class="sk-add"><?= csrf_field() ?><input type="hidden" name="action" value="shared_add"><input name="text" placeholder="Fx højtaler, kortspil, førstehjælp…" autocomplete="off" maxlength="80" required><button aria-label="Tilføj"><?= icon('plus') ?></button></form>
     </section>
   </main>
+  <nav class="sk-tabs" aria-label="Menu" data-tabs>
+    <a href="#tracker" data-tab-go="ski" aria-label="Skitracker og rangliste"><?= icon('chart') ?><span>Ski</span></a>
+    <a href="#min-liste" data-tab-go="lister" aria-label="Huskelister"><?= icon('check') ?><span>Lister</span></a>
+    <a href="#udgifter" data-tab-go="penge" aria-label="Hvem skylder hvem"><?= icon('wallet') ?><span>Penge</span></a>
+    <a href="#program" data-tab-go="rejsen" aria-label="Rejsen"><?= icon('calendar') ?><span>Rejsen</span></a>
+  </nav>
 </div>
 </body>
 </html>

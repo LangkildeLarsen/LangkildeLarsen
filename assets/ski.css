@@ -276,3 +276,34 @@ html:has(body.sk), body.sk, body.sk-auth { background: #000; }
 body:not(.sk-before) .sk-hero .trip-count, body:not(.sk-before) .sk-hero .sk-eyebrow { display: none; }
 body:not(.sk-before) .sk-hero .sk-crew { margin-top: 0; }
 @media (max-width: 1100px) { .sk-book, .sk-snow { grid-column: span 12; } }
+
+.sk-tabs { display: none; }
+@media (max-width: 900px) {
+  body.sk { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
+  body.sk[data-tab="ski"] .sk-grid > [data-tab]:not([data-tab="ski"]),
+  body.sk[data-tab="lister"] .sk-grid > [data-tab]:not([data-tab="lister"]),
+  body.sk[data-tab="penge"] .sk-grid > [data-tab]:not([data-tab="penge"]),
+  body.sk[data-tab="rejsen"] .sk-grid > [data-tab]:not([data-tab="rejsen"]) { display: none; }
+  .sk-tabs {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex;
+    gap: 4px;
+    padding: 7px;
+    border-radius: 999px;
+    background: rgba(18, 18, 19, .86);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: var(--inset), 0 20px 50px rgba(0, 0, 0, .6);
+  }
+  .sk-tabs a { display: grid; place-items: center; width: 64px; height: 50px; border-radius: 999px; color: var(--muted); text-decoration: none; gap: 1px; align-content: center; transition: background .25s ease, color .25s ease; }
+  .sk-tabs a .ic { width: 21px; height: 21px; }
+  .sk-tabs a span { font-size: 10px; line-height: 1; }
+  .sk-tabs a.active { background: #fff; color: #000; }
+}
+@media (max-width: 900px) and (display-mode: standalone) {
+  .sk-tabs { bottom: max(6px, calc(env(safe-area-inset-bottom) - 14px)); }
+}

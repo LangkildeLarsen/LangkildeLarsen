@@ -247,3 +247,26 @@ document.addEventListener('click', e => {
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok).catch(() => prompt('Kopiér linket', t));
   else prompt('Kopiér linket', t);
 });
+
+(() => {
+  const nav = document.querySelector('[data-tabs]');
+  if (!nav) return;
+  const mq = matchMedia('(max-width: 900px)');
+  const valid = ['ski', 'lister', 'penge', 'rejsen'];
+  const set = (tab, scroll) => {
+    if (!valid.includes(tab)) return;
+    document.body.dataset.tab = tab;
+    nav.querySelectorAll('[data-tab-go]').forEach(a => a.classList.toggle('active', a.dataset.tabGo === tab));
+    try { localStorage.setItem('ski-tab', tab); } catch (e) {}
+    if (scroll && mq.matches) scrollTo({ top: 0, behavior: 'instant' });
+  };
+  let saved = null;
+  try { saved = localStorage.getItem('ski-tab'); } catch (e) {}
+  set(saved || document.body.dataset.tab, false);
+  nav.addEventListener('click', e => {
+    const a = e.target.closest('[data-tab-go]');
+    if (!a || !mq.matches) return;
+    e.preventDefault();
+    set(a.dataset.tabGo, true);
+  });
+})();
