@@ -128,7 +128,7 @@ if (!$me) {
     $waitText = count($names) > 1 ? implode(', ', array_slice($names, 0, -1)) . ' og ' . end($names) . ' venter på dig' : ($names ? $names[0] . ' venter på dig' : '');
     $st = trip_status();
     $heroImg = 'https://images.contenthub.dev/390osprlshgj/450280868de9f7683c35a94ed4fb614b/mbb_mountopolis_winter_neu_2025_harakiri_1.jpg?fm=jpg&fl=progressive&fit=fill&q=60&w=1200';
-    $ogTitle = $mode === 'join' ? ($nick ? $nick . ', du er inviteret til Mayrhofen' : 'Du er inviteret til Mayrhofen') : 'Skiferie · Mayrhofen';
+    $ogTitle = $mode === 'join' ? ($first ? $first . ', du er inviteret til Mayrhofen' : 'Du er inviteret til Mayrhofen') : 'Skiferie · Mayrhofen';
     ?><!doctype html>
 <html lang="da">
 <head>
@@ -146,7 +146,7 @@ if (!$me) {
   </div>
   <div class="sk-join-body">
     <?php if ($mode === 'join'): ?>
-      <h1><?= $nick ? 'Hej ' . e($nick) . '!' : ($picker ? 'Skiferie i Mayrhofen' : 'Kom med til Mayrhofen!') ?></h1>
+      <h1><?= $first ? 'Hej ' . e($first) . '!' : ($picker ? 'Skiferie i Mayrhofen' : 'Kom med til Mayrhofen!') ?></h1>
       <p class="sk-join-lead">Glæd dig til Mayrhofen! Det bliver vildt. Ni dage i Zillertal med pister fra morgen til eftermiddag, après-ski, nytårsaften i bjergene og os fem samlet i samme bil derned.</p>
     <?php else: ?>
       <h1>Skiferie</h1>
