@@ -189,9 +189,13 @@ function trip_card(): string
         $h .= '<p class="trip-big">Hjemme<small> igen</small></p><p class="trip-sub">Skiferien er slut · ' . e($range) . '</p>';
     }
     $h .= '</div>';
+    return $h . trip_snow_box();
+}
+
+function trip_snow_box(): string
+{
+    $cfg = ['lat' => TRIP['lat'], 'lon' => TRIP['lon'], 'spots' => TRIP['spots'], 'icon' => icon('snow')];
     $cache = load_json('trip-snow-cache');
-    $fresh = ($cache['t'] ?? 0) > time() - 3600;
-    $h .= '<div class="trip-snow" data-trip-snow' . ($fresh ? '' : ' data-trip-refresh') . '>';
-    $h .= !empty($cache['d']) ? trip_snow_html($cache['d']) : '<div class="wx-empty" data-wx-load><span class="wx-spin"></span><p class="muted small">Henter snedata…</p></div>';
-    return $h . '</div>';
+    $inner = !empty($cache['d']) ? trip_snow_html($cache['d']) : '<div class="wx-empty" data-wx-load><span class="wx-spin"></span><p class="muted small">Henter snedata…</p></div>';
+    return '<div class="trip-snow" data-trip-snow data-snow="' . e(json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '">' . $inner . '</div>';
 }

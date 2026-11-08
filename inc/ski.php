@@ -77,7 +77,7 @@ function ski_ensure_owner(array $user): string
     $id = 'o-' . user_slug($user['email']);
     ski_mutate('members', function (&$m) use ($id, $user) {
         if (!isset($m[$id])) {
-            $m[$id] = ['id' => $id, 'name' => first_name($user), 'email' => $user['email'], 'role' => 'owner', 'hash' => '', 'tokens' => [], 'color' => SKI_COLORS[0], 'joined' => date('c')];
+            $m[$id] = ['id' => $id, 'name' => first_name($user), 'email' => $user['email'], 'role' => 'owner', 'hash' => '', 'tokens' => [], 'color' => ski_next_color($m), 'joined' => date('c')];
         }
     });
     return $id;
@@ -452,4 +452,78 @@ function ski_app_login(string $raw): ?string
     [$id, $token] = explode('.', $raw, 2);
     $m = ski_members()[$id] ?? null;
     return $m && !empty($m['app']) && hash_equals($m['app'], $token) ? $id : null;
+}
+
+const SKI_EUR = 7.46;
+
+function ski_expenses(): array
+{
+    $l = load_json('ski/expenses');
+    uasort($l, fn($a, $b) => strcmp($b['created'], $a['created']));
+    return $l;
+}
+
+function ski_money(int $ore): string
+{
+    return number_format($ore / 100, $ore % 100 ? 2 : 0, ',', '.') . ' kr.';
+}
+
+function ski_balances(array $expenses, array $members): array
+{
+    $bal = array_fill_keys(array_keys($members), 0);
+    $spent = array_fill_keys(array_keys($members), 0);
+    $total = 0;
+    foreach ($expenses as $x) {
+        $split = array_values(array_filter($x['split'], fn($id) => isset($members[$id])));
+        if (!$split || !isset($members[$x['by']])) {
+            continue;
+        }
+        $amt = (int)$x['ore'];
+        $base = intdiv($amt, count($split));
+        $rest = $amt - $base * count($split);
+        $bal[$x['by']] += $amt;
+        foreach ($split as $i => $id) {
+            $share = $base + ($i < $rest ? 1 : 0);
+            $bal[$id] -= $share;
+            if (($x['type'] ?? 'expense') === 'expense') {
+                $spent[$id] += $share;
+            }
+        }
+        if (($x['type'] ?? 'expense') === 'expense') {
+            $total += $amt;
+        }
+    }
+    $debt = [];
+    $cred = [];
+    foreach ($bal as $id => $v) {
+        if ($v < 0) $debt[$id] = -$v;
+        if ($v > 0) $cred[$id] = $v;
+    }
+    arsort($debt);
+    arsort($cred);
+    $moves = [];
+    while ($debt && $cred) {
+        $d = array_key_first($debt);
+        $c = array_key_first($cred);
+        $amt = min($debt[$d], $cred[$c]);
+        if ($amt > 0) {
+            $moves[] = ['from' => $d, 'to' => $c, 'ore' => $amt];
+        }
+        $debt[$d] -= $amt;
+        $cred[$c] -= $amt;
+        if ($debt[$d] <= 0) unset($debt[$d]);
+        if ($cred[$c] <= 0) unset($cred[$c]);
+        arsort($debt);
+        arsort($cred);
+    }
+    return ['bal' => $bal, 'spent' => $spent, 'total' => $total, 'moves' => $moves];
+}
+
+function ski_parse_amount(string $s): float
+{
+    $s = trim(str_replace([' ', 'kr', '€', ' '], '', $s));
+    if (preg_match('/^\d{1,3}(\.\d{3})+(,\d+)?$/', $s)) {
+        $s = str_replace('.', '', $s);
+    }
+    return (float)str_replace(',', '.', $s);
 }

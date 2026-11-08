@@ -1334,6 +1334,7 @@ if ($view === 'launch') {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/admin.css?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.css') ?>">
 <script src="../assets/admin.js?v=<?= filemtime(dirname(__DIR__) . '/assets/admin.js') ?>" defer></script>
+<script src="../assets/snow.js?v=<?= filemtime(dirname(__DIR__) . '/assets/snow.js') ?>" defer></script>
 </head>
 <?php $bgFile = (string)($ui['bg'] ?? ''); $hasBg = $bgFile !== '' && is_file(UPLOAD_DIR . '/' . $bgFile); ?>
 <body<?= $hasBg ? ' class="has-bg" style="--bg-dim: ' . ((int)($ui['bg_dim'] ?? 45) / 100) . '; --glass-blur: ' . (int)($ui['bg_blur'] ?? 24) . 'px; --glass-a: ' . ((int)($ui['bg_card'] ?? 42) / 100) . '; --el-a: ' . ((int)($ui['bg_el'] ?? 7) / 100) . '; --img-blur: ' . (int)($ui['bg_img_blur'] ?? 0) . 'px"' : '' ?>>
