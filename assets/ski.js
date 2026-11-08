@@ -270,3 +270,15 @@ document.addEventListener('click', e => {
     set(a.dataset.tabGo, true);
   });
 })();
+
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-mp]');
+  if (!a) return;
+  e.preventDefault();
+  const go = () => { location.href = 'mobilepay://'; };
+  const amount = a.dataset.mp;
+  if (navigator.clipboard) navigator.clipboard.writeText(amount).then(go, go);
+  else go();
+  a.textContent = amount + ' kr. kopieret';
+  setTimeout(() => { a.textContent = 'Afregn'; }, 4000);
+});

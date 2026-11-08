@@ -61,7 +61,8 @@ if ($action === 'join' || $action === 'login') {
         if (!$personal && !ski_invite_valid($joinToken)) {
             $error = 'Invitationslinket virker ikke længere. Bed om et nyt.';
         } else {
-            $res = ski_join((string)($_POST['name'] ?? ''), $personal ? $personal['email'] : (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''));
+            ski_seed_travellers();
+            $res = ski_join((string)($_POST['name'] ?? ''), $personal ? $personal['email'] : (string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''), $personal ? 'p-' . $personal['key'] : '');
             if (isset($res['error'])) {
                 $error = $res['error'];
             } else {
@@ -131,6 +132,7 @@ if (!$me) {
 
 $isOwner = $me['role'] === 'owner';
 $mid = $me['id'];
+ski_seed_travellers();
 
 if ($action !== '') {
     verify_csrf();
@@ -224,7 +226,7 @@ if ($action !== '') {
         $from = (string)($_POST['from'] ?? '');
         $to = (string)($_POST['to'] ?? '');
         $ore = (int)round(ski_parse_amount((string)($_POST['amount'] ?? '0')) * 100);
-        if (isset($members[$from], $members[$to]) && $from !== $to && $ore > 0 && $ore < 100000000 && in_array($mid, [$from, $to], true)) {
+        if (isset($members[$from], $members[$to]) && $from !== $to && $ore > 0 && $ore < 100000000 && (in_array($mid, [$from, $to], true) || $isOwner)) {
             ski_mutate('expenses', function (&$l) use ($from, $to, $ore, $mid) {
                 $id = ski_id();
                 $l[$id] = ['id' => $id, 'type' => 'payment', 'text' => 'MobilePay', 'amount' => $ore / 100, 'cur' => 'DKK', 'ore' => $ore, 'by' => $from, 'split' => [$to], 'added' => $mid, 'created' => date('c')];
@@ -376,6 +378,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
 
   <main class="sk-grid">
     <section class="card sk-hero" data-tab="rejsen">
+      <div class="sk-hero-img" aria-hidden="true"></div>
       <p class="sk-eyebrow"><span class="dot"></span>Mayrhofen, Østrig · <?= e($range) ?></p>
       <div class="trip-count" data-trip-start="<?= $st['start'] ?>">
         <?php if ($st['phase'] === 'before'): ?>
@@ -391,7 +394,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
       </div>
       <div class="sk-crew" data-live="crew">
         <div class="sk-avs"><?php foreach ($members as $m): ?><?= ski_avatar($m) ?><?php endforeach; ?></div>
-        <span class="muted small"><?= count($members) ?> med på turen</span>
+        <span class="muted small"><?= count($members) ?> med på turen<?php $pend = count(array_filter($members, fn($x) => !empty($x['pending']))); ?><?= $pend ? ' · ' . $pend . ' mangler at oprette sig' : '' ?></span>
       </div>
       <?php if ($isOwner): ?>
         <div class="sk-invite" id="inviter" data-live="invite">
@@ -401,8 +404,8 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
             <?php foreach (SKI_BOOKING['travellers'] as $t): if ($t['role'] === 'Rejsebestiller') continue; $tm = ski_traveller_member($t['name'], $members); $inv = $invites[ski_slug($t['name'])] ?? null; ?>
               <li>
                 <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
-                <span class="sk-who"><?= e($t['name']) ?><small><?= $tm ? 'Er med i appen' : ($inv ? 'Inviteret ' . e(dk_date($inv['sent'])) . ' · ' . e($inv['email']) : 'Ikke inviteret endnu') ?></small></span>
-                <?php if (!$tm): ?>
+                <span class="sk-who"><?= e($t['name']) ?><small><?= $tm && empty($tm['pending']) ? 'Er med i appen' : ($inv ? 'Inviteret ' . e(dk_date($inv['sent'])) . ' · ' . e($inv['email']) : 'Ikke inviteret endnu') ?></small></span>
+                <?php if (!$tm || !empty($tm['pending'])): ?>
                   <form method="post" data-ajax class="sk-inv-f"><?= csrf_field() ?><input type="hidden" name="action" value="invite_send"><input type="hidden" name="name" value="<?= e($t['name']) ?>"><input type="email" name="email" placeholder="Mail" value="<?= e($inv['email'] ?? '') ?>" required aria-label="Mail til <?= e($t['name']) ?>"><button class="btn small"><?= $inv ? 'Send igen' : 'Send' ?></button></form>
                   <?php if ($inv && !empty($inv['token'])): ?><button type="button" class="sk-x" data-copy-text="<?= e(ski_base_url() . '?invite=' . $inv['token']) ?>" aria-label="Kopiér link" title="Kopiér personligt link"><?= icon('link') ?></button><?php endif; ?>
                 <?php endif; ?>
@@ -484,7 +487,7 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
         <?php foreach (SKI_BOOKING['travellers'] as $t): $tm = ski_traveller_member($t['name'], $members); ?>
           <li>
             <?= $tm ? ski_avatar($tm) : '<span class="sk-av ghost">' . e(ski_initials(['name' => $t['name']])) . '</span>' ?>
-            <span class="sk-who"><?= e($t['name']) ?><small><?= e($t['role']) ?><?= $t['extra'] ? ' · ' . e(implode(', ', $t['extra'])) : '' ?><?= $tm ? '' : ' · ikke oprettet endnu' ?></small></span>
+            <span class="sk-who"><?= e($t['name']) ?><small><?= e($t['role']) ?><?= $t['extra'] ? ' · ' . e(implode(', ', $t['extra'])) : '' ?><?= $tm && empty($tm['pending']) ? '' : ' · ikke oprettet endnu' ?></small></span>
             <span class="sk-val"><?= ski_kr($t['price']) ?></span>
           </li>
         <?php endforeach; ?>
@@ -577,10 +580,14 @@ $mineDone = count(array_filter($mine, fn($x) => !empty($x['done'])));
                   <?= ski_avatar($f) ?><span class="sk-arrow"><?= icon('arrow') ?></span><?= ski_avatar($t) ?>
                   <span class="sk-who"><?= e(explode(' ', $f['name'])[0]) ?> skylder <?= e(explode(' ', $t['name'])[0]) ?><small><?= $mv['from'] === $mid ? 'Det er dig, der skal betale' : ($mv['to'] === $mid ? 'Du skal have pengene' : '') ?></small></span>
                   <span class="sk-val"><?= ski_money($mv['ore']) ?></span>
+                  <?php $amt = number_format($mv['ore'] / 100, 2, ',', ''); ?>
                   <?php if ($mv['from'] === $mid): ?>
-                    <form method="post" data-ajax class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input name="amount" inputmode="decimal" value="<?= e(number_format($mv['ore'] / 100, 2, ',', '')) ?>" aria-label="Beløb overført til <?= e($t['name']) ?>"><button class="btn small sk-mp">Overført på MobilePay</button></form>
-                  <?php elseif ($mv['to'] === $mid): ?>
-                    <form method="post" data-ajax data-confirm class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input type="hidden" name="amount" value="<?= e(number_format($mv['ore'] / 100, 2, ',', '')) ?>"><button class="btn ghost small">Modtaget</button></form>
+                    <div class="sk-pay">
+                      <a class="btn small sk-mp" href="mobilepay://" data-mp="<?= e($amt) ?>">Afregn</a>
+                      <form method="post" data-ajax class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input name="amount" inputmode="decimal" value="<?= e($amt) ?>" aria-label="Beløb overført til <?= e($t['name']) ?>"><button class="btn ghost small">Overført</button></form>
+                    </div>
+                  <?php elseif ($mv['to'] === $mid || $isOwner): ?>
+                    <form method="post" data-ajax data-confirm class="sk-pay-f"><?= csrf_field() ?><input type="hidden" name="action" value="exp_settle"><input type="hidden" name="from" value="<?= e($mv['from']) ?>"><input type="hidden" name="to" value="<?= e($mv['to']) ?>"><input type="hidden" name="amount" value="<?= e($amt) ?>"><button class="btn ghost small"><?= $mv['to'] === $mid ? 'Modtaget' : 'Markér betalt' ?></button></form>
                   <?php endif; ?>
                 </li>
               <?php endforeach; ?>

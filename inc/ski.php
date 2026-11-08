@@ -163,7 +163,8 @@ function ski_initials(array $m): string
 
 function ski_avatar(array $m, string $class = ''): string
 {
-    return '<span class="sk-av' . ($class ? ' ' . $class : '') . '" style="--c: ' . e($m['color']) . '" title="' . e($m['name']) . '">' . e(ski_initials($m)) . '</span>';
+    $class .= !empty($m['pending']) ? ' pending' : '';
+    return '<span class="sk-av' . ($class ? ' ' . trim($class) : '') . '" style="--c: ' . e($m['color']) . '" title="' . e($m['name']) . '">' . e(ski_initials($m)) . '</span>';
 }
 
 function ski_next_color(array $members): string
@@ -177,7 +178,7 @@ function ski_next_color(array $members): string
     return SKI_COLORS[count($members) % count(SKI_COLORS)];
 }
 
-function ski_join(string $name, string $email, string $password): array
+function ski_join(string $name, string $email, string $password, string $claim = ''): array
 {
     $email = mb_strtolower(trim($email));
     $name = trim(preg_replace('/\s+/u', ' ', $name));
@@ -190,11 +191,25 @@ function ski_join(string $name, string $email, string $password): array
     if (mb_strlen($password) < 8) {
         return ['error' => 'Adgangskoden skal være mindst 8 tegn.'];
     }
-    return ski_mutate('members', function (&$m) use ($name, $email, $password) {
+    return ski_mutate('members', function (&$m) use ($name, $email, $password, $claim) {
         foreach ($m as $x) {
-            if (mb_strtolower($x['email']) === $email) {
+            if ($x['email'] !== '' && mb_strtolower($x['email']) === $email) {
                 return ['error' => 'Den mail er allerede med. Log ind i stedet.'];
             }
+        }
+        $id = null;
+        if ($claim !== '' && !empty($m[$claim]['pending'])) {
+            $id = $claim;
+        } else {
+            $first = mb_strtolower(explode(' ', $name)[0]);
+            $hits = array_filter($m, fn($x) => !empty($x['pending']) && mb_strtolower(explode(' ', $x['name'])[0]) === $first);
+            if (count($hits) === 1) {
+                $id = array_key_first($hits);
+            }
+        }
+        if ($id) {
+            $m[$id] = array_merge($m[$id], ['name' => $name, 'email' => $email, 'hash' => password_hash($password, PASSWORD_DEFAULT), 'tokens' => [], 'pending' => false, 'joined' => date('c')]);
+            return ['id' => $id];
         }
         $id = 'm-' . ski_id();
         $m[$id] = ['id' => $id, 'name' => $name, 'email' => $email, 'role' => 'member', 'hash' => password_hash($password, PASSWORD_DEFAULT), 'tokens' => [], 'color' => ski_next_color($m), 'joined' => date('c')];
@@ -365,6 +380,10 @@ function ski_trip_days(): array
 
 function ski_traveller_member(string $name, array $members): ?array
 {
+    $pid = 'p-' . ski_slug($name);
+    if (isset($members[$pid])) {
+        return $members[$pid];
+    }
     $first = mb_strtolower(explode(' ', trim($name))[0]);
     foreach ($members as $m) {
         if (mb_strtolower(explode(' ', trim($m['name']))[0]) === $first) {
@@ -535,4 +554,26 @@ function ski_parse_amount(string $s): float
         $s = str_replace('.', '', $s);
     }
     return (float)str_replace(',', '.', $s);
+}
+
+function ski_seed_travellers(): void
+{
+    if (load_json('ski/seed-travellers')) {
+        return;
+    }
+    ski_mutate('members', function (&$m) {
+        foreach (SKI_BOOKING['travellers'] as $t) {
+            if ($t['role'] === 'Rejsebestiller') {
+                continue;
+            }
+            $first = mb_strtolower(explode(' ', $t['name'])[0]);
+            $exists = array_filter($m, fn($x) => mb_strtolower(explode(' ', $x['name'])[0]) === $first);
+            if ($exists) {
+                continue;
+            }
+            $id = 'p-' . ski_slug($t['name']);
+            $m[$id] = ['id' => $id, 'name' => $t['name'], 'email' => '', 'role' => 'member', 'hash' => '', 'tokens' => [], 'color' => ski_next_color($m), 'pending' => true, 'joined' => ''];
+        }
+    });
+    save_json('ski/seed-travellers', ['t' => date('c')]);
 }
