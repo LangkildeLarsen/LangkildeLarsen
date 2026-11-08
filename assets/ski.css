@@ -209,3 +209,5 @@ body.sk { padding-top: max(24px, env(safe-area-inset-top)); }
 .sk-auth-logo { box-shadow: none; }
 .sk-install { background: var(--card); box-shadow: var(--inset); }
 .sk-share { color: var(--ink); }
+
+html:has(body.sk), body.sk, body.sk-auth { background: #000; }
