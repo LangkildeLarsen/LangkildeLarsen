@@ -656,3 +656,5 @@ footer a:hover { color: var(--ink); }
   .topbar { grid-template-columns: 1fr auto; }
   .seg { grid-column: 1 / -1; grid-row: 2; }
 }
+
+.grid > .c-hero { grid-column: span 12; }

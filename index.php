@@ -81,25 +81,6 @@ function exp_item(array $x): string
       </div>
     </section>
 
-    <section class="card c-photo">
-      <img src="<?= e($photo) ?>" alt="<?= e($p['name']) ?>">
-      <?php if (!empty($p['highlights'][1])): ?>
-        <div class="kpi">
-          <span class="kpi-ic"><?= icon('chart') ?></span>
-          <span class="kpi-v"><?= e($p['highlights'][1]['value']) ?></span>
-          <span class="kpi-l"><?= e($p['highlights'][1]['label']) ?></span>
-        </div>
-      <?php endif; ?>
-    </section>
-
-    <?php $pills = ['orange', 'green', 'yellow', 'blue']; $pillText = ['Start', 'Omsætning', 'Om året', 'Om året']; ?>
-    <?php foreach ($p['highlights'] as $i => $h): ?>
-      <div class="card mini reveal" style="--d: <?= $i ?>">
-        <strong><b data-count="<?= e($h['value']) ?>"><?= e($h['value']) ?></b><em class="pill-s <?= $pills[$i % 4] ?>"><?= e($pillText[$i] ?? '') ?></em></strong>
-        <span><?= e(mb_strtoupper(mb_substr($h['label'], 0, 1)) . mb_substr($h['label'], 1)) ?></span>
-      </div>
-    <?php endforeach; ?>
-
     <?php if ($logos): ?>
     <section class="card c-logos" aria-label="Virksomheder jeg har arbejdet med">
       <p>Har arbejdet med</p>
