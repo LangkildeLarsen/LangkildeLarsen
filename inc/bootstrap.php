@@ -59,7 +59,7 @@ function default_profile(): array
         'linkedin' => 'https://www.linkedin.com/in/langkildelarsen/',
         'dribbble' => 'https://dribbble.com/longkilos',
         'photo' => '',
-        'about' => "Jeg er grafisk designer med speciale i UI/UX og har en iværksætters tilgang til design. I fem år byggede og drev jeg min egen webshop, Home Shoppen, som nåede en samlet omsætning på 15 mio. kr. – så jeg ved, hvad der skal til for at gøre en idé til en forretning.\n\nJeg er uddannet multimediedesigner og har arbejdet i Photoshop i over ti år. Jeg ser hvert projekt som en chance for at lære noget nyt og går til opgaverne både strategisk og kreativt.",
+        'about' => "Jeg er grafisk designer med speciale i UI/UX og har en iværksætters tilgang til design. I fem år byggede og drev jeg min egen webshop, Home Shoppen.\n\nJeg er uddannet multimediedesigner og har arbejdet i Photoshop i over ti år. Jeg ser hvert projekt som en chance for at lære noget nyt og går til opgaverne både strategisk og kreativt.",
         'status' => 'Åben for nye projekter',
         'now' => 'Grafisk webdesigner hos EFUTURE, hvor jeg arbejder med webshoppen, design, indhold og markedsføring af elcykler.',
         'experience' => [
@@ -141,6 +141,15 @@ function run_migrations(): void
             save_json('profile', $saved);
         }
         $done['remove-esbjerg-frontpage'] = date('c');
+        save_json('migrations', $done);
+    }
+    if (empty($done['about-remove-revenue'])) {
+        $saved = load_json('profile');
+        if (isset($saved['about'])) {
+            $saved['about'] = preg_replace('/,\s*som nåede en samlet omsætning på 15 mio\. kr\.\s*[–-]\s*så jeg ved, hvad der skal til for at gøre en idé til en forretning\./u', '.', $saved['about']);
+            save_json('profile', $saved);
+        }
+        $done['about-remove-revenue'] = date('c');
         save_json('migrations', $done);
     }
 }
